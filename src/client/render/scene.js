@@ -12,6 +12,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { KIND } from '../../sim/index.js';
 
 export const TEAM_COLORS = [0x3d8bff, 0xff4d4d]; // team 0 blue (player), team 1 red
 
@@ -21,8 +22,9 @@ const VIEW_TILES_WIDE = 32;
 /**
  * @param {HTMLCanvasElement} canvas
  * @param {any} mapgen raw data/mapgen.json (tile units)
+ * @param {import('../world-view.js').WorldView} view
  */
-export function createScene(canvas, mapgen) {
+export function createScene(canvas, mapgen, view) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   const scene = new THREE.Scene();
@@ -64,6 +66,8 @@ export function createScene(canvas, mapgen) {
   const borderGeo = new THREE.BufferGeometry();
   borderGeo.setAttribute('position', new THREE.Float32BufferAttribute(borderPts, 3));
   scene.add(new THREE.LineSegments(borderGeo, new THREE.LineBasicMaterial({ color: 0x2a3550 })));
+
+  addGeneratedLayout(scene, view);
 
   // Lumen Cores: team 0 from mapgen.json, team 1 point-mirrored.
   const c0 = mapgen.cores[0];
@@ -140,4 +144,54 @@ export function createScene(canvas, mapgen) {
   }
 
   return { render, pan, camera, renderer, viewTilesWide: VIEW_TILES_WIDE };
+}
+
+/**
+ * Placeholder shapes for the generated layout so the generator can be eyeballed
+ * on a phone: lane tiles as a faint strip, vents as cyan discs, item spawns as
+ * amber rings, blockers as grey boxes. Blockers are read once, so a destroyed
+ * blocker stays on screen until M7 replaces this with instanced entity rendering.
+ * @param {THREE.Scene} scene
+ * @param {import('../world-view.js').WorldView} view
+ */
+function addGeneratedLayout(scene, view) {
+  const map = view.map();
+  const flat = (/** @type {THREE.BufferGeometry} */ g) => g.rotateX(-Math.PI / 2);
+
+  const tiles = [...new Set(map.lanes.flatMap((l) => l.tiles))];
+  const strip = new THREE.InstancedMesh(
+    flat(new THREE.PlaneGeometry(1, 1)),
+    new THREE.MeshBasicMaterial({ color: 0x1a2744 }),
+    tiles.length,
+  );
+  const m = new THREE.Matrix4();
+  tiles.forEach((i, n) => {
+    strip.setMatrixAt(n, m.makeTranslation((i % map.width) + 0.5, 0.005, Math.floor(i / map.width) + 0.5));
+  });
+  scene.add(strip);
+
+  const disc = flat(new THREE.CircleGeometry(0.4, 16));
+  const ventMat = new THREE.MeshBasicMaterial({ color: 0x2de2e6 });
+  for (const v of map.vents) {
+    const mesh = new THREE.Mesh(disc, ventMat);
+    mesh.position.set(v.tileX + 0.5, 0.03, v.tileZ + 0.5);
+    scene.add(mesh);
+  }
+
+  const ring = flat(new THREE.RingGeometry(0.3, 0.45, 16));
+  const spawnMat = new THREE.MeshBasicMaterial({ color: 0xffc24d });
+  for (const s of map.itemSpawns) {
+    const mesh = new THREE.Mesh(ring, spawnMat);
+    mesh.position.set(s.tileX + 0.5, 0.03, s.tileZ + 0.5);
+    scene.add(mesh);
+  }
+
+  const box = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+  const blockerMat = new THREE.MeshBasicMaterial({ color: 0x4a5060 });
+  for (const e of view.entities()) {
+    if (e.kind !== KIND.BLOCKER) continue;
+    const mesh = new THREE.Mesh(box, blockerMat);
+    mesh.position.set(e.x / 1000, 0.4, e.z / 1000);
+    scene.add(mesh);
+  }
 }

@@ -29,7 +29,7 @@ const bot = createBot(1);
 let pendingHumanCommands = [];
 
 const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('view'));
-const scene = createScene(canvas, raw.mapgen);
+const scene = createScene(canvas, raw.mapgen, view);
 attachPan(canvas, scene.pan, () => scene.viewTilesWide / canvas.clientWidth);
 
 const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));

@@ -13,6 +13,7 @@
  * @typedef {Object} WorldView
  * @property {() => number} tick
  * @property {() => readonly import('../sim/state.js').Entity[]} entities
+ * @property {() => import('../sim/state.js').StaticMap} map  generated lanes, vents and item spawns; never changes
  * @property {(team: number) => { coreLux: number, pendingLux: number }} team  milli-lux
  * @property {(entity: import('../sim/state.js').Entity) => boolean} isVisibleToViewer  always true until fog of war ships
  */
@@ -26,6 +27,7 @@ export function localWorldView(state, _viewerTeam) {
   return {
     tick: () => state.tick,
     entities: () => state.entities,
+    map: () => state.map,
     team: (t) => ({ coreLux: state.teams[t].coreLux, pendingLux: state.teams[t].pendingLux }),
     isVisibleToViewer: () => true,
   };
