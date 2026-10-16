@@ -16,7 +16,8 @@ const VIEWER_TEAM = 0;
 
 const raw = await loadDataBrowser();
 const config = normalizeData(raw);
-const seed = Number(new URLSearchParams(location.search).get('seed') ?? 1234567);
+const query = new URLSearchParams(location.search);
+const seed = Number(query.get('seed') ?? 1234567);
 const players = [
   { id: 0, team: 0, kind: /** @type {const} */ ('human') },
   { id: 1, team: 1, kind: /** @type {const} */ ('bot') },
@@ -35,12 +36,21 @@ attachPan(canvas, scene.pan, () => scene.viewTilesWide / canvas.clientWidth);
 const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
 let lastHash = '';
 
+// Test hook for test/e2e/smoke.e2e.js. With ?test=1 the page keeps every
+// state hash by tick; without the flag nothing is recorded or exposed.
+/** @type {Record<number, string> | null} */
+const testHashes = query.get('test') === '1' ? {} : null;
+if (testHashes) /** @type {any} */ (window).__luxTest = { hashes: testHashes };
+
 startLoop({
   tick() {
     const cmds = [...pendingHumanCommands, ...bot.think(view)];
     pendingHumanCommands = [];
     step(state, cmds);
-    if (state.tick % HASH_INTERVAL === 0) lastHash = hashState(state);
+    if (state.tick % HASH_INTERVAL === 0) {
+      lastHash = hashState(state);
+      if (testHashes) testHashes[state.tick] = lastHash;
+    }
   },
   render() {
     scene.render(performance.now() / 1000);

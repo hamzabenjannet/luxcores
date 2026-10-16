@@ -9,9 +9,13 @@
   },
   "scripts": {
     "test": "node --test \"test/**/*.test.js\"",
+    "test:e2e": "node --test \"test/e2e/*.e2e.js\"",
     "headless": "node tools/run-headless.js",
     "gen:sin": "node tools/gen-sin-table.js",
     "lint:prose": "python3 tools/check_style.py",
     "serve": "python3 -m http.server 5173 --bind 0.0.0.0"
+  },
+  "devDependencies": {
+    "playwright-core": "1.58.2"
   }
 }
