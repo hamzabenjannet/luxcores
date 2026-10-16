@@ -4,54 +4,52 @@ Status as of 2026-10-16. Read `CLAUDE.md` first for the working rules.
 
 ## Where things stand
 
-Design is settled for the MVP: `docs/GAME_DESIGN.md` v0.9 has no blocking open questions. Every number marked *(default)* is a playtest tuning point and already lives in `data/`.
+Design is settled for the MVP: `docs/GAME_DESIGN.md` v0.9.1 has no blocking open questions. Every number marked *(default)* is a playtest tuning point and already lives in `data/`.
 
-The scaffold is in place and green:
+Milestone M1 (map generation) is done. The scaffold and M1 are green:
 
 | Area | State |
 |---|---|
 | Integer math (`fixed.js`, `sin-table.js`) | Done, tested against BigInt and exact quarter turns |
 | RNG (`rng.js`) | Done, tested against the reference Mulberry32 |
-| State, config normalization | Done (`state.js`, `config.js`); entities and teams are minimal |
+| State, config normalization | Done (`state.js`, `config.js`); `createState` spawns the 2 Cores and 12 blockers; teams are minimal |
+| Map generation (`mapgen.js`) | Done (M1): 3 lanes, 2 vents, 6 blockers and 2 item spawns per team from the seed, point-mirrored, flood-fill checked; stored on `state.map` |
 | Tick pipeline (`step.js`) | Done; every system in `systems/` is a stub |
 | Commands (`commands.js`) | Schema, ordering and dispatch done; `HANDLERS` is empty, so every command is dropped |
-| Hash (`hash.js`) | Done; canonical layout documented in the file header |
-| Replay (`replay.js`) | Record and playback done, mismatch detection tested |
-| Headless runner | `npm run headless`: 12 000 ticks in about 30 ms with empty systems |
+| Hash (`hash.js`) | Done; canonical layout documented in the file header; `state.map` is not hashed |
+| Replay (`replay.js`) | Record and playback done, mismatch detection tested; the golden replay `replays/golden/seed-1234567.json` (2 400 ticks) plays back in `test/golden.test.js` |
+| Headless runner | `npm run headless`: 12 000 ticks in about 15 ms with empty systems; a third argument saves the run as a replay |
 | Purity guard | `test/sim-boundary.test.js` blocks bare imports, Math.random, wall clock, approximated Math, `**`, DOM, timers, key iteration |
-| Client | Renders the 96 × 112 map, both Cores, the black hole, HUD and a one-finger pan; runs the sim at 20 Hz |
-| Cross-runtime check | Chromium and Node produced the same hashes at ticks 80 and 120 (seed 1234567) |
+| Client | Renders the 96 × 112 map, both Cores, the black hole, the generated lanes, vents, item spawns and blockers (placeholder shapes), the HUD and a one-finger pan; runs the sim at 20 Hz |
+| Cross-runtime check | `npm run test:e2e` loads the page in Chromium inside the Playwright container and compares its tick-120 hash with Node's; seed 1234567 gives `a3dbf89c` in both |
 
-`npm test`: 19 pass, 3 todo (the mapgen tests below).
+`npm test`: 37 pass, 0 todo. `npm run headless` prints hash `e626db0e` for seed 1234567 at 12 000 ticks, on both of two consecutive runs.
 
-## Next task: finish M1 (map generation)
+### Browser Smoke Test
 
-Implement `generateMap(seed, mapgen)` in `src/sim/mapgen.js` per GDD section 10.2 and `data/mapgen.json`.
+Start `npm run serve`, then run `npm run test:e2e`. The test reads `PW_WS_ENDPOINT` (default `ws://localhost:42944/`) and `APP_URL` (default `http://host.docker.internal:5173/`, the host as the container sees it). It skips with exit code 0 when nothing listens on the endpoint, fails on any console or page error, and saves `test/e2e/__screenshots__/smoke.png`. The script uses the glob `test/e2e/*.e2e.js` because Node 22.15.1 reads `node --test test/e2e/` as a module path and fails.
 
-Requirements:
+## Next Task: M2 (Economy)
 
-1. Use a separate RNG created from the match seed (for example `createRng(seed ^ 0x9e3779b9)`), never `state.rng`, so map generation does not shift the gameplay stream.
-2. Generate team 0 (bottom half, rows 56 to 111), then point-mirror onto team 1: tile `(x, z)` becomes `(95 - x, 111 - z)`.
-3. Lanes: start from the templates in `mapgen.json`, apply a seeded sideways jitter of up to ±3 tiles to inner control points, keep each lane inside its own column outside the Core row. The first point (the Core) and the last point (the DMZ edge) don't move.
-4. Rasterize each lane polyline to tiles (lane width 3 tiles is a reasonable default; add `laneWidth` to `mapgen.json`).
-5. Place 2 vents (in 2 different columns), 6 blockers (2 per column) and 1 item spawn (DMZ, side columns) per team, respecting `spacing`. Retry up to 50 times per element, then relax `between` by 1 and continue.
-6. Connectivity: flood fill over walkable tiles (not blocker, not Core, not black-hole radius). If any lane tile is cut off from either Core, retry with `seed + 1`, and so on. Return the seed that passed as `usedSeed`.
-7. Spawn the generated entities into state: wire `generateMap` into `createState` (Cores at their tiles with HP = start lux, blockers with 200 HP as `NEUTRAL`). Vents and item spawns are map data, not entities; store them on `state.map`.
+Implement the economy per `docs/GAME_DESIGN.md` sections 3 to 5: collectors, day/night, the pending buffer, the spend rule (the Core keeps 1 lux), placement rules, the recycle channel, entropy, meltdown and victory. The systems live in `economy.js`, `recycle.js`, `entropy.js`, `meltdown.js` and `victory.js`. Add the `build`, `recycle` and `cancelRecycle` handlers to `HANDLERS` in `commands.js`.
+
+M1 leaves these starting points:
+
+- The Cores are entities 1 (team 0) and 2 (team 1). Their `hp` equals `coreLux`, both in milli units. The economy must keep the two equal, because Core HP is its lux (GDD 3.1).
+- Placement must refuse tiles that hold a blocker (`KIND.BLOCKER` entities, ids 3 to 14), tiles in the DMZ and tiles inside the black hole disc (GDD 10.1).
+- A geothermal collector needs a vent tile. `state.map.vents` lists them as tile coordinates, 2 per team.
 
 Acceptance:
 
-- Replace the 3 `test.todo` entries in `test/determinism.test.js` with real tests: same seed gives a deep-equal layout; the layout is point-symmetric; every lane connects both Cores for 1 000 seeds.
-- `npm run headless` still runs 12 000 ticks; the hash changes (new entities) and stays stable across two runs.
-- Render the generated lanes, vents and blockers in `scene.js` as placeholder shapes so the layout can be eyeballed on a phone.
-- Record one golden replay into `replays/golden/` and add a test that plays every golden replay and expects `ok: true`.
+- Unit tests drive each rule through commands and `step()`. They cover the 2 s buffer, the 60% recycle refund, recycle cancel, meltdown at 2 400 ticks, refusal below 1 lux, and a draw on a same-tick Core death.
+- `SPEC_VERSION` bumped, because the pipeline now changes outcomes, and the golden replay re-recorded with `node tools/run-headless.js 1234567 2400 replays/golden/seed-1234567.json`.
 
-## Milestones after M1
+## Milestones After M2
 
 From `docs/TECH_ARCHITECTURE.md` section 14. Each milestone ends with tests green and a short demo on a phone.
 
 | # | Scope | Done when |
 |---|---|---|
-| M2 | Economy: collectors, day/night, pending buffer, spend rule (Core keeps 1 lux), placement rules, recycle channel, entropy, meltdown, victory | Unit tests for: 2 s buffer, 60% recycle, recycle cancel, meltdown at 2 400 ticks, refusal below 1 lux, draw on same-tick Core death |
 | M3 | Combat and physics: `grid2d.js`, A* (fixed neighbor order, throttled to 8 repaths per tick), towers with the Dota targeting override, attack types and procs, simultaneous damage, visibility bitsets | Two units killing each other on one tick both die; tower switches to an enemy hero that attacks a friendly hero |
 | M4 | Creeps: barracks queue, groups of 1 to 5, cap 30 with held groups skipping ahead, merge and split (odd creep stays), default and custom paths (max 10 waypoints), lane following | Queue skip-ahead test; split 7 gives 4 + 3 |
 | M5 | Hero: roster of 5, rotation lock, HP allocation, 5 s production, 5 s respawn cooldown, 4 abilities from data, shield targets | Rotation lock test across 6 picks |
@@ -61,7 +59,7 @@ From `docs/TECH_ARCHITECTURE.md` section 14. Each milestone ends with tests gree
 | M9 | Bot per GDD 12.1, hot-seat toggle, bot-vs-bot soak over 1 000 seeds in Node | Soak finishes with no crash and no non-integer values |
 | M10 | Cross-browser determinism page (Chrome Android, iOS Safari vs Node), performance pass | Identical final hashes on all three |
 
-## Interpretations made in the scaffold
+## Interpretations Made in the Scaffold
 
 Check with Hamza or Hama if any of these feel wrong:
 
@@ -70,8 +68,30 @@ Check with Hamza or Hama if any of these feel wrong:
 - `balance.json` stores the starting Core as `startPerPlayerLux: 100` and team start lux is 100 × players on the team.
 - Placeholder hero kits in `heroes.json` (Halo, Prism, Flare, Aurora, Corona) are working names until Hama designs the roster.
 
-## Known gaps
+## Interpretations Made in M1
+
+Two came from the owners during the session; the rest fill gaps in the docs.
+
+- **Item spawns (owners):** 2 per team, 4 in total, as in GDD 10.2. `itemSpawnsPerTeam` in `mapgen.json` was 1 and is now 2. Team 0's spawns go in rows 56 to 63, one per side column, and the mirror puts the other two in rows 48 to 55.
+- **Black hole (owners):** the disc within 3 tiles of its center is an obstacle for walking, building and the flood fill. Lane tiles inside the disc are exempt from the connectivity check, because the mid lane template ends inside it. Without the exemption no seed could pass.
+- **Disc coordinates:** the disc is measured in tile indices, centered on (47.5, 55.5), the one point the mirror maps onto itself.
+- **Distances:** "within N tiles" means the larger of the two axis differences (Chebyshev) is at most N. The `between` spacing is also checked against the mirror images of placed elements, so the finished layout meets it across the DMZ.
+- **Relaxation:** when the 50 tries run out, `between` shrinks by `relaxStep` for that element only, down to a floor of 1 tile. If it still fails, the whole attempt fails and the next seed runs.
+- **Seed limit:** `maxSeedAttempts` (64 in `mapgen.json`) bounds the retry loop. Exhausting it throws.
+- **Lane jitter:** sideways only (x), one draw per inner control point. Outside the Core row (z below 80), x is clamped so the stamped lane stays inside its column.
+- **Lane tiles:** each Bresenham tile on a polyline is stamped as a square of `laneWidth` tiles. Team 1's tiles are the mirrored tiles of team 0, not a second rasterization, so the symmetry is exact.
+- **Zones:** vents and blockers go in rows 64 to 111, the build zone of team 0, and the mirror covers rows 0 to 47. Vents take 2 distinct columns chosen by the seed.
+- **HP units:** HP is stored in milli units, like lux, so a Core's `hp` equals its `coreLux`. A blocker's 200 HP from `buildings.json` becomes 200 000 in state.
+- **Core `maxHp`:** set to the starting lux. M2 must decide what `maxHp` means once income lifts the Core above it, because the glow formula divides by `maxHp`.
+- **Entity ids:** Cores are 1 and 2, then team 0's 6 blockers (3 to 8) in placement order, then team 1's mirrored 6 (9 to 14). Cores and blockers have `owner` -1.
+- **Replay metadata:** `mapgen.version` stays 1, because no earlier generator existed. Bump it when a data or code change alters layouts for the same seed.
+- **Spec and GDD:** `SPEC_VERSION` is 0.10.0. The GDD is v0.9.1, with a changelog row for the black hole, lane width, connectivity and spacing rules.
+
+## Known Gaps
 
 - Mobile testing needs the page served over the LAN (`npm run serve`, then `http://<mac-ip>:5173` on the phone). Three.js loads from jsDelivr, so the phone needs internet access.
 - `src/client/input/pan.js` maps screen y to world z 1:1, ignoring the camera tilt. Fine for now; M8 should ray-cast to the ground plane instead.
+- The renderer draws the black hole ring at (47.5, 55.5) world units. Tile squares span index to index + 1, so the mirror center is (48, 56) in world units, and the ring sits half a tile off it. The walkable disc uses the mirror center.
+- `state.map` is outside the hash. A change that only moves lanes, vents or item spawns passes the golden replay unless it also moves a blocker. Hashing a digest of `state.map` would close this; it changes the hash layout and needs a `SPEC_VERSION` bump.
+- `tools/check_style.py` has no `--register informal` flag and prints no deny or ask labels, although `CLAUDE.md` describes both. Run it plain on commit messages and ignore contraction and title-case hits.
 - No CI yet. A GitHub Actions job running `npm test` on Node 22 is a five-line addition when the repo goes to GitHub.
