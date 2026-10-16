@@ -15,7 +15,6 @@
     { "team": 0, "tileX": 48, "tileZ": 96 }
   ],
   "mirror": "point",
-  "blackHole": { "centerMilliTilesX": 47500, "centerMilliTilesZ": 55500, "noWalkRadius": 3 },
   "lanes": {
     "_doc": "Lane templates for team 0. Points run from the Core outward to the map center row. Side lanes leave the Core, curve inside the Core row, then run straight up their own column.",
     "jitter": 3,

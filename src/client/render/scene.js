@@ -86,19 +86,6 @@ export function createScene(canvas, mapgen, view) {
     return mesh;
   });
 
-  // Black hole: decorative (GDD 10).
-  const bh = mapgen.blackHole;
-  const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(2.6, 0.12, 8, 48),
-    new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xc9a7ff, emissiveIntensity: 1.6 }),
-  );
-  ring.rotation.x = Math.PI / 2;
-  ring.position.set(bh.centerMilliTilesX / 1000, 0.6, bh.centerMilliTilesZ / 1000);
-  scene.add(ring);
-  const hole = new THREE.Mesh(new THREE.SphereGeometry(1.6, 24, 16), new THREE.MeshBasicMaterial({ color: 0x000000 }));
-  hole.position.copy(ring.position);
-  scene.add(hole);
-
   scene.add(new THREE.AmbientLight(0xffffff, 0.2));
 
   // Camera: orthographic, isometric tilt, framing 32 tiles across.
@@ -137,7 +124,6 @@ export function createScene(canvas, mapgen, view) {
   /** @param {number} timeSec */
   function render(timeSec) {
     for (const c of cores) c.rotation.y = timeSec * 0.6;
-    ring.rotation.z = timeSec * 0.2;
     camera.position.copy(target).add(OFFSET);
     camera.lookAt(target);
     composer.render();

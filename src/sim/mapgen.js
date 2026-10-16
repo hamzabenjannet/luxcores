@@ -22,12 +22,10 @@
  *   3. every placement try draws x first, then z
  *
  * Distances ("within N tiles") are Chebyshev: max(|dx|, |dz|) <= N.
- * Black hole distances are Euclidean in tile-index space, where the point
- * mirror maps the hole center (47.5, 55.5) onto itself.
  */
 
 import { createRng, nextInt, nextRange } from './rng.js';
-import { UNITS_PER_TILE, idiv, assertInt } from './fixed.js';
+import { idiv, assertInt } from './fixed.js';
 
 /** Lane names in fixed order. A lane's index is also its column index. */
 const LANES = /** @type {const} */ (['left', 'mid', 'right']);
@@ -126,19 +124,6 @@ function rowSpan(rows, pick) {
   }
   if (z0 < 0) throw new Error('mapgen: no row matches');
   return { z0, z1 };
-}
-
-/**
- * True when the tile index lies inside the black hole no-walk disc.
- * @param {any} mapgen
- * @param {number} x @param {number} z
- */
-function inBlackHole(mapgen, x, z) {
-  const bh = mapgen.blackHole;
-  const r = bh.noWalkRadius * UNITS_PER_TILE;
-  const dx = x * UNITS_PER_TILE - bh.centerMilliTilesX;
-  const dz = z * UNITS_PER_TILE - bh.centerMilliTilesZ;
-  return dx * dx + dz * dz <= r * r;
 }
 
 /**
@@ -329,30 +314,19 @@ function attempt(seed, mapgen) {
 
 /**
  * Flood fill from Core 0 over walkable tiles, neighbors in the fixed order
- * N, E, S, W. A tile is walkable if it is on the grid and holds no blocker,
- * no Core and no black hole disc. The layout passes when Core 1 touches a
- * reached tile and every lane tile is reached. Lane tiles inside the black
- * hole disc and the Core tiles themselves are exempt.
+ * N, E, S, W. A tile is walkable if it is on the grid and holds no blocker
+ * and no Core. The layout passes when Core 1 touches a reached tile and
+ * every lane tile is reached. The Core tiles themselves are exempt.
  * @param {MapLayout} layout
- * @param {any} mapgen
  * @returns {boolean}
  */
-export function isConnected(layout, mapgen) {
+export function isConnected(layout) {
   const W = layout.width;
   const H = layout.height;
   const blocked = new Uint8Array(W * H);
   const exempt = new Uint8Array(W * H);
   for (const b of layout.blockers) blocked[b.tileZ * W + b.tileX] = 1;
   for (const c of layout.cores) { blocked[c.tileZ * W + c.tileX] = 1; exempt[c.tileZ * W + c.tileX] = 1; }
-  const bh = mapgen.blackHole;
-  const reach = idiv(bh.noWalkRadius * UNITS_PER_TILE, UNITS_PER_TILE) + 1;
-  const bx = idiv(bh.centerMilliTilesX, UNITS_PER_TILE);
-  const bz = idiv(bh.centerMilliTilesZ, UNITS_PER_TILE);
-  for (let z = Math.max(0, bz - reach); z <= Math.min(H - 1, bz + reach); z++) {
-    for (let x = Math.max(0, bx - reach); x <= Math.min(W - 1, bx + reach); x++) {
-      if (inBlackHole(mapgen, x, z)) { blocked[z * W + x] = 1; exempt[z * W + x] = 1; }
-    }
-  }
 
   const DX = [0, 1, 0, -1]; // N, E, S, W
   const DZ = [-1, 0, 1, 0];
@@ -399,7 +373,7 @@ export function generateMap(seed, mapgen) {
   }
   for (let i = 0; i < mapgen.maxSeedAttempts; i++) {
     const layout = attempt(seed + i, mapgen);
-    if (layout && isConnected(layout, mapgen)) return layout;
+    if (layout && isConnected(layout)) return layout;
   }
   throw new Error(`mapgen: no valid layout within ${mapgen.maxSeedAttempts} seeds from ${seed}`);
 }

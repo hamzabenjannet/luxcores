@@ -20,7 +20,7 @@ Milestone M1 (map generation) is done. The scaffold and M1 are green:
 | Replay (`replay.js`) | Record and playback done, mismatch detection tested; the golden replay `replays/golden/seed-1234567.json` (2 400 ticks) plays back in `test/golden.test.js` |
 | Headless runner | `npm run headless`: 12 000 ticks in about 15 ms with empty systems; a third argument saves the run as a replay |
 | Purity guard | `test/sim-boundary.test.js` blocks bare imports, Math.random, wall clock, approximated Math, `**`, DOM, timers, key iteration |
-| Client | Renders the 96 × 112 map, both Cores, the black hole, the generated lanes, vents, item spawns and blockers (placeholder shapes), the HUD and a one-finger pan; runs the sim at 20 Hz |
+| Client | Renders the 96 × 112 map, both Cores, the generated lanes, vents, item spawns and blockers (placeholder shapes), the HUD and a one-finger pan; runs the sim at 20 Hz |
 | Cross-runtime check | `npm run test:e2e` loads the page in Chromium inside the Playwright container and compares its tick-120 hash with Node's; seed 1234567 gives `a3dbf89c` in both |
 
 `npm test`: 37 pass, 0 todo. `npm run headless` prints hash `e626db0e` for seed 1234567 at 12 000 ticks, on both of two consecutive runs.
@@ -36,7 +36,7 @@ Implement the economy per `docs/GAME_DESIGN.md` sections 3 to 5: collectors, day
 M1 leaves these starting points:
 
 - The Cores are entities 1 (team 0) and 2 (team 1). Their `hp` equals `coreLux`, both in milli units. The economy must keep the two equal, because Core HP is its lux (GDD 3.1).
-- Placement must refuse tiles that hold a blocker (`KIND.BLOCKER` entities, ids 3 to 14), tiles in the DMZ and tiles inside the black hole disc (GDD 10.1).
+- Placement must refuse tiles that hold a blocker (`KIND.BLOCKER` entities, ids 3 to 14), and tiles in the DMZ.
 - A geothermal collector needs a vent tile. `state.map.vents` lists them as tile coordinates, 2 per team.
 
 Acceptance:
@@ -73,8 +73,7 @@ Check with Hamza or Hama if any of these feel wrong:
 Two came from the owners during the session; the rest fill gaps in the docs.
 
 - **Item spawns (owners):** 2 per team, 4 in total, as in GDD 10.2. `itemSpawnsPerTeam` in `mapgen.json` was 1 and is now 2. Team 0's spawns go in rows 56 to 63, one per side column, and the mirror puts the other two in rows 48 to 55.
-- **Black hole (owners):** the disc within 3 tiles of its center is an obstacle for walking, building and the flood fill. Lane tiles inside the disc are exempt from the connectivity check, because the mid lane template ends inside it. Without the exemption no seed could pass.
-- **Disc coordinates:** the disc is measured in tile indices, centered on (47.5, 55.5), the one point the mirror maps onto itself.
+- **Black hole (owners):** removed from the design, the data and the client. Layouts and hashes did not change, so `SPEC_VERSION` stays 0.10.0 and the golden replay still plays back.
 - **Distances:** "within N tiles" means the larger of the two axis differences (Chebyshev) is at most N. The `between` spacing is also checked against the mirror images of placed elements, so the finished layout meets it across the DMZ.
 - **Relaxation:** when the 50 tries run out, `between` shrinks by `relaxStep` for that element only, down to a floor of 1 tile. If it still fails, the whole attempt fails and the next seed runs.
 - **Seed limit:** `maxSeedAttempts` (64 in `mapgen.json`) bounds the retry loop. Exhausting it throws.
@@ -85,13 +84,12 @@ Two came from the owners during the session; the rest fill gaps in the docs.
 - **Core `maxHp`:** set to the starting lux. M2 must decide what `maxHp` means once income lifts the Core above it, because the glow formula divides by `maxHp`.
 - **Entity ids:** Cores are 1 and 2, then team 0's 6 blockers (3 to 8) in placement order, then team 1's mirrored 6 (9 to 14). Cores and blockers have `owner` -1.
 - **Replay metadata:** `mapgen.version` stays 1, because no earlier generator existed. Bump it when a data or code change alters layouts for the same seed.
-- **Spec and GDD:** `SPEC_VERSION` is 0.10.0. The GDD is v0.9.1, with a changelog row for the black hole, lane width, connectivity and spacing rules.
+- **Spec and GDD:** `SPEC_VERSION` is 0.10.0. The GDD is v0.9.1, with a changelog row for the black hole removal, lane width, connectivity and spacing rules.
 
 ## Known Gaps
 
 - Mobile testing needs the page served over the LAN (`npm run serve`, then `http://<mac-ip>:5173` on the phone). Three.js loads from jsDelivr, so the phone needs internet access.
 - `src/client/input/pan.js` maps screen y to world z 1:1, ignoring the camera tilt. Fine for now; M8 should ray-cast to the ground plane instead.
-- The renderer draws the black hole ring at (47.5, 55.5) world units. Tile squares span index to index + 1, so the mirror center is (48, 56) in world units, and the ring sits half a tile off it. The walkable disc uses the mirror center.
 - `state.map` is outside the hash. A change that only moves lanes, vents or item spawns passes the golden replay unless it also moves a blocker. Hashing a digest of `state.map` would close this; it changes the hash layout and needs a `SPEC_VERSION` bump.
 - `tools/check_style.py` has no `--register informal` flag and prints no deny or ask labels, although `CLAUDE.md` describes both. Run it plain on commit messages and ignore contraction and title-case hits.
 - No CI yet. A GitHub Actions job running `npm test` on Node 22 is a five-line addition when the repo goes to GitHub.

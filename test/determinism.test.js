@@ -98,19 +98,9 @@ test('mapgen: layout is point-symmetric through the map center', () => {
 const NESW = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 
 /** Independent flood fill (N, E, S, W) over the grid, written without the generator's helpers. */
-function laneProblems(map, mapgen) {
+function laneProblems(map) {
   const { width: W, height: H } = map;
-  const bh = mapgen.blackHole;
-  const r = bh.noWalkRadius * 1000;
-  const blocked = new Uint8Array(W * H); // blockers, Cores and the black hole disc
-  const hole = new Uint8Array(W * H);
-  for (let z = 0; z < H; z++) {
-    for (let x = 0; x < W; x++) {
-      const dx = x * 1000 - bh.centerMilliTilesX;
-      const dz = z * 1000 - bh.centerMilliTilesZ;
-      if (dx * dx + dz * dz <= r * r) hole[z * W + x] = blocked[z * W + x] = 1;
-    }
-  }
+  const blocked = new Uint8Array(W * H); // blockers and Cores
   for (const b of map.blockers) blocked[b.tileZ * W + b.tileX] = 1;
   const coreIdx = map.cores.map((c) => c.tileZ * W + c.tileX);
   for (const i of coreIdx) blocked[i] = 1;
@@ -135,7 +125,7 @@ function laneProblems(map, mapgen) {
   if (!NESW.some(([dx, dz]) => seen[(tileZ + dz) * W + tileX + dx])) problems.push('Core 1 unreachable');
   for (const lane of map.lanes) {
     for (const i of lane.tiles) {
-      if (!seen[i] && !hole[i] && !coreIdx.includes(i)) problems.push(`${lane.team}/${lane.lane} tile ${i % W},${Math.floor(i / W)}`);
+      if (!seen[i] && !coreIdx.includes(i)) problems.push(`${lane.team}/${lane.lane} tile ${i % W},${Math.floor(i / W)}`);
     }
   }
   return problems;
@@ -146,7 +136,7 @@ test(`mapgen: every lane connects both Cores over ${MAP_SEEDS} seeds`, () => {
   const t0 = performance.now();
   for (let seed = 1; seed <= MAP_SEEDS; seed++) {
     const map = generateMap(seed, config.mapgen);
-    assert.deepEqual(laneProblems(map, config.mapgen), [], `seed ${seed} (used ${map.usedSeed})`);
+    assert.deepEqual(laneProblems(map), [], `seed ${seed} (used ${map.usedSeed})`);
   }
   assert.ok(performance.now() - t0 < 5000, 'lane connectivity over 1 000 seeds must take under 5 s');
 });

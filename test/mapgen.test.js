@@ -170,13 +170,13 @@ test('createState: state.map stays unchanged across steps', () => {
 test('mapgen: the connectivity check rejects a walled-in Core', () => {
   const { config } = loadData();
   const map = generateMap(11, config.mapgen);
-  assert.equal(isConnected(map, config.mapgen), true);
+  assert.equal(isConnected(map), true);
   const { tileX, tileZ } = map.cores[0];
   const walled = {
     ...map,
     blockers: [[0, -1], [1, 0], [0, 1], [-1, 0]].map(([dx, dz]) => ({ team: 0, tileX: tileX + dx, tileZ: tileZ + dz })),
   };
-  assert.equal(isConnected(walled, config.mapgen), false);
+  assert.equal(isConnected(walled), false);
 });
 
 test('mapgen: a failed attempt advances the seed and reports usedSeed', () => {
