@@ -30,7 +30,7 @@ Describes the repo at commit `a3cf86c` (2026-10-16). Read `docs/HANDOVER.md` for
 
 ## Open Questions for the Owners
 
-See the end of the session report. The main ones: how players sign in beyond guests, whether the web client should play against this server next, and where the server will be hosted.
+Answered in `2026-10-16-backend-decisions.md`: a networked web client first, then a plain WebSocket gateway for Godot, a device guest with a recovery code, and a VPS with Docker Compose.
 
 ## Knowledge Worth Keeping
 

@@ -15,6 +15,8 @@ cp .env.example .env      # optional, every variable has a development default
 npm run start:dev         # watch mode on http://localhost:3000
 ```
 
+To play against the server from a browser, open `http://localhost:3000/?server=&name=Halo&match=new&vsBot=1&autostart=1`. The web client then renders server snapshots, and `?match=<id>` joins an existing lobby (see `src/client/net/server-session.js`).
+
 | URL | What it serves |
 |---|---|
 | `/` | The game page, so a phone on the LAN can play against this server |

@@ -22,6 +22,7 @@ Milestone M1 (map generation) is done. The scaffold and M1 are green:
 | Purity guard | `test/sim-boundary.test.js` blocks bare imports, Math.random, wall clock, approximated Math, `**`, DOM, timers, key iteration |
 | Client | Renders the 96 × 112 map, both Cores, the generated lanes, vents, item spawns and blockers (placeholder shapes), the HUD and a one-finger pan; runs the sim at 20 Hz |
 | Backend (`backend/nodejs/`) | NestJS 12 multiplayer server: guest auth with JWT guards, players, lobbies, a server-authoritative match runner at 20 Hz, Socket.IO `/game` namespace, replays with server-side verify, static routes for the game files, Swagger at `/api/docs`, JSON file database with MongoDB and PostgreSQL adapters, RabbitMQ events with an in-process fallback. See `backend/nodejs/README.md` |
+| Networked client | `?server=` mode: the web client signs in, opens or joins a match, and renders server snapshots through `networkWorldView`. `npm run test:e2e` plays a match between two Chromium pages and checks their hashes against the sim |
 | Entity labels | Every entity and map marker shows its name and, for entities, its lux count under it (`render/labels.js`) |
 | Project memory (`docs/prompts/`) | Tracked in git: prompt history, handovers, progress and knowledge notes; see its README |
 | Prose gate | `tools/check_style.py` labels hits `deny` or `ask`, supports `--register informal`, reads `.js` files through their comments and checks the whole repo with `npm run lint:prose:all`; `test/prose.test.js` fails `npm test` on any `deny` hit |
@@ -94,7 +95,19 @@ Two came from the owners during the session; the rest fill gaps in the docs.
 ## Known Gaps
 
 - The backend sends full snapshots with every entity, uses guest sign-in only, has no rate limiting, and keeps a running match in the memory of one process. `backend/nodejs/README.md` lists these limits with the planned fixes.
-- The web client does not talk to the backend yet. It still runs its own sim, so a networked client (commands out, snapshots in, behind `WorldView`) is the next client task for multiplayer.
+- The networked client has no lobby screen and no controls yet. A host starts a match through `?autostart=1` or the test hook, and commands can only be sent from code. The camera stays north-up for team 1, so its base appears at the top.
+- The client compares the sim spec version with the server but not the data hash, because `crypto.subtle` needs a secure context and a LAN address is not one.
+
+## Queued by the Owners
+
+Decided on 2026-10-16 (`docs/prompts/2026-10-16-backend-decisions.md`). Do them in this order:
+
+1. A plain WebSocket gateway beside Socket.IO, with the same events as JSON, so Godot in `vone/` connects with its native `WebSocketPeer`.
+2. A device guest with a recovery code, so a profile survives a restart of the client and moves to another device.
+3. A Dockerfile and a compose service with Postgres and RabbitMQ, plus a reverse proxy with TLS, for one VPS.
+4. Then M2 (economy), the next game task above.
+
+## More Gaps
 - Backend adapter and event tests for MongoDB, PostgreSQL and RabbitMQ pass on real containers (Postgres 16, MongoDB 7.0, RabbitMQ 3.13 on a local Docker Desktop) but skip in a plain `npm test`. No CI runs them yet.
 
 - Mobile testing needs the page served over the LAN (`npm run serve`, then `http://<mac-ip>:5173` on the phone). Three.js loads from jsDelivr, so the phone needs internet access.

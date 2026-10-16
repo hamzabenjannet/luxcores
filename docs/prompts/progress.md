@@ -2,6 +2,11 @@
 
 Newest first. One entry per milestone or notable change. Add the commit hash and the verification, not just the intent.
 
+## 2026-10-16: Networked Web Client
+
+- Two browsers play one server match: `?server=` mode in `src/client/main.js`, `net/server-session.js`, `networkWorldView`, and `test/e2e/network.e2e.js`. Both pages receive the sim hashes at ticks 20 and 40 (`66b9dd40`, `a698130c` for seed 1234567).
+- Decisions for what follows are in `2026-10-16-backend-decisions.md`.
+
 ## 2026-10-16: Multiplayer Backend
 
 - `75badef` NestJS 12 server in `backend/nodejs`: REST, Socket.IO, server-authoritative match runner, replays with verify, Swagger, JSON, MongoDB and PostgreSQL storage, optional RabbitMQ events.

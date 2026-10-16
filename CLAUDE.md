@@ -62,6 +62,7 @@ Values marked *(default)* in the GDD are tuning points. Change them in data and 
 - Every player action becomes a `CommandEnvelope` (`src/sim/commands.js`). The UI may pre-validate for instant feedback; the sim result is final.
 - Three.js world units are tiles. Team 0 (player, bottom) is blue `#3d8bff`; team 1 (top) is red `#ff4d4d`.
 - The game shows no HP bars and no glow-as-health. Each unit and building shows a small lux count beside it (GDD 13.1); glow is decoration only.
+- Online play is `?server=<origin>` (empty for the page's own origin), with `name`, `match` (`new` or an id), `vsBot=1`, `seed` and `autostart=1`. The client then sends commands and renders server snapshots through `networkWorldView`; it never steps the sim. `npm run test:e2e` plays a two-browser match when `backend/nodejs` is built.
 - Mobile comes first: portrait layout, touch input, `devicePixelRatio` capped at 2, bloom at half resolution, instancing for crowds.
 - The `index.html` import map pins `three` to 0.170.0. Change that version only on purpose, then test on a phone.
 

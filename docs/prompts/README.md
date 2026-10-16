@@ -24,6 +24,7 @@ The live status of the repo stays in `docs/HANDOVER.md`. This folder keeps the h
 |---|---|---|
 | `claude-code-kickoff.md` | Prompt | Kickoff for milestone M1 (map generation) and the browser smoke test against the Playwright container |
 | `2026-10-16-review-decisions.md` | Prompt | Owner answers to the M1 review: black hole removed, Core max HP, glow removed, checker tiers, `vone/` |
+| `2026-10-16-backend-decisions.md` | Prompt | Owner choices after the backend: networked client, plain WebSocket for Godot, device guest accounts, VPS hosting |
 | `2026-10-16-backend-nestjs.md` | Prompt | Request for the NestJS multiplayer backend, entity labels and this folder |
 | `handover-2026-10-16-backend.md` | Handover | State after the backend, labels and this folder: what is verified, what is not, and what to remember |
 | `progress.md` | Progress | Dated log of milestones with commit hashes |
