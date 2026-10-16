@@ -151,12 +151,13 @@ INFORMAL_OFF = {"RULE-I", "RULE-G"}
 # copy whose BAD examples contain the phrases on purpose.
 ALL_EXCLUDE = (
     "docs/writing/rules.md",
-    "docs/prompts/",   # prompt history holds the owners' own words
     "vone/",
 )
 
-# Paths inside an excluded folder that --all still checks.
-ALL_INCLUDE = ("docs/prompts/README.md",)
+# Prompt history holds the owners' own words (docs/prompts/README.md): dated
+# prompt files and the kickoff prompt. Handovers, progress and knowledge notes
+# in the same folder are the agents' prose, so --all checks them.
+PROMPT_FILE_RE = re.compile(r"^docs/prompts/(\d{4}-\d{2}-\d{2}-|claude-code-kickoff)")
 
 # Directory names --all never enters, at any depth.
 SKIP_DIRS = ("node_modules", "dist", "coverage", "__pycache__")
@@ -629,7 +630,7 @@ def repo_files():
         dirs[:] = sorted(d for d in dirs if not d.startswith(".") and d not in SKIP_DIRS)
         for name in sorted(names):
             rel = name if rel_base == "." else f"{rel_base}/{name}"
-            if rel.startswith(ALL_EXCLUDE) and rel not in ALL_INCLUDE:
+            if rel.startswith(ALL_EXCLUDE) or PROMPT_FILE_RE.match(rel):
                 continue
             top = rel.split("/")[0]
             if name.endswith(".md") and (top in ("docs", "src", "test", "tools", "backend") or "/" not in rel):

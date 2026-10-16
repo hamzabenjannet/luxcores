@@ -13,7 +13,7 @@ The live status of the repo stays in `docs/HANDOVER.md`. This folder keeps the h
 
 ## Conventions
 
-- Keep the owners' prompts word for word. The prose checker skips every file here except this README, because a prompt holds the owners' own words.
+- Keep the owners' prompts word for word. The prose checker skips prompt files, because they hold the owners' own words, and checks everything else in this folder.
 - Start each handover with the commit hash it describes, then list verified facts and unverified claims separately. Mark anything unverified as `[UNVERIFIED]`.
 - Write a knowledge note when you spent real effort learning something: a version quirk, a failed approach, an environment fact. Name the source, such as a command you ran or a document you read.
 - Never store secrets, tokens or personal data here.
@@ -25,3 +25,5 @@ The live status of the repo stays in `docs/HANDOVER.md`. This folder keeps the h
 | `claude-code-kickoff.md` | Prompt | Kickoff for milestone M1 (map generation) and the browser smoke test against the Playwright container |
 | `2026-10-16-review-decisions.md` | Prompt | Owner answers to the M1 review: black hole removed, Core max HP, glow removed, checker tiers, `vone/` |
 | `2026-10-16-backend-nestjs.md` | Prompt | Request for the NestJS multiplayer backend, entity labels and this folder |
+| `handover-2026-10-16-backend.md` | Handover | State after the backend, labels and this folder: what is verified, what is not, and what to remember |
+| `progress.md` | Progress | Dated log of milestones with commit hashes |
