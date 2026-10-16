@@ -76,13 +76,13 @@ function makeLabel(text, color) {
 }
 
 /**
- * Whole lux of an entity: HP divided by its HP factor, milli units to lux.
+ * Lux of an entity, rounded to the nearest whole lux: HP divided by its HP factor, milli units to lux.
  * @param {import('../../sim/state.js').Entity} e
  * @param {{ core: number, default: number }} hpFactor from data/balance.json
  */
 export function luxOf(e, hpFactor) {
   const factor = e.kind === KIND.CORE ? hpFactor.core : hpFactor.default;
-  return Math.floor(e.hp / factor / MILLI);
+  return Math.round(e.hp / factor / MILLI);
 }
 
 /**

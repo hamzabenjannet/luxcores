@@ -72,6 +72,7 @@ if (serverParam) {
     recoveryCode: session.requestRecoveryCode,
     start: session.start,
     send: session.sendCommand,
+    entityKinds: () => view.entities().map((e) => e.kind),
   });
   session.onSnapshot((s) => {
     if (s.hash && testHashes) testHashes[s.tick] = s.hash;

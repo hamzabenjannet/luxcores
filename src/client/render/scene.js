@@ -14,6 +14,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { KIND } from '../../sim/index.js';
 import { createLabels } from './labels.js';
+import { createEntityMeshes } from './entity-meshes.js';
 
 export const TEAM_COLORS = [0x3d8bff, 0xff4d4d]; // team 0 blue (player), team 1 red
 
@@ -71,6 +72,7 @@ export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0) {
   scene.add(new THREE.LineSegments(borderGeo, new THREE.LineBasicMaterial({ color: 0x2a3550 })));
 
   const labels = createLabels(scene, hpFactor, TEAM_COLORS);
+  const entityMeshes = createEntityMeshes(scene, TEAM_COLORS);
   addGeneratedLayout(scene, view, labels);
 
   // Lumen Cores: team 0 from mapgen.json, team 1 point-mirrored.
@@ -130,6 +132,7 @@ export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0) {
   function render(timeSec) {
     for (const c of cores) c.rotation.y = timeSec * 0.6;
     labels.update(view.entities());
+    entityMeshes.update(view.entities());
     camera.position.copy(target).add(OFFSET);
     camera.lookAt(target);
     composer.render();

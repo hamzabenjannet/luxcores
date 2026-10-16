@@ -57,6 +57,23 @@ function referenceHash(ticks) {
   return hashState(state);
 }
 
+/** A free tile in team 0's build zone, from the same map the server generated for the seed. */
+function freeSpot() {
+  const state = createState({ seed: SEED, players: [{ id: 0, team: 0, kind: 'human' }, { id: 1, team: 1, kind: 'human' }], config: loadData().config });
+  const taken = new Set(state.entities.map((e) => `${Math.floor(e.x / 1000)},${Math.floor(e.z / 1000)}`));
+  for (const v of state.map.vents) taken.add(`${v.tileX},${v.tileZ}`);
+  // The free tile nearest to the point (44, 90), so it shows in the first screen of the host.
+  let best = null;
+  for (let z = 70; z < 110; z++) {
+    for (let x = 4; x < 92; x++) {
+      const d = (x - 44) ** 2 + (z - 90) ** 2;
+      if (!taken.has(`${x},${z}`) && (best === null || d < best.d)) best = { d, tileX: x, tileZ: z };
+    }
+  }
+  if (!best) throw new Error('no free tile');
+  return { tileX: best.tileX, tileZ: best.tileZ };
+}
+
 /** Resolves once the backend answers its health route. */
 async function waitForBackend(child, log) {
   for (let i = 0; i < 100; i++) {
@@ -154,6 +171,13 @@ test('two browsers play a server match and receive the sim hashes', { timeout: 1
     // A command goes to the server, which stamps and queues it.
     const ack = await host.evaluate(() => /** @type {any} */ (window).__luxTest.send({ t: 'heroMove', x: 48000, z: 80000 }));
     assert.equal(ack.accepted, true, `the server refused the command: ${ack.reason}`);
+
+    // A build command reaches the sim: the host's page soon shows the new collector.
+    const spot = freeSpot();
+    const built = await host.evaluate((s) => /** @type {any} */ (window).__luxTest.send({ t: 'build', building: 'solar', ...s }), spot);
+    assert.equal(built.accepted, true);
+    await host.waitForFunction(() => /** @type {any} */ (window).__luxTest.entityKinds().includes(2), null, { timeout: 30_000 }); // KIND.SOLAR
+    await guest.waitForFunction(() => /** @type {any} */ (window).__luxTest.entityKinds().includes(2), null, { timeout: 30_000 });
 
     for (const tick of [20, 40]) {
       const expected = referenceHash(tick);
