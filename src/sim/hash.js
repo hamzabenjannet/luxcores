@@ -7,7 +7,9 @@
  *   2. rng.s                     i64 LE
  *   3. nextId                    i64 LE
  *   4. team count                i64 LE
- *      per team, in team index order: TEAM_HASH_FIELDS, each i64 LE
+ *      per team, in team index order: TEAM_HASH_FIELDS, each i64 LE, then
+ *      the pending pool: its entry count, then per entry, in settle order,
+ *      settleTick and amount, each i64 LE
  *   5. entity count              i64 LE
  *      per entity, in ascending id order: ENTITY_HASH_FIELDS, each i64 LE
  *
@@ -63,6 +65,11 @@ export function hashState(state) {
   put(state.teams.length, 'teams.length');
   state.teams.forEach((team, i) => {
     for (const f of TEAM_HASH_FIELDS) put(/** @type {any} */ (team)[f], `teams[${i}].${f}`);
+    put(team.pending.length, `teams[${i}].pending.length`);
+    for (const [n, entry] of team.pending.entries()) {
+      put(entry.settleTick, `teams[${i}].pending[${n}].settleTick`);
+      put(entry.amount, `teams[${i}].pending[${n}].amount`);
+    }
   });
 
   put(state.entities.length, 'entities.length');

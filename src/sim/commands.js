@@ -8,6 +8,8 @@
  * sim result is the authority.
  */
 
+import { tryBuild, tryCancelRecycle, tryRecycle } from './buildings.js';
+
 /**
  * @typedef {Object} CommandEnvelope
  * @property {number} tick      execution tick
@@ -41,11 +43,15 @@
 
 /**
  * Handlers by command type. Each returns true if the command was valid and
- * applied. Milestones M2 to M6 fill these in; until then every command is
- * dropped as invalid.
+ * applied. M2 fills in build, recycle and cancelRecycle; milestones M3 to M6
+ * add the rest, and a command with no handler is dropped as invalid.
  * @type {Record<string, (s: import('./state.js').SimState, playerId: number, cmd: any) => boolean>}
  */
-export const HANDLERS = {};
+export const HANDLERS = {
+  build: tryBuild,
+  recycle: tryRecycle,
+  cancelRecycle: tryCancelRecycle,
+};
 
 /**
  * Canonical command order: (playerId, seq) ascending.

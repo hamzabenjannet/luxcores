@@ -1,11 +1,30 @@
 // @ts-check
 /**
- * System: entropy
- * Scope: 1% of max HP per minute on buildings, creeps and heroes; Core exempt. GDD 3.7
- * Milestone: M2 (see docs/HANDOVER.md)
+ * System: entropy (pipeline step 12)
+ * Buildings, creeps and heroes lose `entropyPctPerMinute` percent of max HP per
+ * minute. The Core is exempt. GDD 3.7.
+ *
+ * HP is removed once per second. The loss after k seconds is
+ * `maxHp * pct * k / 6000` (rounded down), and each second removes the
+ * difference from the second before, so 60 seconds remove exactly `pct`
+ * percent of max HP, with no rounding drift.
  */
 
-/** @param {import('../state.js').SimState} _state */
-export function run(_state) {
-  // TODO(M2): implement.
+import { TICK_HZ, idiv } from '../fixed.js';
+import { KIND } from '../state.js';
+import { isBuildingKind } from '../buildings.js';
+
+const SECONDS_PER_MINUTE_X_PERCENT = 60 * 100;
+
+/** @param {import('../state.js').SimState} state */
+export function run(state) {
+  const pct = state.config.balance.economy.entropyPctPerMinute;
+  for (const e of state.entities) {
+    if (!isBuildingKind(e.kind) && e.kind !== KIND.CREEP && e.kind !== KIND.HERO) continue;
+    const age = state.tick - e.born;
+    if (age <= 0 || age % TICK_HZ !== 0) continue;
+    const k = idiv(age, TICK_HZ);
+    const loss = idiv(e.maxHp * pct * k, SECONDS_PER_MINUTE_X_PERCENT) - idiv(e.maxHp * pct * (k - 1), SECONDS_PER_MINUTE_X_PERCENT);
+    e.hp = Math.max(0, e.hp - loss);
+  }
 }

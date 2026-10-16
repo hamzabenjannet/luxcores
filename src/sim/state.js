@@ -31,10 +31,13 @@ export const NEUTRAL = -1;
 
 /**
  * Entity fields included in the hash, in this exact order.
- * When adding a gameplay field, append it here and bump specVersion.
+ * When adding a gameplay field, append it here. SPEC_VERSION stays at 0.10.0
+ * while the MVP is built (CLAUDE.md, simulation rule 8), so re-record the
+ * golden replays in the same commit instead.
  */
 export const ENTITY_HASH_FIELDS = Object.freeze([
   'id', 'kind', 'team', 'owner', 'x', 'z', 'hp', 'maxHp',
+  'born', 'roll', 'recycle', 'attack',
 ]);
 
 /** Team fields included in the hash, in this exact order. */
@@ -52,6 +55,10 @@ export const TEAM_HASH_FIELDS = Object.freeze([
  * @property {number} z
  * @property {number} hp      current HP
  * @property {number} maxHp
+ * @property {number} born     tick of creation; collectors and entropy count from it
+ * @property {number} roll     wind plants: current output in milli-lux per second; 0 for other kinds
+ * @property {number} recycle  buildings: ticks left in the recycle channel, 0 when idle
+ * @property {number} attack   towers: attack type code (ATTACK_CODE in buildings.js), 0 for other kinds
  */
 
 /**
@@ -162,12 +169,32 @@ export function createState({ seed, players, config }) {
 
 /**
  * Create an entity with the next id and append it (keeps id order).
+ * `born` defaults to the current tick, the other extra fields to 0.
  * @param {SimState} state
- * @param {Omit<Entity, 'id'>} fields
+ * @param {Omit<Entity, 'id' | 'born' | 'roll' | 'recycle' | 'attack'> & Partial<Pick<Entity, 'born' | 'roll' | 'recycle' | 'attack'>>} fields
  * @returns {Entity}
  */
 export function spawnEntity(state, fields) {
-  const e = { id: state.nextId++, ...fields };
+  const e = { id: state.nextId++, born: state.tick, roll: 0, recycle: 0, attack: 0, ...fields };
   state.entities.push(e);
   return e;
+}
+
+/**
+ * Binary search in the id-sorted entity array.
+ * @param {SimState} state
+ * @param {number} id
+ * @returns {Entity | undefined}
+ */
+export function findEntity(state, id) {
+  let lo = 0;
+  let hi = state.entities.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const e = state.entities[mid];
+    if (e.id === id) return e;
+    if (e.id < id) lo = mid + 1;
+    else hi = mid - 1;
+  }
+  return undefined;
 }

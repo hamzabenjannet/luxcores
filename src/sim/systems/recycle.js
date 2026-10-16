@@ -1,11 +1,21 @@
 // @ts-check
 /**
- * System: recycle
- * Scope: 3 s recycle channel, 60% refund, cancel by second tap. GDD 3.6
- * Milestone: M2 (see docs/HANDOVER.md)
+ * System: recycle (pipeline step 5)
+ * Counts down the recycle channel of every building that has one. When it
+ * ends, the owner's Core gets the refund at once and the building is removed.
+ * GDD 3.6.
  */
 
-/** @param {import('../state.js').SimState} _state */
-export function run(_state) {
-  // TODO(M2): implement.
+import { credit } from '../lux.js';
+import { recycleRefund } from '../buildings.js';
+
+/** @param {import('../state.js').SimState} state */
+export function run(state) {
+  for (const e of state.entities) {
+    if (e.recycle === 0) continue;
+    e.recycle--;
+    if (e.recycle > 0) continue;
+    credit(state, e.team, recycleRefund(state, e));
+    e.hp = 0; // the cleanup system removes it, in the same tick
+  }
 }

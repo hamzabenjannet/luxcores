@@ -2,11 +2,23 @@
 
 Working title. A strategy game mixing hero control (Dota 2), creep waypoint paths (Age of Empires) and base building with tower defense (Generals Zero Hour, Clash Royale). Everything in the world is made of light energy, measured in **lux**. Destroyed things dissolve into light; there is no blood or gore.
 
-Status: draft v0.9.1. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
+Status: draft v0.9.2. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
 
 ---
 
 ## 0. Changelog
+
+### v0.9.1 → v0.9.2
+
+Clarifications that the economy milestone (M2) needed. The owners approve each one.
+
+| Area | Change |
+|---|---|
+| Recycling | The refund goes into the Core at once, not through the income buffer; only the owner of a building can recycle it (sections 2.1, 3.6) |
+| Wind | A wind plant rolls its output when it is built, then again every 10 s (section 4) |
+| Entropy | HP is removed once per second, and 60 seconds remove exactly the percentage of max HP (section 3.7) |
+| Meltdown | It hurts Cores, buildings, creeps and heroes within 3 tiles, not neutral blockers; damage to a Core comes out of its lux (section 4) |
+| Vents | Other buildings may stand on a vent tile; only a geothermal collector needs one (section 5) |
 
 ### v0.9 → v0.9.1
 
@@ -170,11 +182,11 @@ Buildings, creeps, heroes, ability casts and items move lux from the Core at 1:1
 
 ### 3.6 Recycling
 
-Buildings only. Refund `60% × current lux value`, 3 s channel, cancel by tapping the building again.
+Buildings only. Refund `60% × current lux value`, 3 s channel, cancel by tapping the building again. The refund goes into the Core at once, not through the income buffer. Only the owner of a building can recycle it.
 
 ### 3.7 Entropy
 
-Buildings, creeps and heroes lose 1% of max HP per minute *(default)*. The Core is exempt.
+Buildings, creeps and heroes lose 1% of max HP per minute *(default)*. The Core is exempt. HP is removed once per second, and 60 seconds remove exactly 1% of max HP.
 
 ### 3.8 Number logic
 
@@ -194,12 +206,12 @@ Every price is anchored to two references: the starting Core (100 lux) and a bas
 | Collector | Cost | Output | Payback | Rule |
 |---|---|---|---|---|
 | Solar | 20 | 2 lux/s by day, 0 at night | 10 s of daylight | Day/night cycle |
-| Wind | 20 | 0 to 3 lux/s (avg 1.5) | ~13 s | Rerolls every 10 s (seeded RNG) |
+| Wind | 20 | 0 to 3 lux/s (avg 1.5) | ~13 s | Rolls when built, then rerolls every 10 s (seeded RNG) |
 | Geothermal | 40 | 2 lux/s | 20 s | Vent tiles only (2 per build zone) |
 | Nuclear | 80 | 5 lux/s | 16 s | Meltdown risk |
 
 - Day/night: 40 s day + 20 s night. Match starts at dawn.
-- Meltdown: if the team spends nothing for 120 s while owning nuclear plants, each plant is destroyed and deals 50% of its max HP as damage within 3 tiles, to both teams. Any spend resets the timer.
+- Meltdown: if the team spends nothing for 120 s while owning nuclear plants, each plant is destroyed and deals 50% of its max HP as damage within 3 tiles, to both teams. Any spend resets the timer. The blast hurts Cores, buildings, creeps and heroes within 3 tiles; neutral blockers are not hurt. Damage to a Core comes out of its lux.
 
 ## 5. Buildings
 
@@ -212,7 +224,7 @@ Every price is anchored to two references: the starting Core (100 lux) and a bas
 | Barracks | 40 | 400 | Creeps, items, hero spawn point |
 | Tower | 20 | 200 | 20 damage per hit, 1 hit/s, range 5 tiles; attack type chosen at build |
 
-- Placement anywhere in the team's build zone on free tiles. DMZ and map center are no-build.
+- Placement anywhere in the team's build zone on free tiles. DMZ and map center are no-build. A vent tile is free like any other; only a geothermal collector needs one.
 - Every building, including the Lumen Core, occupies 1 × 1 tile.
 - No limit on barracks or towers.
 - Recycling a barracks refunds its queued orders at 100% *(default)*.

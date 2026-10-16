@@ -6,7 +6,7 @@ Status as of 2026-10-16. Read `CLAUDE.md` first for the working rules.
 
 Design is settled for the MVP: `docs/GAME_DESIGN.md` v0.9.1 has no blocking open questions. Every number marked *(default)* is a playtest tuning point and already lives in `data/`.
 
-Milestone M1 (map generation) is done. The scaffold and M1 are green:
+Milestones M1 (map generation) and M2 (economy) are done. The scaffold, M1 and M2 are green:
 
 | Area | State |
 |---|---|
@@ -14,7 +14,8 @@ Milestone M1 (map generation) is done. The scaffold and M1 are green:
 | RNG (`rng.js`) | Done, tested against the reference Mulberry32 |
 | State, config normalization | Done (`state.js`, `config.js`); `createState` spawns the 2 Cores and 12 blockers; teams are minimal |
 | Map generation (`mapgen.js`) | Done (M1): 3 lanes, 2 vents, 6 blockers and 2 item spawns per team from the seed, point-mirrored, flood-fill checked; stored on `state.map` |
-| Tick pipeline (`step.js`) | Done; every system in `systems/` is a stub |
+| Economy (M2) | Done: collectors (solar, wind, geothermal, nuclear), day/night, the 2 s income buffer, the spend rule, placement, recycle channel, entropy, meltdown and victory, through the `build`, `recycle` and `cancelRecycle` commands. Two golden replays cover it |
+| Tick pipeline (`step.js`) | Economy, recycle, entropy, meltdown, cleanup and victory run; behavior, movement, combat, effects, production, hero and items are stubs |
 | Commands (`commands.js`) | Schema, ordering and dispatch done; `HANDLERS` is empty, so every command is dropped |
 | Hash (`hash.js`) | Done; canonical layout documented in the file header; `state.map` is not hashed |
 | Replay (`replay.js`) | Record and playback done, mismatch detection tested; the golden replay `replays/golden/seed-1234567.json` (2 400 ticks) plays back in `test/golden.test.js` |
@@ -29,34 +30,35 @@ Milestone M1 (map generation) is done. The scaffold and M1 are green:
 | Godot project (`vone/`) | Created by the owners (Godot 4.6, GL Compatibility renderer, for web, mobile and PC); other agents build the game there from this MVP's logic and playtest feedback |
 | Cross-runtime check | `npm run test:e2e` loads the page in Chromium inside the Playwright container and compares its tick-120 hash with Node's; seed 1234567 gives `a3dbf89c` in both |
 
-`npm test`: 37 pass, 0 todo. `npm run headless` prints hash `e626db0e` for seed 1234567 at 12 000 ticks, on both of two consecutive runs.
+`npm test`: 72 pass, 0 todo. `npm run headless` prints hash `1790fc9a` for seed 1234567 at 12 000 ticks.
 
 ### Browser Smoke Test
 
 Start `npm run serve`, then run `npm run test:e2e`. The test reads `PW_WS_ENDPOINT` (default `ws://localhost:42944/`) and `APP_URL` (default `http://host.docker.internal:5173/`, the host as the container sees it). It skips with exit code 0 when nothing listens on the endpoint, fails on any console or page error, and saves `test/e2e/__screenshots__/smoke.png`. The script uses the glob `test/e2e/*.e2e.js` because Node 22.15.1 reads `node --test test/e2e/` as a module path and fails.
 
-## Next Task: M2 (Economy)
+## Next Task: M3 (Combat and Physics)
 
-Implement the economy per `docs/GAME_DESIGN.md` sections 3 to 5: collectors, day/night, the pending buffer, the spend rule (the Core keeps 1 lux), placement rules, the recycle channel, entropy, meltdown and victory. The systems live in `economy.js`, `recycle.js`, `entropy.js`, `meltdown.js` and `victory.js`. Add the `build`, `recycle` and `cancelRecycle` handlers to `HANDLERS` in `commands.js`.
+Implement combat per `docs/GAME_DESIGN.md` sections 5.0, 7.4 and 3.5. Add the physics and pathfinding of `docs/TECH_ARCHITECTURE.md` section 6: `grid2d.js`, and A* with a fixed neighbor order, throttled to 8 repaths per tick. The scope also holds towers with the targeting override, attack types and procs, simultaneous damage, and the visibility bitsets. Systems to fill in: `behavior.js`, `movement.js`, `combat.js`, `effects.js` and `visibility.js`. The grid code goes in `physics/`.
 
-M1 leaves these starting points:
+M2 leaves these starting points:
 
-- The Cores are entities 1 (team 0) and 2 (team 1). Their `hp` equals `coreLux`, both in milli units. The economy must keep the two equal, because Core HP is its lux (GDD 3.1). A Core's `maxHp` starts at its starting lux and rises to match `hp` whenever `hp` exceeds it (GDD 3.1, owners' decision).
-- Placement must refuse tiles that hold a blocker (`KIND.BLOCKER` entities, ids 3 to 14), and tiles in the DMZ.
-- A geothermal collector needs a vent tile. `state.map.vents` lists them as tile coordinates, 2 per team.
+- `tower` entities exist (built through the `build` command) with `attack` set to 1 (melee), 2 (ranged) or 3 (area) from `ATTACK_CODE` in `buildings.js`. They do nothing yet.
+- Damage resolution (pipeline step 10) is a stub. The meltdown already deals damage directly (`systems/meltdown.js`) and the cleanup system removes entities at 0 HP, so combat can reuse both. A Core takes damage through `damageCore` in `lux.js`, which keeps its `hp` equal to its lux.
+- Nothing can empty a Core yet. A nuclear plant earns about 600 lux before a meltdown and deals 400, so combat is the first rule that can end a match by a Core's death. The victory system is ready for it.
+- Creeps and heroes do not exist yet, but entropy and the meltdown already treat their kinds (`KIND.CREEP`, `KIND.HERO`) like buildings.
 
 Acceptance:
 
-- Unit tests drive each rule through commands and `step()`. They cover the 2 s buffer, the 60% recycle refund, recycle cancel, meltdown at 2 400 ticks, refusal below 1 lux, and a draw on a same-tick Core death.
-- The golden replay re-recorded in the same commit with `node tools/run-headless.js 1234567 2400 replays/golden/seed-1234567.json`. `SPEC_VERSION` stays at 0.10.0 while the MVP is built (`CLAUDE.md`, simulation rule 8).
+- Two units that kill each other on one tick both die.
+- A tower switches to an enemy hero that attacks a friendly hero, for 3 s after the last such attack.
+- Unit tests drive each rule through commands and `step()`. Golden replays are re-recorded in the same commit (`SPEC_VERSION` stays at 0.10.0, `CLAUDE.md` rule 8).
 
-## Milestones After M2
+## Milestones After M3
 
 From `docs/TECH_ARCHITECTURE.md` section 14. Each milestone ends with tests green and a short demo on a phone.
 
 | # | Scope | Done when |
 |---|---|---|
-| M3 | Combat and physics: `grid2d.js`, A* (fixed neighbor order, throttled to 8 repaths per tick), towers with the Dota targeting override, attack types and procs, simultaneous damage, visibility bitsets | Two units killing each other on one tick both die; tower switches to an enemy hero that attacks a friendly hero |
 | M4 | Creeps: barracks queue, groups of 1 to 5, cap 30 with held groups skipping ahead, merge and split (odd creep stays), default and custom paths (max 10 waypoints), lane following | Queue skip-ahead test; split 7 gives 4 + 3 |
 | M5 | Hero: roster of 5, rotation lock, HP allocation, 5 s production, 5 s respawn cooldown, 4 abilities from data, shield targets | Rotation lock test across 6 picks |
 | M6 | Items: inventory (50), barracks orders waiting for a hero, drops, map spawns, loot bags (owner can reclaim), the 4 starter items | Energy Boost refused on the Core; Energy Grab funnels exactly 50 lux then is consumed |
@@ -92,9 +94,29 @@ Two came from the owners during the session; the rest fill gaps in the docs.
 - **Replay metadata:** `mapgen.version` stays 1, because no earlier generator existed. Bump it when a data or code change alters layouts for the same seed.
 - **Spec and GDD (owners):** `SPEC_VERSION` is 0.10.0 and stays there while the MVP is built, so a rule change re-records the golden replay instead of bumping the version. The GDD is v0.9.1, with a changelog row for the black hole removal, lane width, connectivity and spacing rules.
 
+## Interpretations Made in M2
+
+The GDD was silent or ambiguous on these. Its v0.9.2 changelog records the ones that change a rule, and the owners approve them.
+
+- **Recycle refund:** it goes into the Core at once, not through the 2 s buffer, and only the owner of a building can recycle it.
+- **Meltdown targets:** Cores, buildings, creeps and heroes within 3 tiles, not neutral blockers. Damage to a Core comes out of its lux. The timer counts ticks since the last spend, and the plants explode at the end of the 2 400th tick.
+- **Vents:** only a geothermal collector needs a vent tile. Other buildings may stand on one.
+- **Wind:** a plant rolls its output when it is built and again every 200 ticks, from `state.rng`, in id order.
+- **Income rounding:** each source pays `rate / 20` per tick with integer math that adds up to exactly `rate` over 20 ticks, so there is no drift.
+- **Entropy:** HP leaves once per second (cumulative `floor(maxHp x pct x seconds / 6000)`), exact over a minute. It assumes a constant max HP, so the shell upgrade of M3 or later must change that formula.
+- **Day and night:** derived from the tick (`tick % 1200 < 800` is day), so they need no state. The match starts at dawn.
+- **Build rules:** a refused build costs nothing. The sim refuses a tile outside the team's build zone, off the map, or under a Core, building or blocker. It also refuses an unknown building or player, a tower without a valid attack type, any other building with one, and a geothermal collector off the team's vents. A tower is an ordinary building until M3 gives it a behavior.
+- **Hash layout:** entities carry four more fields (`born`, `roll`, `recycle`, `attack`) and the pending pool is hashed entry by entry. `SPEC_VERSION` stays at 0.10.0, so both golden replays were re-recorded.
+- **Not in M2:** the timed-mode buzzer needs a mode setting in `createState` and in the replay format. The server still ends a match at `MATCH_MAX_TICKS` as a draw.
+
+## Open Design Question
+
+A nuclear plant earns 5 lux/s. It earns 600 lux in the 120 s before it melts down and deals only 400 damage. A meltdown therefore cannot kill a Core by itself, even next to it. If the meltdown should be a real risk to the owner, the damage or the timer needs tuning (`data/balance.json`, `meltdown`).
+
 ## Known Gaps
 
 - The backend sends full snapshots with every entity, uses guest sign-in only, has no rate limiting, and keeps a running match in the memory of one process. `backend/nodejs/README.md` lists these limits with the planned fixes.
+- The client has no way to build or recycle yet: commands can only be sent from code or the test hook (M8 adds touch controls). Buildings draw as placeholder boxes.
 - The networked client has no lobby screen and no controls yet. A host starts a match through `?autostart=1` or the test hook, and commands can only be sent from code. The camera stays north-up for team 1, so its base appears at the top.
 - The client compares the sim spec version with the server but not the data hash, because `crypto.subtle` needs a secure context and a LAN address is not one.
 
@@ -105,7 +127,7 @@ Decided on 2026-10-16 (`docs/prompts/2026-10-16-backend-decisions.md`). Do them 
 1. Done: a plain WebSocket gateway at `/ws` (`backend/nodejs/README.md`, Plain WebSocket Protocol).
 2. Done: a device guest with a recovery code, plus rate limits on the sign-in routes.
 3. A Dockerfile and a compose service with Postgres and RabbitMQ, plus a reverse proxy with TLS, for one VPS.
-4. Then M2 (economy), the next game task above.
+4. Done: M2 (economy). The next game task is M3 above.
 
 ## More Gaps
 - Backend adapter and event tests for MongoDB, PostgreSQL and RabbitMQ pass on real containers (Postgres 16, MongoDB 7.0, RabbitMQ 3.13 on a local Docker Desktop) but skip in a plain `npm test`. No CI runs them yet.

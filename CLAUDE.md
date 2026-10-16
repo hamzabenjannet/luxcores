@@ -8,7 +8,7 @@ Luxcores is a mobile strategy game where everything is made of light energy (lux
 
 This repo is **phase 1**: an HTML and JavaScript MVP. Its simulation doubles as the **executable reference spec** for a later Godot port with a Rust sim core. The design docs are the source of truth:
 
-- `docs/GAME_DESIGN.md`: rules and every number (v0.9).
+- `docs/GAME_DESIGN.md`: rules and every number.
 - `docs/TECH_ARCHITECTURE.md`: sim design, determinism rules, netcode plan, milestones.
 - `docs/HANDOVER.md`: current status and the next tasks with acceptance criteria. Start there.
 
