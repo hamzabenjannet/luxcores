@@ -1,6 +1,6 @@
 // Enforces the Writing Rules from CLAUDE.md through tools/check_style.py.
-// `deny` hits (filler phrases, clichés) fail the suite. `ask` hits are
-// reported by `npm run lint:prose:all` and judged by the author.
+// `deny` hits (filler phrases, clichés) fail the suite. The author judges `ask`
+// hits, which `npm run lint:prose:all` reports.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

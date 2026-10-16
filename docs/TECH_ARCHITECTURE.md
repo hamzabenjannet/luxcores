@@ -279,6 +279,8 @@ Bot commands are recorded, so replays don't depend on bot code.
 
 ## 13. Backend (Node.js, later)
 
+Status: the phase 1 foundation exists in `backend/nodejs/` (NestJS, Socket.IO, JSON database, optional MongoDB, PostgreSQL and RabbitMQ). It runs the JavaScript sim server-side as described in section 13.1. Accounts beyond guests, matchmaking, fog-filtered delta snapshots and the Rust core are still ahead.
+
 One API for every client:
 
 - Accounts and profiles (future: starting Core buffs from account level).

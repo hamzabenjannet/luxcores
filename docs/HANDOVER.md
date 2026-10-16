@@ -21,6 +21,9 @@ Milestone M1 (map generation) is done. The scaffold and M1 are green:
 | Headless runner | `npm run headless`: 12 000 ticks in about 15 ms with empty systems; a third argument saves the run as a replay |
 | Purity guard | `test/sim-boundary.test.js` blocks bare imports, Math.random, wall clock, approximated Math, `**`, DOM, timers, key iteration |
 | Client | Renders the 96 × 112 map, both Cores, the generated lanes, vents, item spawns and blockers (placeholder shapes), the HUD and a one-finger pan; runs the sim at 20 Hz |
+| Backend (`backend/nodejs/`) | NestJS 12 multiplayer server: guest auth with JWT guards, players, lobbies, a server-authoritative match runner at 20 Hz, Socket.IO `/game` namespace, replays with server-side verify, static routes for the game files, Swagger at `/api/docs`, JSON file database with MongoDB and PostgreSQL adapters, RabbitMQ events with an in-process fallback. See `backend/nodejs/README.md` |
+| Entity labels | Every entity and map marker shows its name and, for entities, its lux count under it (`render/labels.js`) |
+| Project memory (`docs/prompts/`) | Tracked in git: prompt history, handovers, progress and knowledge notes; see its README |
 | Prose gate | `tools/check_style.py` labels hits `deny` or `ask`, supports `--register informal`, reads `.js` files through their comments and checks the whole repo with `npm run lint:prose:all`; `test/prose.test.js` fails `npm test` on any `deny` hit |
 | Godot project (`vone/`) | Created by the owners (Godot 4.6, GL Compatibility renderer, for web, mobile and PC); other agents build the game there from this MVP's logic and playtest feedback |
 | Cross-runtime check | `npm run test:e2e` loads the page in Chromium inside the Playwright container and compares its tick-120 hash with Node's; seed 1234567 gives `a3dbf89c` in both |
@@ -89,6 +92,10 @@ Two came from the owners during the session; the rest fill gaps in the docs.
 - **Spec and GDD (owners):** `SPEC_VERSION` is 0.10.0 and stays there while the MVP is built, so a rule change re-records the golden replay instead of bumping the version. The GDD is v0.9.1, with a changelog row for the black hole removal, lane width, connectivity and spacing rules.
 
 ## Known Gaps
+
+- The backend sends full snapshots with every entity, uses guest sign-in only, has no rate limiting, and keeps a running match in the memory of one process. `backend/nodejs/README.md` lists these limits with the planned fixes.
+- The web client does not talk to the backend yet. It still runs its own sim, so a networked client (commands out, snapshots in, behind `WorldView`) is the next client task for multiplayer.
+- Backend adapter and event tests for MongoDB, PostgreSQL and RabbitMQ pass on real containers (Postgres 16, MongoDB 7.0, RabbitMQ 3.13 on a local Docker Desktop) but skip in a plain `npm test`. No CI runs them yet.
 
 - Mobile testing needs the page served over the LAN (`npm run serve`, then `http://<mac-ip>:5173` on the phone). Three.js loads from jsDelivr, so the phone needs internet access.
 - `src/client/input/pan.js` maps screen y to world z 1:1, ignoring the camera tilt. Fine for now; M8 should ray-cast to the ground plane instead.

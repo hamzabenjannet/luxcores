@@ -26,7 +26,7 @@ npm run gen:sin                      # regenerate src/sim/sin-table.js (rarely)
 npm run serve                        # static server on :5173, open from a phone on the LAN
 ```
 
-The repo needs Node 22 or newer and Python 3 for the prose checker. There is no build step, and `npm test` needs no install. The one approved dependency is `playwright-core` 1.58.2 (dev, pinned) for `npm run test:e2e`; ask the owners before you add another.
+The repo needs Node 22 or newer and Python 3 for the prose checker. There is no build step, and `npm test` needs no install. Two dependency sets are approved: `playwright-core` 1.58.2 (dev, pinned) for `npm run test:e2e`, and the NestJS stack in `backend/nodejs/package.json` (owners, 2026-10-16). Ask the owners before you add anything else.
 
 ## Simulation Rules (`src/sim/`)
 
@@ -73,7 +73,7 @@ Values marked *(default)* in the GDD are tuning points. Change them in data and 
 
 ## Code Style
 
-- Plain JavaScript ES modules, `// @ts-check` at the top of every file, JSDoc types.
+- Plain JavaScript ES modules, `// @ts-check` at the top of every file, JSDoc types. The backend in `backend/nodejs/` is the exception: it is TypeScript, as NestJS expects.
 - Small pure functions. Sim state holds plain objects and arrays only, with no class instances.
 - File names in kebab-case, and one system per file in `src/sim/systems/`.
 
@@ -153,6 +153,25 @@ Field-observed rules (maintainer observation of LLM output, 2022 to 2026):
 ### Verification
 
 RULE-H is the rule with teeth. Version numbers, engine behavior, API shapes and benchmark figures change over time. Verify them against a real source (package registry, official docs, a test run in this repo) before you state them. Say which parts you verified and which you recalled.
+
+## Backend (`backend/nodejs/`)
+
+A NestJS 12 app (TypeScript, ESM) serves the multiplayer: REST API, Socket.IO match server, replay storage, Swagger docs at `/api/docs`, and optional RabbitMQ events. It has its own `package.json`, so run `npm install` inside `backend/nodejs/`. `backend/nodejs/README.md` holds the routes, the socket protocol and the configuration.
+
+```bash
+cd backend/nodejs
+npm run start:dev    # http://localhost:3000, JSON file database
+npm test             # unit and adapter contract tests (Vitest)
+npm run test:e2e     # REST, Socket.IO and Swagger against the real app
+npm run lint && npm run typecheck
+```
+
+- The server runs the repo's sim through `SimService`, which loads `src/sim/index.js` at start-up. Never copy or reimplement a rule in the backend; a rule change belongs in `src/sim/` and the GDD.
+- Give every route body and response a DTO with `@ApiProperty` and validation decorators, and cover each new route in an end-to-end test.
+- Services use the abstract `DataStore`, never a driver. Add a method to the contract and to all three adapters (`json`, `mongodb`, `postgres`), and extend `test/store-contract.spec.ts`.
+- `COMMAND_TYPES` in `src/game/command-types.ts` must list the sim commands. A test fails when the lists drift.
+- Never commit `.env` or `data/db.json`. Secrets come from the environment. In production the server refuses to start without `JWT_SECRET` and `ADMIN_API_KEY`.
+- Before you finish a backend task, run `npm test` and `npm run test:e2e` in `backend/nodejs/`. The tests for MongoDB, PostgreSQL and RabbitMQ skip unless `TEST_MONGODB_URL`, `TEST_POSTGRES_URL` and `TEST_RABBITMQ_URL` are set (see the README); run them when you touch storage or events.
 
 ## Godot Project (`vone/`)
 
