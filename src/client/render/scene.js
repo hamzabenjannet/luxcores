@@ -13,6 +13,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { KIND } from '../../sim/index.js';
+import { createLabels } from './labels.js';
 
 export const TEAM_COLORS = [0x3d8bff, 0xff4d4d]; // team 0 blue (player), team 1 red
 
@@ -23,8 +24,9 @@ const VIEW_TILES_WIDE = 32;
  * @param {HTMLCanvasElement} canvas
  * @param {any} mapgen raw data/mapgen.json (tile units)
  * @param {import('../world-view.js').WorldView} view
+ * @param {{ core: number, default: number }} hpFactor raw data/balance.json hpFactor
  */
-export function createScene(canvas, mapgen, view) {
+export function createScene(canvas, mapgen, view, hpFactor) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   const scene = new THREE.Scene();
@@ -67,7 +69,8 @@ export function createScene(canvas, mapgen, view) {
   borderGeo.setAttribute('position', new THREE.Float32BufferAttribute(borderPts, 3));
   scene.add(new THREE.LineSegments(borderGeo, new THREE.LineBasicMaterial({ color: 0x2a3550 })));
 
-  addGeneratedLayout(scene, view);
+  const labels = createLabels(scene, hpFactor, TEAM_COLORS);
+  addGeneratedLayout(scene, view, labels);
 
   // Lumen Cores: team 0 from mapgen.json, team 1 point-mirrored.
   const c0 = mapgen.cores[0];
@@ -124,6 +127,7 @@ export function createScene(canvas, mapgen, view) {
   /** @param {number} timeSec */
   function render(timeSec) {
     for (const c of cores) c.rotation.y = timeSec * 0.6;
+    labels.update(view.entities());
     camera.position.copy(target).add(OFFSET);
     camera.lookAt(target);
     composer.render();
@@ -140,8 +144,9 @@ export function createScene(canvas, mapgen, view) {
  * entity rendering.
  * @param {THREE.Scene} scene
  * @param {import('../world-view.js').WorldView} view
+ * @param {ReturnType<typeof createLabels>} labels
  */
-function addGeneratedLayout(scene, view) {
+function addGeneratedLayout(scene, view, labels) {
   const map = view.map();
   const flat = (/** @type {THREE.BufferGeometry} */ g) => g.rotateX(-Math.PI / 2);
 
@@ -163,6 +168,7 @@ function addGeneratedLayout(scene, view) {
     const mesh = new THREE.Mesh(disc, ventMat);
     mesh.position.set(v.tileX + 0.5, 0.03, v.tileZ + 0.5);
     scene.add(mesh);
+    labels.addMarker('Vent', v.tileX, v.tileZ, 0x2de2e6);
   }
 
   const ring = flat(new THREE.RingGeometry(0.3, 0.45, 16));
@@ -171,6 +177,7 @@ function addGeneratedLayout(scene, view) {
     const mesh = new THREE.Mesh(ring, spawnMat);
     mesh.position.set(s.tileX + 0.5, 0.03, s.tileZ + 0.5);
     scene.add(mesh);
+    labels.addMarker('Item Spawn', s.tileX, s.tileZ, 0xffc24d);
   }
 
   const box = new THREE.BoxGeometry(0.8, 0.8, 0.8);
