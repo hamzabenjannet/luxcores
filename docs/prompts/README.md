@@ -28,3 +28,5 @@ The live status of the repo stays in `docs/HANDOVER.md`. This folder keeps the h
 | `2026-10-16-backend-nestjs.md` | Prompt | Request for the NestJS multiplayer backend, entity labels and this folder |
 | `handover-2026-10-16-backend.md` | Handover | State after the backend, labels and this folder: what is verified, what is not, and what to remember |
 | `progress.md` | Progress | Dated log of milestones with commit hashes |
+| `2026-10-16-next-steps.md` | Prompt | Go-ahead for the WebSocket gateway, device guests, Docker and M2, and a request for the best course of action |
+| `handover-2026-10-16-economy.md` | Handover | State after those four steps: verified claims, what is not verified and what to remember |

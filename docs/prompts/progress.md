@@ -2,6 +2,12 @@
 
 Newest first. One entry per milestone or notable change. Add the commit hash and the verification, not just the intent.
 
+## 2026-10-16: Transports, Accounts, Deployment and M2
+
+- `5f5b0e8` Plain WebSocket gateway. `db3274e` Device guests, recovery codes, rate limits. `9fe4ec5` Shutdown order fix. `21a64ec` Dockerfile and production stack.
+- `163b77c` M2 economy done: collectors, day/night, the 2 s buffer, spend rule, placement, recycle, entropy, meltdown, victory. `1942561` Placeholder boxes for buildings and the economy over the server.
+- Next: M3 (combat and physics). Open design question for the owners: a meltdown cannot kill a Core (`docs/HANDOVER.md`).
+
 ## 2026-10-16: Networked Web Client
 
 - Two browsers play one server match: `?server=` mode in `src/client/main.js`, `net/server-session.js`, `networkWorldView`, and `test/e2e/network.e2e.js`. Both pages receive the sim hashes at ticks 20 and 40 (`66b9dd40`, `a698130c` for seed 1234567).
