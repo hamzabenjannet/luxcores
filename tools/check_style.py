@@ -19,16 +19,37 @@ The remaining twelve rules need judgment and are checked by reading.
 Word lists are taken from the agent-style detectors (MIT).
 Ruleset: The Elements of Agent Style, https://github.com/yzhao062/agent-style, CC BY 4.0.
 
+Each hit carries an enforcement tier from docs/writing/rules.md:
+
+    deny   RULE-04, RULE-05. Exact phrase lists with near-zero false positives.
+           Fix every hit. The exit code is 1 when any deny hit exists.
+    ask    RULE-06, 12, B, C, D, G, I. Heuristics. Judge each hit; fix it or
+           keep it on purpose. They never change the exit code unless --strict.
+
+Profiles (CLAUDE.md, Writing Rules):
+
+    formal (default)  all nine rules
+    informal          RULE-I (contractions) and RULE-G (title case) off; use it
+                      for commit messages, release notes and casual chat
+
+File types: .md and other text files are checked whole. .js files are checked
+through their comments only (// lines, block comments, JSDoc descriptions),
+so code and identifiers are never flagged.
+
 Usage:
     python3 check_style.py FILE [FILE ...]
     cat draft.md | python3 check_style.py
+    python3 check_style.py --register informal FILE
     python3 check_style.py --json FILE
+    python3 check_style.py --all            # every repo doc and code comment
+    python3 check_style.py --all --strict   # ask hits fail too
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 
@@ -110,6 +131,31 @@ HEADING_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
 LIST_MARK_RE = re.compile(r"^\s*(?:[*+-]|\d+[.)])\s+")
 TOKEN_RE = re.compile(r"\.?[A-Za-z0-9](?:[A-Za-z0-9'./\\:_-]*[A-Za-z0-9])?")
 
+# Tier-1 enforcement per rule, from docs/writing/rules.md.
+TIER = {
+    "RULE-04": "deny",
+    "RULE-05": "deny",
+    "RULE-06": "ask",
+    "RULE-12": "ask",
+    "RULE-B": "ask",
+    "RULE-C": "ask",
+    "RULE-D": "ask",
+    "RULE-G": "ask",
+    "RULE-I": "ask",
+}
+
+# Rules switched off by the informal profile.
+INFORMAL_OFF = {"RULE-I", "RULE-G"}
+
+# Paths skipped by --all, relative to the repo root. rules.md is a verbatim
+# copy whose BAD examples contain the phrases on purpose.
+ALL_EXCLUDE = (
+    "docs/writing/rules.md",
+    "docs/prompts/",
+    "node_modules/",
+    "vone/",
+)
+
 RULE_TITLES = {
     "RULE-05": "cliche / prefabricated phrase",
     "RULE-06": "avoidable jargon / AI-tell word",
@@ -190,6 +236,10 @@ def in_inline_code(line, col):
     return line.count("`", 0, col) % 2 == 1
 
 
+def in_double_quotes(line, col):
+    return line.count('"', 0, col) % 2 == 1
+
+
 def strip_inline_code(line):
     return re.sub(r"`[^`]*`", lambda m: " " * len(m.group()), line)
 
@@ -219,8 +269,8 @@ def find_pattern(lines, pattern, rule, label):
         if ln.in_code:
             continue
         for m in pattern.finditer(ln.text):
-            if in_inline_code(ln.text, m.start()):
-                continue
+            if in_inline_code(ln.text, m.start()) or in_double_quotes(ln.text, m.start()):
+                continue  # code, or a phrase quoted as a mention (CLAUDE.md scope: quoted material)
             hits.append({
                 "rule": rule, "line": ln.no, "column": m.start() + 1,
                 "detail": f"{label} '{m.group()}'",
@@ -392,7 +442,7 @@ def check_headings(lines):
     return hits
 
 
-def review(text):
+def review(text, register="formal"):
     lines = scan_lines(text)
     hits = []
     hits += find_pattern(lines, FILLER_RE, "RULE-04", "filler phrase")
@@ -404,8 +454,133 @@ def review(text):
     hits += check_transitions(lines)
     hits += check_headings(lines)
     hits += check_contractions(lines)
+    if register == "informal":
+        hits = [h for h in hits if h["rule"] not in INFORMAL_OFF]
+    for h in hits:
+        h["tier"] = TIER[h["rule"]]
     hits.sort(key=lambda h: (h["line"], h["column"]))
     return hits
+
+
+# --------------------------------------------------------------------------
+# JavaScript comments
+# --------------------------------------------------------------------------
+
+# JSDoc tags whose text after the type and name is prose.
+JSDOC_PROSE_TAGS = {"param", "property", "prop", "arg", "returns", "return",
+                    "throws", "deprecated", "see"}
+JSDOC_NAMED_TAGS = {"param", "property", "prop", "arg"}
+DIRECTIVE_RE = re.compile(r"^(?:@ts-|eslint|prettier|c8 |istanbul|SPDX)", re.IGNORECASE)
+
+
+def _strip_braces(text):
+    """Remove balanced {...} groups (JSDoc types)."""
+    out, depth = [], 0
+    for ch in text:
+        if ch == "{":
+            depth += 1
+        elif ch == "}" and depth:
+            depth -= 1
+        elif not depth:
+            out.append(ch)
+    return "".join(out)
+
+
+def _comment_prose(raw, in_block):
+    """Reduce one comment line to (prose, starts_paragraph). Prose is ''
+    when the line holds none. A JSDoc tag or a list item starts a paragraph;
+    any other comment line continues the one above it."""
+    body = re.sub(r"^\s*\*+(?!/)", "", raw) if in_block else raw
+    indented = len(body) - len(body.lstrip(" ")) >= 3  # aligned table, list or code
+    text = body.strip()
+    if in_block and raw.strip().startswith("*/"):
+        text = ""
+    if not text or DIRECTIVE_RE.match(text):
+        return "", False
+    m = re.match(r"^@(\w+)\s*(.*)$", text)
+    if m:
+        tag, rest = m.group(1), m.group(2)
+        if tag not in JSDOC_PROSE_TAGS:
+            return "", True
+        rest = _strip_braces(rest).strip()
+        if tag in JSDOC_NAMED_TAGS:
+            rest = re.sub(r"^\[?[\w.$]+\]?(?:=[^\s\]]*)?\]?\s*", "", rest)
+        return re.sub(r"^-\s*", "", rest), True
+    return text, indented or bool(LIST_MARK_RE.match(text))
+
+
+def js_comment_text(source):
+    """Return a text with the same line numbers as `source` holding only
+    comment prose. Code lines become empty, which ends a paragraph. The lines
+    of one wrapped paragraph are joined onto its first line, because the
+    detectors read a line start as a sentence start."""
+    lines = [[] for _ in source.split("\n")]
+    has_code = [False] * len(lines)  # a trailing comment starts its own paragraph
+    n, i, line = len(source), 0, 0
+    state = "code"  # code, ', ", `, //, /*
+    buf = ""
+    while i < n:
+        ch = source[i]
+        nxt = source[i + 1] if i + 1 < n else ""
+        if ch == "\n":
+            if state == "//":
+                lines[line].append(_comment_prose(buf, False))
+                buf, state = "", "code"
+            elif state == "/*":
+                lines[line].append(_comment_prose(buf, True))
+                buf = ""
+            elif state in ("'", '"'):
+                state = "code"
+            line += 1
+            i += 1
+            continue
+        if state == "code":
+            if ch == "/" and nxt == "/":
+                state, buf, i = "//", "", i + 2
+                continue
+            if ch == "/" and nxt == "*":
+                state, buf, i = "/*", "", i + 2
+                if source[i:i + 1] == "*":
+                    i += 1
+                continue
+            if ch in "'\"`":
+                state = ch
+            if not ch.isspace():
+                has_code[line] = True
+        elif state in ("'", '"', "`"):
+            if ch == "\\":
+                i += 2
+                continue
+            if ch == state:
+                state = "code"
+        elif state == "//":
+            buf += ch
+        elif state == "/*":
+            if ch == "*" and nxt == "/":
+                lines[line].append(_comment_prose(buf, True))
+                buf, state, i = "", "code", i + 2
+                continue
+            buf += ch
+        i += 1
+    if state == "//":
+        lines[line].append(_comment_prose(buf, False))
+    out = [""] * len(lines)
+    current = None  # index of the line that opened the running paragraph
+    for idx, parts in enumerate(lines):
+        text = " ".join(t for t, _ in parts if t)
+        starts = any(st for _, st in parts) or has_code[idx]
+        if not text:
+            # A tag with no prose still opens a paragraph, so the lines that
+            # wrap below it do not attach to the previous tag.
+            current = idx if starts else None
+            continue
+        if current is None or starts:
+            current = idx
+            # A list marker keeps parallel tags and rows from reading as RULE-C repeats.
+            out[idx] = text if LIST_MARK_RE.match(text) else "- " + text
+        else:
+            out[current] = (out[current] + " " + text).strip()
+    return "\n".join(out)
 
 
 # --------------------------------------------------------------------------
@@ -424,48 +599,102 @@ def report(name, hits, max_examples=3):
     for rule in sorted(by_rule, key=lambda r: (-len(by_rule[r]), r)):
         group = by_rule[rule]
         label = RULE_TITLES.get(rule, rule)
-        print(f"{rule:9} {label:34} {len(group):>3}")
+        print(f"{rule:9} {TIER[rule]:4} {label:34} {len(group):>3}")
         for h in group[:max_examples]:
             print(f"          L{h['line']}:{h['column']}  {h['detail']}")
             print(f"            {h['excerpt']}")
         if len(group) > max_examples:
             print(f"          ... {len(group) - max_examples} more")
-    print(f"\ntotal: {len(hits)} across {len(by_rule)} rules "
+    deny = sum(1 for h in hits if h["tier"] == "deny")
+    print(f"\ntotal: {len(hits)} across {len(by_rule)} rules, {deny} deny "
           f"(12 judgment rules not checked here)")
     return len(hits)
+
+
+def repo_root():
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def repo_files():
+    """Docs and code that --all checks, sorted for stable output."""
+    root = repo_root()
+    found = []
+    for base, dirs, names in os.walk(root):
+        rel_base = os.path.relpath(base, root).replace(os.sep, "/")
+        dirs[:] = sorted(d for d in dirs if not d.startswith(".")
+                         and not f"{rel_base}/{d}/".lstrip("./").startswith(ALL_EXCLUDE))
+        for name in sorted(names):
+            rel = name if rel_base == "." else f"{rel_base}/{name}"
+            if rel.startswith(ALL_EXCLUDE) or rel in ALL_EXCLUDE:
+                continue
+            top = rel.split("/")[0]
+            if name.endswith(".md") and (top in ("docs", "src", "test", "tools") or "/" not in rel):
+                found.append(rel)
+            elif name.endswith(".js") and top in ("src", "test", "tools"):
+                found.append(rel)
+    return root, sorted(found)
+
+
+def review_file(text, path, register):
+    """Whole text for prose files, comments only for JavaScript."""
+    if path.endswith(".js"):
+        text = js_comment_text(text)
+    return review(text, register)
 
 
 def main():
     ap = argparse.ArgumentParser(description="agent-style mechanical checker")
     ap.add_argument("files", nargs="*", help="files to check; omit to read stdin")
     ap.add_argument("--json", action="store_true", help="emit JSON")
+    ap.add_argument("--register", choices=("formal", "informal"), default="formal",
+                    help="informal switches off RULE-I and RULE-G")
+    ap.add_argument("--all", action="store_true",
+                    help="check every .md file and every .js comment in the repo")
+    ap.add_argument("--strict", action="store_true",
+                    help="exit 1 on ask hits as well as deny hits")
     args = ap.parse_args()
 
     sources = []
+    if args.all:
+        root, rels = repo_files()
+        args.files = [os.path.join(root, r) for r in rels]
     if args.files:
         for path in args.files:
             try:
                 with open(path, encoding="utf-8") as fh:
-                    sources.append((path, fh.read()))
+                    sources.append((os.path.relpath(path) if args.all else path, fh.read()))
             except OSError as err:
                 print(f"cannot read {path}: {err}", file=sys.stderr)
                 return 2
     else:
         sources.append(("<stdin>", sys.stdin.read()))
 
-    total = 0
+    deny = ask = 0
     payload = {}
     for name, text in sources:
-        hits = review(text)
-        total += len(hits)
+        hits = review_file(text, name, args.register)
+        deny += sum(1 for h in hits if h["tier"] == "deny")
+        ask += sum(1 for h in hits if h["tier"] == "ask")
         if args.json:
             payload[name] = hits
+        elif args.all:
+            if hits:
+                d = sum(1 for h in hits if h["tier"] == "deny")
+                print(f"{name}: {d} deny, {len(hits) - d} ask")
+                for h in hits:
+                    if h["tier"] == "deny":
+                        print(f"  L{h['line']}:{h['column']} {h['rule']} {h['detail']}")
+                        print(f"    {h['excerpt']}")
         else:
             report(name, hits)
 
     if args.json:
         print(json.dumps(payload, indent=2))
-    return 1 if total else 0
+    elif args.all:
+        print(f"\n{len(sources)} files checked: {deny} deny, {ask} ask")
+    if deny or (args.strict and ask):
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

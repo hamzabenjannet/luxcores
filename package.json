@@ -13,6 +13,7 @@
     "headless": "node tools/run-headless.js",
     "gen:sin": "node tools/gen-sin-table.js",
     "lint:prose": "python3 tools/check_style.py",
+    "lint:prose:all": "python3 tools/check_style.py --all",
     "serve": "python3 -m http.server 5173 --bind 0.0.0.0"
   },
   "devDependencies": {

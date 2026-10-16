@@ -133,10 +133,11 @@ export function createScene(canvas, mapgen, view) {
 }
 
 /**
- * Placeholder shapes for the generated layout so the generator can be eyeballed
- * on a phone: lane tiles as a faint strip, vents as cyan discs, item spawns as
- * amber rings, blockers as grey boxes. Blockers are read once, so a destroyed
- * blocker stays on screen until M7 replaces this with instanced entity rendering.
+ * Placeholder shapes for the generated layout, so the generator can be checked
+ * by eye on a phone. Lane tiles form a faint strip, vents are cyan discs, item
+ * spawns are amber rings and blockers are grey boxes. Blockers are read once,
+ * so a destroyed blocker stays on screen until M7 replaces this with instanced
+ * entity rendering.
  * @param {THREE.Scene} scene
  * @param {import('../world-view.js').WorldView} view
  */

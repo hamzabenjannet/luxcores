@@ -4,7 +4,7 @@
  *
  * Every input source (touch UI, bot, hot seat, later the network) produces
  * CommandEnvelopes. The sim validates each one and silently drops the
- * invalid ones. The UI may call `validate` for instant feedback, but the
+ * invalid ones. A UI may call `validate` for instant feedback, but the
  * sim result is the authority.
  */
 

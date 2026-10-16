@@ -16,7 +16,7 @@ function walk(dir) {
   });
 }
 
-/** Strip // and /* *\/ comments so docs that mention forbidden APIs don't trip the check. */
+/** Strip // and /* *\/ comments so docs that mention forbidden APIs do not trip the check. */
 function code(src) {
   return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
 }
@@ -31,7 +31,7 @@ const FORBIDDEN = [
   [/\bsetTimeout\b|\bsetInterval\b/, 'timers'],
 ];
 
-// config.js normalizes data once at load time; key iteration there doesn't
+// config.js normalizes data once at load time; key iteration there does not
 // touch sim state order. sin-table.js is generated data.
 const KEY_ITERATION = /\bObject\.(keys|values|entries)\b/;
 const KEY_ITERATION_ALLOWED = new Set(['config.js', 'sin-table.js']);

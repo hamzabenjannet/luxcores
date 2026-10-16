@@ -1,7 +1,7 @@
 // Browser smoke test. It drives Chromium inside the Playwright container
-// (see CLAUDE.md and docs/HANDOVER.md), loads the game with ?test=1, and
-// checks that the sim state hash at tick 120 equals the hash Node computes.
-// A mismatch means the sim diverged between Node and Chromium (P0).
+// (see CLAUDE.md and docs/HANDOVER.md) and loads the game with ?test=1. The
+// sim state hash at tick 120 must equal the hash Node computes. A mismatch
+// means the sim diverged between Node and Chromium (P0).
 //
 // Run: npm run serve   (in one terminal)
 //      npm run test:e2e

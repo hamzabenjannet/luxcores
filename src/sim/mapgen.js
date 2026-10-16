@@ -316,7 +316,7 @@ function attempt(seed, mapgen) {
  * Flood fill from Core 0 over walkable tiles, neighbors in the fixed order
  * N, E, S, W. A tile is walkable if it is on the grid and holds no blocker
  * and no Core. The layout passes when Core 1 touches a reached tile and
- * every lane tile is reached. The Core tiles themselves are exempt.
+ * every lane tile is reached. Both Core tiles are exempt.
  * @param {MapLayout} layout
  * @returns {boolean}
  */
