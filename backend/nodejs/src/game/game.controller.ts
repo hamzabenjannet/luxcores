@@ -13,7 +13,11 @@ import { Public } from '../common/decorators/public.decorator.js';
 import { ErrorResponseDto } from '../common/dto/error-response.dto.js';
 import { MAX_SEED, ParseSeedPipe } from '../common/pipes/parse-seed.pipe.js';
 import { SimService } from '../simulation/sim.service.js';
-import { GameSpecDto, type SocketDocDto } from './dto/game-spec.dto.js';
+import {
+  GameSpecDto,
+  type SocketDocDto,
+  type WebSocketDocDto,
+} from './dto/game-spec.dto.js';
 import { MapLayoutDto } from './dto/map-layout.dto.js';
 import {
   ChatMessageDto,
@@ -93,6 +97,14 @@ const SOCKET_DOC: SocketDocDto = {
 };
 
 // The socket payload DTOs have no HTTP route, so list them here for the OpenAPI schemas.
+const WEBSOCKET_DOC: WebSocketDocDto = {
+  path: '/ws',
+  format:
+    'JSON frames { event, data, id? }. A frame with an id is answered by { event: "ack", id, data }.',
+  auth: 'Authorization header, ?token= query parameter, or an auth frame { event: "auth", data: { token } } after connecting.',
+  events: 'Same events as the Socket.IO namespace, listed in socket.events.',
+};
+
 @ApiExtraModels(MatchRefDto, GameCommandDto, ChatMessageDto)
 @ApiTags('game')
 @Controller('game')
@@ -120,6 +132,7 @@ export class GameController {
       snapshotEveryTicks: game.snapshotEveryTicks,
       matchMaxTicks: game.matchMaxTicks,
       socket: SOCKET_DOC,
+      webSocket: WEBSOCKET_DOC,
     };
   }
 

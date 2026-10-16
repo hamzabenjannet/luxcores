@@ -5,6 +5,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { io, type Socket } from 'socket.io-client';
+import WebSocket from 'ws';
 import { AppModule } from '../../src/app.module.js';
 import {
   configureApp,
@@ -163,4 +164,88 @@ export function ack<T = any>(
   payload?: unknown,
 ): Promise<T> {
   return socket.timeout(5000).emitWithAck(event, payload) as Promise<T>;
+}
+
+/** A frame of the plain WebSocket protocol. */
+export interface WsFrame {
+  event: string;
+  data?: any;
+  id?: number;
+}
+
+/** Plain WebSocket client with request/ack helpers. */
+export class RawClient {
+  readonly frames: WsFrame[] = [];
+  private nextId = 1;
+  private waiters: {
+    accept: (f: WsFrame) => boolean;
+    resolve: (f: WsFrame) => void;
+  }[] = [];
+
+  constructor(readonly ws: WebSocket) {
+    ws.on('message', (raw) => {
+      const frame = JSON.parse(raw.toString()) as WsFrame;
+      this.frames.push(frame);
+      this.waiters = this.waiters.filter((w) => {
+        if (!w.accept(frame)) return true;
+        w.resolve(frame);
+        return false;
+      });
+    });
+  }
+
+  /** Sends a request and resolves with the data of its ack. */
+  async request<T = any>(event: string, data?: unknown): Promise<T> {
+    const id = this.nextId++;
+    const reply = this.next((f) => f.event === 'ack' && f.id === id);
+    this.ws.send(JSON.stringify({ event, data, id }));
+    return (await reply).data as T;
+  }
+
+  /** Resolves with the first frame (past or future) that passes `accept`. */
+  next(accept: (f: WsFrame) => boolean, ms = 15_000): Promise<WsFrame> {
+    const seen = this.frames.find(accept);
+    if (seen) return Promise.resolve(seen);
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error('timed out waiting for a frame')),
+        ms,
+      );
+      this.waiters.push({
+        accept,
+        resolve: (f) => {
+          clearTimeout(timer);
+          resolve(f);
+        },
+      });
+    });
+  }
+
+  /** Resolves with the close code. */
+  closed(): Promise<number> {
+    return new Promise((resolve) =>
+      this.ws.once('close', (code) => resolve(code)),
+    );
+  }
+}
+
+/** Connects to `/ws`. Resolves once open; rejects with the HTTP status when the upgrade is refused. */
+export function connectRaw(
+  url: string,
+  options: { token?: string; query?: boolean } = {},
+): Promise<RawClient> {
+  const wsUrl = `${url.replace('http', 'ws')}/ws${options.token && options.query ? `?token=${options.token}` : ''}`;
+  const ws = new WebSocket(wsUrl, {
+    headers:
+      options.token && !options.query
+        ? { authorization: `Bearer ${options.token}` }
+        : {},
+  });
+  return new Promise((resolve, reject) => {
+    ws.once('open', () => resolve(new RawClient(ws)));
+    ws.once('unexpected-response', (_req, res) =>
+      reject(new Error(`HTTP ${res.statusCode}`)),
+    );
+    ws.once('error', (err) => reject(err));
+  });
 }

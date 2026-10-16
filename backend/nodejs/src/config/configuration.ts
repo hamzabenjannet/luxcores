@@ -26,6 +26,8 @@ export interface AppConfig {
     snapshotEveryTicks: number;
   };
   static: { publicDir: string };
+  /** Plain WebSocket at /ws. */
+  ws: { authTimeoutMs: number; maxPayloadBytes: number };
 }
 
 const int = (value: string | undefined, fallback: number): number =>
@@ -67,5 +69,9 @@ export default (): AppConfig => {
       snapshotEveryTicks: int(env.SNAPSHOT_EVERY_TICKS, 2),
     },
     static: { publicDir: resolve(env.PUBLIC_DIR ?? 'public') },
+    ws: {
+      authTimeoutMs: int(env.WS_AUTH_TIMEOUT_MS, 5000),
+      maxPayloadBytes: int(env.WS_MAX_PAYLOAD_BYTES, 16384),
+    },
   };
 };

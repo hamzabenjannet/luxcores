@@ -18,31 +18,19 @@ import {
 } from '@nestjs/websockets';
 import type { Namespace, Socket } from 'socket.io';
 import type { AuthenticatedPlayer, JwtPayload } from '../common/types.js';
-import { MatchesService } from '../matches/matches.service.js';
 import {
   ChatMessageDto,
   GameCommandDto,
   MatchRefDto,
 } from './dto/socket-dtos.js';
-import {
-  type CommandAck,
-  MatchRunnerService,
-  type MatchSnapshot,
-} from './match-runner.service.js';
+import { GameActions, type JoinAck } from './game-actions.service.js';
+import type { CommandAck } from './match-runner.service.js';
+import { RoomHub } from './room-hub.service.js';
 import { WsErrorFilter } from './ws-exception.filter.js';
 import { WsJwtGuard } from './ws-jwt.guard.js';
 
 /** The Socket.IO room that carries the traffic of one match. */
 export const matchRoom = (matchId: string): string => `match:${matchId}`;
-
-type JoinAck =
-  | {
-      ok: true;
-      status: string;
-      tick: number | null;
-      snapshot: MatchSnapshot | null;
-    }
-  | { ok: false; error: string };
 
 const wsValidation = new ValidationPipe({
   whitelist: true,
@@ -56,7 +44,8 @@ const wsValidation = new ValidationPipe({
 });
 
 /**
- * Real-time channel of a match, in the `/game` namespace.
+ * Socket.IO channel of a match, in the `/game` namespace. The web client uses
+ * it. `RawWsGateway` offers the same events as JSON over a plain WebSocket.
  *
  * Client to server (each takes an ack callback):
  *   match:join     { matchId }            join the room; the ack holds the current snapshot
@@ -84,23 +73,13 @@ export class GameGateway implements OnGatewayInit {
 
   constructor(
     private readonly jwt: JwtService,
-    private readonly runner: MatchRunnerService,
-    private readonly matches: MatchesService,
+    private readonly actions: GameActions,
+    hub: RoomHub,
   ) {
-    this.matches.changes.on('changed', (match: { id: string }) =>
-      this.server?.to(matchRoom(match.id)).emit('match:updated', match),
-    );
-    this.runner.onStarted((info) =>
-      this.server?.to(matchRoom(info.matchId)).emit('match:started', info),
-    );
-    this.runner.onSnapshot((snapshot) =>
-      this.server
-        ?.to(matchRoom(snapshot.matchId))
-        .emit('match:snapshot', snapshot),
-    );
-    this.runner.onEnded((info) =>
-      this.server?.to(matchRoom(info.matchId)).emit('match:ended', info),
-    );
+    hub.addSink({
+      emitToRoom: (matchId, event, data) =>
+        this.server?.to(matchRoom(matchId)).emit(event, data),
+    });
   }
 
   /** Handshake middleware: a socket without a valid token never connects. */
@@ -130,18 +109,9 @@ export class GameGateway implements OnGatewayInit {
     @ConnectedSocket() client: Socket,
     @MessageBody() dto: MatchRefDto,
   ): Promise<JoinAck> {
-    const match = await this.matches.get(dto.matchId).catch(() => null);
-    if (!match) return { ok: false, error: 'Match not found' };
-    if (!match.players.some((p) => p.playerId === this.playerOf(client).id))
-      return { ok: false, error: 'You are not in this match' };
-    await client.join(matchRoom(match.id));
-    const snapshot = this.runner.snapshot(match.id);
-    return {
-      ok: true,
-      status: match.status,
-      tick: snapshot?.tick ?? null,
-      snapshot,
-    };
+    const ack = await this.actions.join(this.playerOf(client), dto.matchId);
+    if (ack.ok) await client.join(matchRoom(dto.matchId));
+    return ack;
   }
 
   @SubscribeMessage('match:leave')
@@ -158,12 +128,7 @@ export class GameGateway implements OnGatewayInit {
     @ConnectedSocket() client: Socket,
     @MessageBody() dto: GameCommandDto,
   ): CommandAck {
-    return this.runner.submitCommand(
-      dto.matchId,
-      this.playerOf(client).id,
-      dto.seq,
-      dto.cmd,
-    );
+    return this.actions.command(this.playerOf(client), dto);
   }
 
   @SubscribeMessage('chat:message')
@@ -171,19 +136,14 @@ export class GameGateway implements OnGatewayInit {
     @ConnectedSocket() client: Socket,
     @MessageBody() dto: ChatMessageDto,
   ): { ok: boolean } {
-    const room = matchRoom(dto.matchId);
-    if (!client.rooms.has(room)) return { ok: false }; // only members who joined the room may talk in it
-    this.server.to(room).emit('chat:message', {
-      from: this.playerOf(client).name,
-      text: dto.text,
-      at: new Date().toISOString(),
-    });
+    if (!client.rooms.has(matchRoom(dto.matchId))) return { ok: false }; // only members who joined the room may talk in it
+    this.actions.chat(this.playerOf(client), dto);
     return { ok: true };
   }
 
   @SubscribeMessage('ping')
   ping(): { serverTime: string } {
-    return { serverTime: new Date().toISOString() };
+    return this.actions.ping();
   }
 
   private playerOf(client: Socket): AuthenticatedPlayer {

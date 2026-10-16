@@ -19,6 +19,7 @@ To play against the server from a browser, open `http://localhost:3000/?server=&
 
 | URL | What it serves |
 |---|---|
+| `/ws` | The plain WebSocket match channel (see Plain WebSocket Protocol) |
 | `/` | The game page, so a phone on the LAN can play against this server |
 | `/api/docs` | Swagger UI (`/api/docs-json` holds the raw OpenAPI document) |
 | `/api/health` | Liveness, database state and event bus mode |
@@ -41,6 +42,7 @@ To play against the server from a browser, open `http://localhost:3000/?server=&
 | `POSTGRES_URL` | none | PostgreSQL connection string |
 | `RABBITMQ_URL` | empty | Empty keeps events inside the process |
 | `RABBITMQ_QUEUE`, `RABBITMQ_PREFETCH` | `luxcores.events`, `10` | Queue name and consumer prefetch |
+| `WS_AUTH_TIMEOUT_MS`, `WS_MAX_PAYLOAD_BYTES` | `5000`, `16384` | Plain WebSocket auth window and largest frame |
 | `LUXCORES_ROOT` | `../..` | Repo root with `src/sim`, `data/` and `index.html` |
 | `PUBLIC_DIR` | `public` | Backend static folder |
 | `MATCH_MAX_TICKS` | `12000` | A match ends after this many ticks (10 minutes at 20 Hz) |
@@ -56,7 +58,7 @@ To play against the server from a browser, open `http://localhost:3000/?server=&
 | `src/simulation` | `SimService`: loads `src/sim` and `data/*.json` at start-up |
 | `src/auth`, `src/players` | Guest sign-in, profiles, leaderboard |
 | `src/matches` | Lobby rules and match persistence |
-| `src/game` | Match runner, Socket.IO gateway, start and stop routes, spec and map routes |
+| `src/game` | Match runner, the Socket.IO and plain WebSocket gateways on one `GameActions` service and `RoomHub`, start and stop routes, spec and map routes |
 | `src/replays` | Replay storage and server-side verification |
 | `src/events` | `EventBus` with a RabbitMQ and an in-process implementation |
 | `src/admin`, `src/health`, `src/static` | Operator routes, liveness, static files |
@@ -121,6 +123,46 @@ const ack = await socket.emitWithAck('match:command', {
 | `match:ended` | server to room | `{ matchId, endedTick, result, replayId }` |
 
 `GET /api/game/spec` lists the same events in machine-readable form, and the Swagger schemas include their payload DTOs.
+
+## Plain WebSocket Protocol
+
+Clients without a Socket.IO library, such as Godot, connect to `ws://host:3000/ws` (`wss://` behind TLS). The events and payloads match the Socket.IO table above. Both transports share one `GameActions` service and one room hub, so players on either side share a match, and a chat line crosses from one transport to the other.
+
+Every frame is one JSON text message: `{ "event": "...", "data": ..., "id": 1 }`. The `id` is optional. Any frame that carries one is a request, and the server answers it with `{ "event": "ack", "id": 1, "data": ... }`. A failed request has `{ "ok": false, "error": "..." }` in its ack. Without an `id`, the error arrives as an `exception` frame.
+
+| Authentication | How |
+|---|---|
+| Header | `Authorization: Bearer <jwt>` on the upgrade request |
+| Query | `/ws?token=<jwt>` for clients that cannot set headers |
+| Frame | After connecting, send `{ "event": "auth", "data": { "token": "<jwt>" } }` within `WS_AUTH_TIMEOUT_MS` (5 s). This keeps the token out of URLs and proxy logs, so prefer it on the web |
+
+A token that is present but invalid gets HTTP 401 at the upgrade. Code 4401 closes a socket that never authenticates, and code 1009 closes one that sends a frame over `WS_MAX_PAYLOAD_BYTES` (16 KB). The server pings every 30 seconds and drops silent peers, and it skips snapshots for a client with a large send backlog.
+
+An untested sketch for Godot 4. It follows Godot's documented `WebSocketPeer` API, but no Godot client has run against this server yet [UNVERIFIED].
+
+```gdscript
+var peer := WebSocketPeer.new()
+var next_id := 1
+
+func connect_to_server(url: String, token: String) -> void:
+    peer.connect_to_url(url)            # for example ws://192.168.1.20:3000/ws
+    # After the state becomes STATE_OPEN, authenticate with a frame:
+    send("auth", {"token": token})
+
+func send(event: String, data: Dictionary = {}) -> int:
+    var id := next_id
+    next_id += 1
+    peer.send_text(JSON.stringify({"event": event, "data": data, "id": id}))
+    return id
+
+func _process(_delta: float) -> void:
+    peer.poll()
+    while peer.get_available_packet_count() > 0:
+        var frame: Dictionary = JSON.parse_string(peer.get_packet().get_string_from_utf8())
+        match frame.event:
+            "match:snapshot": pass      # frame.data.entities, frame.data.tick
+            "ack": pass                 # frame.id matches the request
+```
 
 ## Storage
 

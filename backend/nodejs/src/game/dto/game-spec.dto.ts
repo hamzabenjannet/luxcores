@@ -21,6 +21,25 @@ export class SocketDocDto {
   @ApiProperty({ type: [SocketEventDocDto] }) events!: SocketEventDocDto[];
 }
 
+export class WebSocketDocDto {
+  @ApiProperty({ example: '/ws' }) path!: string;
+  @ApiProperty({
+    example:
+      'JSON frames { event, data, id? }. A frame with an id is answered by { event: "ack", id, data }.',
+  })
+  format!: string;
+  @ApiProperty({
+    example:
+      'Authorization header, ?token= query parameter, or an auth frame { event: "auth", data: { token } } after connecting.',
+  })
+  auth!: string;
+  @ApiProperty({
+    description:
+      'Same events as the Socket.IO namespace, listed in `socket.events`',
+  })
+  events!: string;
+}
+
 /** What a client needs to know before it joins a match. */
 export class GameSpecDto {
   @ApiProperty({
@@ -41,4 +60,5 @@ export class GameSpecDto {
   snapshotEveryTicks!: number;
   @ApiProperty({ example: 12000 }) matchMaxTicks!: number;
   @ApiProperty({ type: SocketDocDto }) socket!: SocketDocDto;
+  @ApiProperty({ type: WebSocketDocDto }) webSocket!: WebSocketDocDto;
 }
