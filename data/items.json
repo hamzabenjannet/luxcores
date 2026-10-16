@@ -1,0 +1,13 @@
+{
+  "_doc": "Starter items. All single use. effect.kind selects the handler in src/sim/systems/items.js; new items with an existing kind need no code. GDD 8.2.",
+  "list": [
+    { "id": 0, "name": "Energy Boost", "costLux": 20, "target": "ownHeroOrBuilding", "excludes": ["core"],
+      "effect": { "kind": "addLux", "amountLux": 15 } },
+    { "id": 1, "name": "Energy Grab",  "costLux": 20, "target": "self",
+      "effect": { "kind": "funnelMode", "budgetLux": 50 } },
+    { "id": 2, "name": "Haste",        "costLux": 20, "target": "self",
+      "effect": { "kind": "attackSpeed", "amount": 300, "durationTicks": 300 } },
+    { "id": 3, "name": "Sluggish",     "costLux": 20, "target": "enemyUnit",
+      "effect": { "kind": "attackSpeed", "amount": -300, "durationTicks": 300 } }
+  ]
+}

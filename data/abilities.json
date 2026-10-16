@@ -1,0 +1,10 @@
+{
+  "_doc": "Ability templates, one per type. Heroes reference these and override fields in heroes.json. Damage is applied as listed (no attack-type multiplier). GDD 7.5.",
+  "templates": {
+    "melee":  { "type": "melee",  "costLux": 5,  "cooldownTicks": 100, "shape": "single", "rangeTiles": 0, "damage": 60, "stunTicks": 10 },
+    "ranged": { "type": "ranged", "costLux": 5,  "cooldownTicks": 100, "shape": "single", "rangeTiles": 6, "damage": 60 },
+    "area":   { "type": "area",   "costLux": 5,  "cooldownTicks": 100, "shape": "circle", "rangeTiles": 5, "radiusMilliTiles": 1500, "damage": 40 },
+    "shield": { "type": "shield", "costLux": 10, "cooldownTicks": 100, "shape": "single", "rangeTiles": 5, "absorb": 150, "durationTicks": 100,
+                "targets": ["ownHero", "ownBuilding", "ownCreep", "allyHero"], "excludes": ["core"] }
+  }
+}

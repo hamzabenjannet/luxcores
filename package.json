@@ -1,0 +1,17 @@
+{
+  "name": "luxcores",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Light-energy strategy game MVP: deterministic JS simulation (reference spec) with a Three.js mobile client.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\"",
+    "headless": "node tools/run-headless.js",
+    "gen:sin": "node tools/gen-sin-table.js",
+    "lint:prose": "python3 tools/check_style.py",
+    "serve": "python3 -m http.server 5173 --bind 0.0.0.0"
+  }
+}

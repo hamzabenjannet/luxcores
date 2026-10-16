@@ -1,0 +1,76 @@
+{
+  "_doc": "Every number is an integer. Suffixes: *Lux = whole lux (x1000 in sim), *Tiles = whole tiles (x1000 in sim), *Ticks = sim ticks at 20 Hz, *Pct = integer percent. Keys containing MilliTiles or MilliLux are already in sim units and used as is. Source: docs/GAME_DESIGN.md v0.9.",
+  "core": {
+    "startPerPlayerLux": 100,
+    "minLeftAfterSpendLux": 1
+  },
+  "hpFactor": {
+    "core": 1,
+    "default": 10
+  },
+  "economy": {
+    "pendingSettleTicks": 40,
+    "recycleRefundPct": 60,
+    "recycleChannelTicks": 60,
+    "recycleQueueRefundPct": 100,
+    "entropyPctPerMinute": 1
+  },
+  "dayNight": {
+    "dayTicks": 800,
+    "nightTicks": 400,
+    "startsAt": "dawn"
+  },
+  "meltdown": {
+    "noSpendTicks": 2400,
+    "damagePctOfMaxHp": 50,
+    "radiusTiles": 3
+  },
+  "attackTypes": {
+    "melee":  { "damagePct": 100, "reachTiles": 0, "procPct": 15, "proc": "stun", "stunTicks": 10 },
+    "ranged": { "damagePct": 60,  "reachTiles": 4, "procPct": 15, "proc": "knockback", "knockbackMilliTiles": 500 },
+    "area":   { "damagePct": 35,  "reachTiles": 3, "splashMilliTiles": 1200, "procPct": 0, "proc": "none" }
+  },
+  "hero": {
+    "rosterSize": 5,
+    "productionTicks": 100,
+    "respawnCooldownTicks": 100,
+    "damagePerHit": 20,
+    "attackSpeed": 100,
+    "moveMilliTilesPerSecond": 3000,
+    "sightTiles": 7,
+    "inventorySlots": 50,
+    "quickSlots": 4,
+    "abilityCooldownTicks": 100,
+    "abilityMinCooldownTicks": 20
+  },
+  "creep": {
+    "costLux": 5,
+    "hp": 50,
+    "groupMin": 1,
+    "groupMax": 5,
+    "productionTicksPerGroup": 40,
+    "damagePerHit": 10,
+    "attackSpeed": 100,
+    "moveMilliTilesPerSecond": 2000,
+    "sightTiles": 6,
+    "capPerPlayer": 30,
+    "maxWaypoints": 10
+  },
+  "attackSpeed": {
+    "base": 100,
+    "min": 20
+  },
+  "items": {
+    "productionTicks": 20,
+    "groundDespawnTicks": 600,
+    "lootBagDespawnTicks": 600,
+    "creepDropPct": 10,
+    "mapSpawnIntervalTicks": 1200
+  },
+  "tower": {
+    "targetOverrideTicks": 60
+  },
+  "match": {
+    "timedModeTicks": 12000
+  }
+}

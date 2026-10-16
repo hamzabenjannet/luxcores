@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#05060a">
+  <title>Luxcores</title>
+  <link rel="stylesheet" href="src/client/hud/hud.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="view"></canvas>
+  <div id="hud">
+    <div class="hud-top">
+      <span id="hud-core">Core —</span>
+      <span id="hud-clock">00:00</span>
+      <span id="hud-phase">☀</span>
+      <span id="hud-enemy">Enemy —</span>
+    </div>
+    <div class="hud-debug" id="hud-debug"></div>
+  </div>
+  <script type="module" src="src/client/main.js"></script>
+</body>
+</html>

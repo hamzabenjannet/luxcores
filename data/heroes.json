@@ -1,0 +1,10 @@
+{
+  "_doc": "Placeholder roster of 5. Names and kits to be designed with Hama. Each hero gets the 4 ability templates (melee, ranged, area, shield) with the overrides listed. GDD 7.",
+  "roster": [
+    { "id": 0, "name": "Halo",   "primary": "melee",  "identity": "tanky brawler",  "overrides": { "shield": { "absorb": 250 } } },
+    { "id": 1, "name": "Prism",  "primary": "ranged", "identity": "long range",     "overrides": { "ranged": { "rangeTiles": 8 } } },
+    { "id": 2, "name": "Flare",  "primary": "area",   "identity": "wave clear",     "overrides": { "area": { "radiusMilliTiles": 2200 } } },
+    { "id": 3, "name": "Aurora", "primary": "ranged", "identity": "skirmisher",     "moveMilliTilesPerSecond": 4000, "overrides": {} },
+    { "id": 4, "name": "Corona", "primary": "melee",  "identity": "diver",          "overrides": { "melee": { "dashMilliTiles": 3000 } } }
+  ]
+}

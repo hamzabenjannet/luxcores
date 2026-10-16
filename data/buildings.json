@@ -1,0 +1,19 @@
+{
+  "_doc": "Cost in whole lux. HP = cost x hpFactor (10) unless hp is given. Output per second in milli-lux per second. GDD sections 4 and 5.",
+  "solar":      { "costLux": 20, "outputMilliLuxPerSecond": 2000, "nightOutputMilliLuxPerSecond": 0 },
+  "wind":       { "costLux": 20, "outputMinMilliLuxPerSecond": 0, "outputMaxMilliLuxPerSecond": 3000, "rerollTicks": 200 },
+  "geothermal": { "costLux": 40, "outputMilliLuxPerSecond": 2000, "requiresVent": true },
+  "nuclear":    { "costLux": 80, "outputMilliLuxPerSecond": 5000, "meltdownRisk": true },
+  "barracks":   { "costLux": 40 },
+  "tower": {
+    "costLux": 20,
+    "damagePerHit": 20,
+    "attackSpeed": 100,
+    "rangeTiles": 5,
+    "upgrades": {
+      "power": [ { "costLux": 10, "damagePct": 25 }, { "costLux": 20, "damagePct": 25 }, { "costLux": 40, "damagePct": 25 } ],
+      "shell": [ { "costLux": 10, "hp": 100 },       { "costLux": 20, "hp": 200 },       { "costLux": 40, "hp": 400 } ]
+    }
+  },
+  "blocker": { "hp": 200 }
+}
