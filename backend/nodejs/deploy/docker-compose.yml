@@ -1,0 +1,82 @@
+# Production stack for one VPS: the API, PostgreSQL, RabbitMQ and Caddy, which
+# terminates TLS with a certificate it fetches and renews by itself.
+#
+#   cp .env.example .env      # fill in every value
+#   docker compose up -d --build
+#
+# Only Caddy publishes ports. The database and the broker stay on the internal network.
+name: luxcores
+
+services:
+  api:
+    build:
+      context: ../../..
+      dockerfile: backend/nodejs/Dockerfile
+    restart: unless-stopped
+    init: true # forwards SIGTERM, so the match runner ends its matches cleanly
+    stop_grace_period: 20s
+    environment:
+      NODE_ENV: production
+      DATABASE_DRIVER: postgres
+      POSTGRES_URL: postgres://luxcores:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/luxcores
+      RABBITMQ_URL: amqp://luxcores:${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD}@rabbitmq:5672
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:?set ADMIN_API_KEY}
+      CORS_ORIGIN: https://${DOMAIN:?set DOMAIN}
+      TRUST_PROXY: '1' # one proxy (Caddy) sits in front, so the client address comes from X-Forwarded-For
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    expose: ['3000']
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: luxcores
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: luxcores
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U luxcores -d luxcores']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-alpine
+    restart: unless-stopped
+    # Verified on Docker Desktop for Mac: the broker needs an explicit user and cookie to start.
+    user: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: luxcores
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD}
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_PASSWORD}
+    volumes: [rabbitmq-data:/var/lib/rabbitmq]
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN}
+    ports:
+      - '${HTTP_PORT:-80}:80'
+      - '${HTTPS_PORT:-443}:443'
+      - '${HTTPS_PORT:-443}:443/udp' # HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data # certificates: keep this volume, or Caddy asks for new ones on every start
+      - caddy-config:/config
+    depends_on: [api]
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
+  caddy-data:
+  caddy-config:

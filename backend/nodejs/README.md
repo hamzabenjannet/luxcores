@@ -192,7 +192,7 @@ Services talk to the abstract `DataStore`, so the driver is a configuration choi
 | `mongodb` | One collection per entity | The `id` is stored as `_id` |
 | `postgres` | One `documents` table with a `jsonb` column | Adding an entity field needs no migration |
 
-`docker-compose.yml` starts Postgres, MongoDB or RabbitMQ on demand through profiles, for example `docker compose --profile postgres up -d`.
+`docker-compose.yml` starts Postgres, MongoDB or RabbitMQ on demand through profiles, for example `docker compose --profile postgres up -d`. For a server, see `deploy/README.md`: a Dockerfile and a production stack with Caddy for TLS.
 
 ## RabbitMQ
 
@@ -217,6 +217,20 @@ TEST_MONGODB_URL=mongodb://localhost:27017 \
 TEST_RABBITMQ_URL=amqp://guest:guest@localhost:5672 \
 npm test && npm run test:e2e
 ```
+
+## Docker
+
+Build the image from the repo root, because the server runs the repo's sim and serves the web client:
+
+```bash
+docker build -f backend/nodejs/Dockerfile -t luxcores-backend .
+```
+
+The image holds the compiled app, production dependencies, and the `src`, `data`, `assets` and `index.html` of the game, and it runs as the unprivileged `node` user. `deploy/` adds a production Compose stack for one VPS (API, PostgreSQL, RabbitMQ, Caddy with automatic TLS) and a guide.
+
+## Shutdown
+
+On SIGTERM the server ends in three phases, in this order: live matches end and save their replays and results, the RabbitMQ publisher closes, and the database closes. A match that ends this way counts as a draw with the reason `stopped`. The `docker stop` grace period of 20 seconds is far more than it needs. Regression tests cover the order, including one on a real broker that hangs when the order is wrong.
 
 ## Limits and Next Steps
 

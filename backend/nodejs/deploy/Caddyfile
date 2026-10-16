@@ -1,0 +1,8 @@
+# Caddy gets a Let's Encrypt certificate for {$DOMAIN} on its own and proxies
+# everything to the API, including Socket.IO and the plain WebSocket at /ws.
+# With DOMAIN=localhost it uses a local certificate, which suits a test on one machine.
+{$DOMAIN} {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000"
+	reverse_proxy api:3000
+}

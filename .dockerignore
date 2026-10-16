@@ -1,0 +1,17 @@
+# The Docker build context is the repo root (backend/nodejs/Dockerfile needs src/sim,
+# data and the web client). Keep everything else out of it.
+.git
+.github
+**/node_modules
+**/dist
+**/coverage
+backend/nodejs/.env
+backend/nodejs/data/db.json*
+backend/nodejs/deploy/.env
+vone
+docs
+replays
+test
+tools
+*.md
+.DS_Store
