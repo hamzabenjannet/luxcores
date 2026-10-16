@@ -12,12 +12,13 @@ test('at least one golden replay exists', () => {
   assert.ok(files.length > 0, 'replays/golden/ holds no .json replay');
 });
 
-// A hash change here without a SPEC_VERSION bump is a bug (CLAUDE.md).
-// After an intended bump, re-record with `node tools/run-headless.js SEED TICKS replays/golden/NAME.json`.
+// While the MVP is built, SPEC_VERSION stays put (CLAUDE.md), so a rule change that alters hashes
+// fails here. Re-record on purpose in the same commit:
+// `node tools/run-headless.js SEED TICKS replays/golden/NAME.json`.
 for (const file of files) {
   test(`golden replay ${file} plays back with every hash intact`, () => {
     const replay = JSON.parse(readFileSync(join(DIR, file), 'utf8'));
-    assert.equal(replay.specVersion, SPEC_VERSION, 're-record this replay after a SPEC_VERSION bump');
+    assert.equal(replay.specVersion, SPEC_VERSION, 'the replay predates a SPEC_VERSION change; re-record it');
     const res = playReplay(replay, loadData().config);
     assert.equal(res.firstMismatchTick, null);
     assert.equal(res.ok, true);

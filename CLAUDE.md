@@ -17,14 +17,16 @@ When code disagrees with the GDD, the GDD wins. To change a rule, edit the GDD i
 ## Commands
 
 ```bash
-npm test                             # node --test, nothing to install
+npm test                             # node --test, nothing to install; includes the prose gate
+npm run test:e2e                     # Chromium smoke test against the Playwright container (needs npm install)
 npm run headless -- <seed> <ticks>   # headless sim run, prints the final hash
-npm run lint:prose -- <file.md>      # writing-rules checker (see Writing Rules)
+npm run lint:prose -- <file>         # writing-rules checker on one file (see Writing Rules)
+npm run lint:prose:all               # every Markdown file and every JavaScript comment
 npm run gen:sin                      # regenerate src/sim/sin-table.js (rarely)
 npm run serve                        # static server on :5173, open from a phone on the LAN
 ```
 
-The repo needs Node 22 or newer and Python 3 for the prose checker. There is no build step and no `node_modules`; ask the owners before you add a dependency.
+The repo needs Node 22 or newer and Python 3 for the prose checker. There is no build step, and `npm test` needs no install. The one approved dependency is `playwright-core` 1.58.2 (dev, pinned) for `npm run test:e2e`; ask the owners before you add another.
 
 ## Simulation Rules (`src/sim/`)
 
@@ -37,7 +39,7 @@ These rules keep the sim deterministic across browsers and portable to Rust. `te
 5. Keep entities in an array sorted by ascending id. Systems iterate in id order, and ties break on the lowest id.
 6. Inside the sim, never iterate over object keys, a `Map` or a `Set`. Lookups are fine; iteration order is not portable.
 7. Add every gameplay field that changes state to `ENTITY_HASH_FIELDS` or `TEAM_HASH_FIELDS` in `state.js`. Derived caches (visibility, spatial hash) stay out of the hash.
-8. The tick pipeline order in `step.js` is part of the spec. A change to the pipeline order, the hash layout, the RNG, or any rule that alters outcomes requires a bump of `SPEC_VERSION` in `config.js`.
+8. The tick pipeline order in `step.js` is part of the spec. A change to the pipeline order, the hash layout, the RNG, or any rule that alters outcomes requires a bump of `SPEC_VERSION` in `config.js`. **Exception while the MVP is built (owners, 2026-10-16):** leave `SPEC_VERSION` at 0.10.0 and re-record the golden replays in the same commit as the change. The bump rule returns when the owners lift this exception.
 9. Damage within a tick resolves simultaneously, so two units can kill each other on the same tick.
 
 ## Data Conventions (`data/*.json`)
@@ -59,14 +61,14 @@ Values marked *(default)* in the GDD are tuning points. Change them in data and 
 - Read game state only through `WorldView` (`world-view.js`). Client code never mutates sim state.
 - Every player action becomes a `CommandEnvelope` (`src/sim/commands.js`). The UI may pre-validate for instant feedback; the sim result is final.
 - Three.js world units are tiles. Team 0 (player, bottom) is blue `#3d8bff`; team 1 (top) is red `#ff4d4d`.
-- The game shows no HP bars. Emissive brightness = 20% + 80% × hp / maxHp.
+- The game shows no HP bars and no glow-as-health. Each unit and building shows a small lux count beside it (GDD 13.1); glow is decoration only.
 - Mobile comes first: portrait layout, touch input, `devicePixelRatio` capped at 2, bloom at half resolution, instancing for crowds.
 - The `index.html` import map pins `three` to 0.170.0. Change that version only on purpose, then test on a phone.
 
 ## Testing Expectations
 
 - Every new rule gets a unit test that drives it through commands and `step()`, without reaching into internals.
-- Any new system must keep `test/determinism.test.js` green. Once golden replays exist in `replays/golden/`, a hash change there without a `SPEC_VERSION` bump is a bug.
+- Any new system must keep `test/determinism.test.js` green. A hash change in a golden replay in `replays/golden/` fails `npm test`. Re-record the replay on purpose, in the same commit as the rule change (see the `SPEC_VERSION` exception above).
 - Before you finish a task, run `npm test` and `npm run headless`.
 
 ## Code Style
@@ -88,7 +90,7 @@ Reference files in this repo:
 
 - `docs/writing/rules.md`: the full 21 rules with BAD and GOOD examples, severity and rationale. Read the relevant block when a call is close.
 - `docs/writing/review-pass.md`: the self-check and full-review workflows and the scorecard format.
-- `tools/check_style.py`: dependency-free checker for RULE-04, 05, 06, 12, B, C, D, G and I. Run `npm run lint:prose -- FILE` (formal) or `python3 tools/check_style.py --register informal FILE`. Fix every `deny` hit; judge each `ask` hit.
+- `tools/check_style.py`: dependency-free checker for RULE-04, 05, 06, 12, B, C, D, G and I. Run `npm run lint:prose -- FILE` (formal) or `python3 tools/check_style.py --register informal FILE`. RULE-04 and RULE-05 hits are `deny`: fix every one. The other rules are `ask`: judge each hit. It reads `.md` files whole and `.js` files through their comments only. `npm run lint:prose:all` covers the whole repo, and `npm test` fails on any `deny` hit (`test/prose.test.js`).
 
 ### Scope
 
@@ -151,6 +153,10 @@ Field-observed rules (maintainer observation of LLM output, 2022 to 2026):
 ### Verification
 
 RULE-H is the rule with teeth. Version numbers, engine behavior, API shapes and benchmark figures change over time. Verify them against a real source (package registry, official docs, a test run in this repo) before you state them. Say which parts you verified and which you recalled.
+
+## Godot Project (`vone/`)
+
+`vone/` holds the Godot 4.6 project (`vone/project.godot`). It uses the GL Compatibility renderer so one project targets web, mobile and PC. Other agents build the game there from this MVP's logic and from playtest feedback. The GDD and `src/sim/` stay the executable reference for the rules. Do not commit `vone/.godot/`, the editor cache that `vone/.gitignore` excludes.
 
 ## People
 

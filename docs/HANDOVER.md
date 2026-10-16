@@ -21,6 +21,8 @@ Milestone M1 (map generation) is done. The scaffold and M1 are green:
 | Headless runner | `npm run headless`: 12 000 ticks in about 15 ms with empty systems; a third argument saves the run as a replay |
 | Purity guard | `test/sim-boundary.test.js` blocks bare imports, Math.random, wall clock, approximated Math, `**`, DOM, timers, key iteration |
 | Client | Renders the 96 × 112 map, both Cores, the generated lanes, vents, item spawns and blockers (placeholder shapes), the HUD and a one-finger pan; runs the sim at 20 Hz |
+| Prose gate | `tools/check_style.py` labels hits `deny` or `ask`, supports `--register informal`, reads `.js` files through their comments and checks the whole repo with `npm run lint:prose:all`; `test/prose.test.js` fails `npm test` on any `deny` hit |
+| Godot project (`vone/`) | Created by the owners (Godot 4.6, GL Compatibility renderer, for web, mobile and PC); other agents build the game there from this MVP's logic and playtest feedback |
 | Cross-runtime check | `npm run test:e2e` loads the page in Chromium inside the Playwright container and compares its tick-120 hash with Node's; seed 1234567 gives `a3dbf89c` in both |
 
 `npm test`: 37 pass, 0 todo. `npm run headless` prints hash `e626db0e` for seed 1234567 at 12 000 ticks, on both of two consecutive runs.
@@ -35,14 +37,14 @@ Implement the economy per `docs/GAME_DESIGN.md` sections 3 to 5: collectors, day
 
 M1 leaves these starting points:
 
-- The Cores are entities 1 (team 0) and 2 (team 1). Their `hp` equals `coreLux`, both in milli units. The economy must keep the two equal, because Core HP is its lux (GDD 3.1).
+- The Cores are entities 1 (team 0) and 2 (team 1). Their `hp` equals `coreLux`, both in milli units. The economy must keep the two equal, because Core HP is its lux (GDD 3.1). A Core's `maxHp` starts at its starting lux and rises to match `hp` whenever `hp` exceeds it (GDD 3.1, owners' decision).
 - Placement must refuse tiles that hold a blocker (`KIND.BLOCKER` entities, ids 3 to 14), and tiles in the DMZ.
 - A geothermal collector needs a vent tile. `state.map.vents` lists them as tile coordinates, 2 per team.
 
 Acceptance:
 
 - Unit tests drive each rule through commands and `step()`. They cover the 2 s buffer, the 60% recycle refund, recycle cancel, meltdown at 2 400 ticks, refusal below 1 lux, and a draw on a same-tick Core death.
-- `SPEC_VERSION` bumped, because the pipeline now changes outcomes, and the golden replay re-recorded with `node tools/run-headless.js 1234567 2400 replays/golden/seed-1234567.json`.
+- The golden replay re-recorded in the same commit with `node tools/run-headless.js 1234567 2400 replays/golden/seed-1234567.json`. `SPEC_VERSION` stays at 0.10.0 while the MVP is built (`CLAUDE.md`, simulation rule 8).
 
 ## Milestones After M2
 
@@ -54,7 +56,7 @@ From `docs/TECH_ARCHITECTURE.md` section 14. Each milestone ends with tests gree
 | M4 | Creeps: barracks queue, groups of 1 to 5, cap 30 with held groups skipping ahead, merge and split (odd creep stays), default and custom paths (max 10 waypoints), lane following | Queue skip-ahead test; split 7 gives 4 + 3 |
 | M5 | Hero: roster of 5, rotation lock, HP allocation, 5 s production, 5 s respawn cooldown, 4 abilities from data, shield targets | Rotation lock test across 6 picks |
 | M6 | Items: inventory (50), barracks orders waiting for a hero, drops, map spawns, loot bags (owner can reclaim), the 4 starter items | Energy Boost refused on the Core; Energy Grab funnels exactly 50 lux then is consumed |
-| M7 | Client: instanced rendering, interpolation, camera follow on the selected hero, glow-as-health, end-of-match stats | 60 creeps on screen at 60 fps on a mid-range Android phone |
+| M7 | Client: instanced rendering, interpolation, camera follow on the selected hero, a small lux count beside every unit and building (no glow-as-health, GDD 13.1), end-of-match stats | 60 creeps on screen at 60 fps on a mid-range Android phone |
 | M8 | Touch controls per GDD 11: tap select, hero move and attack, ability targeting, path mode with Undo/Go/Cancel and Reuse last path, build ghost, quick slots, pinch zoom | A full match playable by touch |
 | M9 | Bot per GDD 12.1, hot-seat toggle, bot-vs-bot soak over 1 000 seeds in Node | Soak finishes with no crash and no non-integer values |
 | M10 | Cross-browser determinism page (Chrome Android, iOS Safari vs Node), performance pass | Identical final hashes on all three |
@@ -81,15 +83,14 @@ Two came from the owners during the session; the rest fill gaps in the docs.
 - **Lane tiles:** each Bresenham tile on a polyline is stamped as a square of `laneWidth` tiles. Team 1's tiles are the mirrored tiles of team 0, not a second rasterization, so the symmetry is exact.
 - **Zones:** vents and blockers go in rows 64 to 111, the build zone of team 0, and the mirror covers rows 0 to 47. Vents take 2 distinct columns chosen by the seed.
 - **HP units:** HP is stored in milli units, like lux, so a Core's `hp` equals its `coreLux`. A blocker's 200 HP from `buildings.json` becomes 200 000 in state.
-- **Core `maxHp`:** set to the starting lux. M2 must decide what `maxHp` means once income lifts the Core above it, because the glow formula divides by `maxHp`.
+- **Core `maxHp` (owners):** starts at the starting lux and rises with the Core's HP (GDD 3.1). `createState` sets only the start; the M2 economy applies the rise. The glow-as-health formula is gone, so nothing divides by `maxHp` for display.
 - **Entity ids:** Cores are 1 and 2, then team 0's 6 blockers (3 to 8) in placement order, then team 1's mirrored 6 (9 to 14). Cores and blockers have `owner` -1.
 - **Replay metadata:** `mapgen.version` stays 1, because no earlier generator existed. Bump it when a data or code change alters layouts for the same seed.
-- **Spec and GDD:** `SPEC_VERSION` is 0.10.0. The GDD is v0.9.1, with a changelog row for the black hole removal, lane width, connectivity and spacing rules.
+- **Spec and GDD (owners):** `SPEC_VERSION` is 0.10.0 and stays there while the MVP is built, so a rule change re-records the golden replay instead of bumping the version. The GDD is v0.9.1, with a changelog row for the black hole removal, lane width, connectivity and spacing rules.
 
 ## Known Gaps
 
 - Mobile testing needs the page served over the LAN (`npm run serve`, then `http://<mac-ip>:5173` on the phone). Three.js loads from jsDelivr, so the phone needs internet access.
 - `src/client/input/pan.js` maps screen y to world z 1:1, ignoring the camera tilt. Fine for now; M8 should ray-cast to the ground plane instead.
-- `state.map` is outside the hash. A change that only moves lanes, vents or item spawns passes the golden replay unless it also moves a blocker. Hashing a digest of `state.map` would close this; it changes the hash layout and needs a `SPEC_VERSION` bump.
-- `tools/check_style.py` has no `--register informal` flag and prints no deny or ask labels, although `CLAUDE.md` describes both. Run it plain on commit messages and ignore contraction and title-case hits.
+- `state.map` stays outside the hash (owners, for now). The hash covers blockers but not lanes, vents or item spawns. A change that moves only those passes the golden replay, `npm run test:e2e` and any future Godot parity check that compares hashes. Placement draws blockers after vents, so most generator changes also move a blocker and get caught; an edit to the item spawn rows or to lane jitter alone may not. The gap closes as systems consume the data. Geothermal collectors read vents (M2), creeps follow lane polylines (M4) and map spawns create ground items (M6), so each puts its result into hashed entities. Until then, a Godot port must compare `generateMap` output directly, for example the layout of seed 1234567. Hashing a digest of `state.map` would close the gap for good and changes the hash layout.
 - No CI yet. A GitHub Actions job running `npm test` on Node 22 is a five-line addition when the repo goes to GitHub.

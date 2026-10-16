@@ -16,6 +16,8 @@ Status: draft v0.9.1. Numbers marked *(default)* live in `data/balance.json` and
 | Lane width | 3 tiles *(default)* (section 10.2) |
 | Connectivity check | Blockers and Cores are the only walls (section 10.2) |
 | Spacing | Distances are measured as the larger of the two axis differences; a relaxed spacing applies to one element only (section 10.2) |
+| Health display | Glow-as-health removed; a lux number sits beside each unit and building (section 13.1) |
+| Core max HP | Rises with the Core's HP instead of staying at the starting lux (section 3.1) |
 
 ### v0.8 → v0.9
 
@@ -140,6 +142,7 @@ Buildings are owned by the player who built them. A player picks heroes, orders 
 - The team's bank and its life. Core HP **is** its lux (HP factor 1).
 - Starting lux: `100 × number of players on the team`.
 - No cap. At 0, the team loses.
+- The Core's max HP is the highest HP it has held, so it rises with the Core's lux and never falls.
 
 ### 3.2 HP factor
 
@@ -479,7 +482,7 @@ XP and levels, DMZ reduced-HP building, "+0.5 per 100 lux", account levels, netw
 - Models (.glb): designed by Hama BEN JANNET.
 - Team colors: **red vs blue**.
 - Readability on a phone screen matters more than detail: silhouettes must tell hero, creep, tower and collector apart at the default zoom.
-- **No HP bars.** Emissive brightness shows an entity's lux: `brightness = 20% + 80% × (current HP / max HP)`, so it reads as health. Tapping an entity shows its exact lux.
+- **No HP bars and no glow-as-health.** A small number beside each unit and building shows its lux count (section 3.2); the Core shows its HP, which is its lux. Glow is decoration and carries no information.
 - Destruction: entities dissolve into particles of their team color.
 
 ## 13.2 End-of-match screen
