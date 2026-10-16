@@ -32,7 +32,7 @@ Profiles (CLAUDE.md, Writing Rules):
     informal          RULE-I (contractions) and RULE-G (title case) off; use it
                       for commit messages, release notes and casual chat
 
-File types: .md and other text files are checked whole. .js files are checked
+File types: .md and other text files are checked whole. .js and .ts files are checked
 through their comments only (// lines, block comments, JSDoc descriptions),
 so code and identifiers are never flagged.
 
@@ -151,10 +151,15 @@ INFORMAL_OFF = {"RULE-I", "RULE-G"}
 # copy whose BAD examples contain the phrases on purpose.
 ALL_EXCLUDE = (
     "docs/writing/rules.md",
-    "docs/prompts/",
-    "node_modules/",
+    "docs/prompts/",   # prompt history holds the owners' own words
     "vone/",
 )
+
+# Paths inside an excluded folder that --all still checks.
+ALL_INCLUDE = ("docs/prompts/README.md",)
+
+# Directory names --all never enters, at any depth.
+SKIP_DIRS = ("node_modules", "dist", "coverage", "__pycache__")
 
 RULE_TITLES = {
     "RULE-05": "cliche / prefabricated phrase",
@@ -621,23 +626,22 @@ def repo_files():
     found = []
     for base, dirs, names in os.walk(root):
         rel_base = os.path.relpath(base, root).replace(os.sep, "/")
-        dirs[:] = sorted(d for d in dirs if not d.startswith(".")
-                         and not f"{rel_base}/{d}/".lstrip("./").startswith(ALL_EXCLUDE))
+        dirs[:] = sorted(d for d in dirs if not d.startswith(".") and d not in SKIP_DIRS)
         for name in sorted(names):
             rel = name if rel_base == "." else f"{rel_base}/{name}"
-            if rel.startswith(ALL_EXCLUDE) or rel in ALL_EXCLUDE:
+            if rel.startswith(ALL_EXCLUDE) and rel not in ALL_INCLUDE:
                 continue
             top = rel.split("/")[0]
-            if name.endswith(".md") and (top in ("docs", "src", "test", "tools") or "/" not in rel):
+            if name.endswith(".md") and (top in ("docs", "src", "test", "tools", "backend") or "/" not in rel):
                 found.append(rel)
-            elif name.endswith(".js") and top in ("src", "test", "tools"):
+            elif name.endswith((".js", ".ts")) and top in ("src", "test", "tools", "backend"):
                 found.append(rel)
     return root, sorted(found)
 
 
 def review_file(text, path, register):
     """Whole text for prose files, comments only for JavaScript."""
-    if path.endswith(".js"):
+    if path.endswith((".js", ".ts")):
         text = js_comment_text(text)
     return review(text, register)
 
