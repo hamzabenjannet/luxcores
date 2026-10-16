@@ -28,7 +28,7 @@ import { MILLI, UNITS_PER_TILE } from './fixed.js';
 
 /** @typedef {RawData & { specVersion: string }} SimConfig */
 
-export const SPEC_VERSION = '0.9.0';
+export const SPEC_VERSION = '0.10.0';
 
 /**
  * Recursively convert suffixed keys. Throws on non-integer numbers.

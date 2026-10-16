@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadData } from './helpers/load-data.js';
-import { createState, step, hashState, Recorder, playReplay, spawnEntity, KIND } from '../src/sim/index.js';
+import { createState, step, hashState, Recorder, playReplay, spawnEntity, generateMap, KIND } from '../src/sim/index.js';
 
 const players = [
   { id: 0, team: 0, kind: 'human' },
@@ -66,6 +66,87 @@ test('state survives a structuredClone round trip with the same hash', () => {
   assert.equal(hashState(copy), hashState(state));
 });
 
-test.todo('mapgen: same seed yields an identical layout (M1)');
-test.todo('mapgen: layout is point-symmetric through the map center (M1)');
-test.todo('mapgen: every lane connects both Cores (M1)');
+const MAP_SEEDS = 1000;
+
+test('mapgen: same seed yields an identical layout', () => {
+  const { config } = loadData();
+  for (const seed of [1, 42, 1234567]) {
+    assert.deepEqual(generateMap(seed, config.mapgen), generateMap(seed, config.mapgen));
+  }
+  assert.notDeepEqual(generateMap(1, config.mapgen), generateMap(2, config.mapgen));
+});
+
+test('mapgen: layout is point-symmetric through the map center', () => {
+  const { config } = loadData();
+  const { width: W, height: H } = config.mapgen;
+  const mirror = (p) => ({ team: 1 - p.team, tileX: W - 1 - p.tileX, tileZ: H - 1 - p.tileZ });
+  const byTeam = (list, team) => list.filter((p) => p.team === team);
+  for (let seed = 1; seed <= 50; seed++) {
+    const map = generateMap(seed, config.mapgen);
+    for (const kind of ['cores', 'vents', 'blockers', 'itemSpawns']) {
+      assert.deepEqual(byTeam(map[kind], 1), byTeam(map[kind], 0).map(mirror), `${kind}, seed ${seed}`);
+    }
+    for (const lane of map.lanes.filter((l) => l.team === 0)) {
+      const twin = map.lanes.find((l) => l.team === 1 && l.lane === lane.lane);
+      assert.deepEqual(twin.points, lane.points.map(([x, z]) => [W - 1 - x, H - 1 - z]));
+      const mirrored = lane.tiles.map((i) => W * H - 1 - i).sort((a, b) => a - b);
+      assert.deepEqual(twin.tiles, mirrored, `${lane.lane} tiles, seed ${seed}`);
+    }
+  }
+});
+
+const NESW = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+
+/** Independent flood fill (N, E, S, W) over the grid, written without the generator's helpers. */
+function laneProblems(map, mapgen) {
+  const { width: W, height: H } = map;
+  const bh = mapgen.blackHole;
+  const r = bh.noWalkRadius * 1000;
+  const blocked = new Uint8Array(W * H); // blockers, Cores and the black hole disc
+  const hole = new Uint8Array(W * H);
+  for (let z = 0; z < H; z++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x * 1000 - bh.centerMilliTilesX;
+      const dz = z * 1000 - bh.centerMilliTilesZ;
+      if (dx * dx + dz * dz <= r * r) hole[z * W + x] = blocked[z * W + x] = 1;
+    }
+  }
+  for (const b of map.blockers) blocked[b.tileZ * W + b.tileX] = 1;
+  const coreIdx = map.cores.map((c) => c.tileZ * W + c.tileX);
+  for (const i of coreIdx) blocked[i] = 1;
+
+  const seen = new Uint8Array(W * H);
+  const queue = [coreIdx[0]];
+  seen[coreIdx[0]] = 1;
+  for (let head = 0; head < queue.length; head++) {
+    const x = queue[head] % W;
+    const z = (queue[head] - x) / W;
+    for (const [dx, dz] of NESW) {
+      const nx = x + dx;
+      const nz = z + dz;
+      if (nx < 0 || nz < 0 || nx >= W || nz >= H) continue;
+      const n = nz * W + nx;
+      if (!seen[n] && !blocked[n]) { seen[n] = 1; queue.push(n); }
+    }
+  }
+
+  const problems = [];
+  const { tileX, tileZ } = map.cores[1];
+  if (!NESW.some(([dx, dz]) => seen[(tileZ + dz) * W + tileX + dx])) problems.push('Core 1 unreachable');
+  for (const lane of map.lanes) {
+    for (const i of lane.tiles) {
+      if (!seen[i] && !hole[i] && !coreIdx.includes(i)) problems.push(`${lane.team}/${lane.lane} tile ${i % W},${Math.floor(i / W)}`);
+    }
+  }
+  return problems;
+}
+
+test(`mapgen: every lane connects both Cores over ${MAP_SEEDS} seeds`, () => {
+  const { config } = loadData();
+  const t0 = performance.now();
+  for (let seed = 1; seed <= MAP_SEEDS; seed++) {
+    const map = generateMap(seed, config.mapgen);
+    assert.deepEqual(laneProblems(map, config.mapgen), [], `seed ${seed} (used ${map.usedSeed})`);
+  }
+  assert.ok(performance.now() - t0 < 5000, 'lane connectivity over 1 000 seeds must take under 5 s');
+});

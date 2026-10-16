@@ -14,7 +14,8 @@
  * Every hashed value must be a safe integer; anything else throws, which
  * catches floats leaking into sim state.
  *
- * Derived data (visibility bitsets, caches) is never hashed.
+ * Derived data (visibility bitsets, caches) is never hashed. That includes
+ * `state.map`, which is a pure function of the seed and the data files.
  */
 
 import { assertInt } from './fixed.js';

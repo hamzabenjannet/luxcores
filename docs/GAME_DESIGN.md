@@ -2,11 +2,20 @@
 
 Working title. A strategy game mixing hero control (Dota 2), creep waypoint paths (Age of Empires) and base building with tower defense (Generals Zero Hour, Clash Royale). Everything in the world is made of light energy, measured in **lux**. Destroyed things dissolve into light; there is no blood or gore.
 
-Status: draft v0.9. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
+Status: draft v0.9.1. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
 
 ---
 
 ## 0. Changelog
+
+### v0.9 → v0.9.1
+
+| Area | Change |
+|---|---|
+| Black hole | Tiles within 3 tiles of its center cannot be walked or built on; it has no other effect (section 10.1) |
+| Lane width | 3 tiles *(default)* (section 10.2) |
+| Connectivity check | Lane tiles inside the black hole disc are exempt; the fill goes around the disc (section 10.2) |
+| Spacing | Distances are measured as the larger of the two axis differences; a relaxed spacing applies to one element only (section 10.2) |
 
 ### v0.8 → v0.9
 
@@ -378,7 +387,7 @@ Haste turns 1 hit/s into 4 hits/s. If playtests show it's dominant, +100 (2 hits
 **Viewport rule**: the portrait viewport (32 × 64 tiles at default zoom) shows exactly 1 column × 3 rows. From your Core it frames your Core row, your build row and the DMZ: 32 + 16 + 16 = 64. Moving between columns or toward the enemy side means sliding the view.
 
 - Each team's build zone: 96 × 48 tiles (Core row + build row).
-- DMZ: 16 rows across the full width, no-build. The black hole sits at its center, (47.5, 55.5).
+- DMZ: 16 rows across the full width, no-build. The black hole sits at its center, (47.5, 55.5) in tile indices, the one point that the mirror in section 10.2 maps onto itself. Tiles within 3 tiles of that point are no-walk, so units go around the disc. The mid lane template crosses the disc, and its tiles there stay on the map but cannot be walked.
 - Lumen Cores: (47, 15) for the enemy and (48, 96) for you, point-mirrored through the map center.
 - Grid for placement, continuous coordinates for movement.
 - **Lanes**: each lane runs inside its own column through both build rows and the DMZ. In the Core row, the left and right lanes curve into the middle column and merge with the mid lane at the Lumen Core. Creeps without a custom path follow the nearest lane.
@@ -392,18 +401,18 @@ Generation runs on your half, then point-mirrors everything through the map cent
 
 | Element | Count per team | Rule *(default)* |
 |---|---|---|
-| Lanes | 3 | Fixed shape; control points get a seeded sideways jitter of up to ±3 tiles inside their column |
+| Lanes | 3 | Fixed shape; control points get a seeded sideways jitter of up to ±3 tiles inside their column; each lane is 3 tiles wide *(default)* |
 | Geothermal vents | 2 | In 2 different columns, chosen by the seed |
 | Blockers | 6 | 2 per column |
 | Item spawn points | 2 (4 in total) | In the DMZ, 1 per side column |
 
 Placement constraints for vents and blockers:
 
-- Not on a lane tile, nor within 2 tiles of one.
+- Not on a lane tile, nor within 2 tiles of one. Distance means the larger of the two axis differences.
 - Not within 6 tiles of the Lumen Core.
 - At least 4 tiles from any other generated element.
-- Retry with the next RNG value when a spot fails, up to 50 tries per element; after that, the generator relaxes the spacing rule by 1 tile and continues.
-- After generation, a flood fill checks that every lane connects the two Cores; if not, the seed is advanced and generation reruns.
+- Retry with the next RNG value when a spot fails, up to 50 tries per element. After that, the generator relaxes the spacing rule by 1 tile for that element and continues.
+- After generation, a flood fill checks that every lane connects the two Cores; if not, the seed is advanced and generation reruns. The fill treats blockers, Cores and the black hole disc as walls and visits neighbors in the order north, east, south, west. Lane tiles inside the disc are exempt from the check.
 
 ## 11. Mobile controls (portrait)
 

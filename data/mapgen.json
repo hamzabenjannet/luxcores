@@ -19,6 +19,7 @@
   "lanes": {
     "_doc": "Lane templates for team 0. Points run from the Core outward to the map center row. Side lanes leave the Core, curve inside the Core row, then run straight up their own column.",
     "jitter": 3,
+    "laneWidth": 3,
     "left":  [ [48, 96], [40, 92], [30, 88], [20, 82], [16, 72], [16, 56] ],
     "mid":   [ [48, 96], [48, 80], [48, 56] ],
     "right": [ [48, 96], [56, 92], [66, 88], [76, 82], [80, 72], [80, 56] ]
@@ -26,7 +27,7 @@
   "counts": {
     "ventsPerTeam": 2,
     "blockersPerColumnPerTeam": 2,
-    "itemSpawnsPerTeam": 1
+    "itemSpawnsPerTeam": 2
   },
   "spacing": {
     "fromLane": 2,
@@ -35,6 +36,7 @@
     "maxTriesPerElement": 50,
     "relaxStep": 1
   },
+  "maxSeedAttempts": 64,
   "itemSpawnRow": "dmz",
   "itemSpawnColumns": ["left", "right"]
 }
