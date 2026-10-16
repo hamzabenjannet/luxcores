@@ -18,6 +18,9 @@ export interface TestApp {
   /** `http://127.0.0.1:<port>` */
   url: string;
   dbPath: string;
+  /** Closes the app the way a SIGTERM does, and keeps the database file for inspection. */
+  shutdown(): Promise<void>;
+  /** Shuts down if needed, restores the environment and deletes the database. */
   close(): Promise<void>;
 }
 
@@ -55,13 +58,20 @@ export async function createTestApp(
   await startRabbitConsumer(app); // does nothing unless RABBITMQ_URL is set
   await app.listen(0, '127.0.0.1');
   const { port } = app.getHttpServer().address() as AddressInfo;
+  let closed = false;
+  const shutdown = async (): Promise<void> => {
+    if (closed) return;
+    closed = true;
+    await app.close();
+  };
 
   return {
     app,
     url: `http://127.0.0.1:${port}`,
     dbPath,
+    shutdown,
     async close() {
-      await app.close();
+      await shutdown();
       for (const [key, value] of saved) {
         if (value === undefined) delete process.env[key];
         else process.env[key] = value;

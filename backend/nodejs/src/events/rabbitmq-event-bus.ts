@@ -1,6 +1,6 @@
 import {
   Logger,
-  type OnModuleDestroy,
+  type BeforeApplicationShutdown,
   type OnModuleInit,
 } from '@nestjs/common';
 import {
@@ -23,7 +23,7 @@ const CONNECT_TIMEOUT_MS = 10_000;
  */
 export class RabbitMqEventBus
   extends EventBus
-  implements OnModuleInit, OnModuleDestroy
+  implements OnModuleInit, BeforeApplicationShutdown
 {
   readonly mode = 'rabbitmq' as const;
   private readonly logger = new Logger('EventBus');
@@ -59,7 +59,8 @@ export class RabbitMqEventBus
     this.logger.log(`RabbitMQ publisher connected, queue "${this.queue}"`);
   }
 
-  async onModuleDestroy(): Promise<void> {
+  /** The second shutdown phase: after the match runner has published its last events, before the database closes. */
+  async beforeApplicationShutdown(): Promise<void> {
     await this.channel?.close();
     await this.connection?.close();
   }

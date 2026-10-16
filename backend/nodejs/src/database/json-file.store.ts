@@ -21,6 +21,7 @@ export class JsonFileStore extends DataStore {
   private readonly logger = new Logger(JsonFileStore.name);
   private tables: Tables = {};
   private queue: Promise<void> = Promise.resolve();
+  private closed = false;
 
   constructor(private readonly path: string) {
     super();
@@ -113,6 +114,7 @@ export class JsonFileStore extends DataStore {
 
   async close(): Promise<void> {
     await this.queue;
+    this.closed = true; // like a closed connection pool: later writes fail, so a shutdown-order bug shows up
   }
 
   private rows<T extends Doc>(collection: string): T[] {
@@ -121,6 +123,8 @@ export class JsonFileStore extends DataStore {
 
   /** Queue a write. Callers wait until their own snapshot of the data is on disk. */
   private save(): Promise<void> {
+    if (this.closed)
+      return Promise.reject(new Error('The JSON database is closed'));
     const snapshot = JSON.stringify(this.tables, null, 2);
     const run = this.queue.then(() => this.write(snapshot));
     this.queue = run.catch((err: Error) =>

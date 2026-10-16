@@ -43,5 +43,58 @@ describe.skipIf(!process.env.TEST_RABBITMQ_URL)(
         await t.close();
       }
     }, 30_000);
+
+    it('ends a live match and still publishes its result when the app shuts down', async () => {
+      const queue = `luxcores.test.shutdown.${Date.now()}`;
+      const url = process.env.TEST_RABBITMQ_URL as string;
+      const first = await createTestApp({
+        RABBITMQ_URL: url,
+        RABBITMQ_QUEUE: queue,
+        MATCH_MAX_TICKS: '6000',
+      });
+      const halo = await guest(first.url, 'Halo');
+      const created = await api(first.url, '/api/matches', {
+        token: halo.token,
+        body: { name: 'Cut short', vsBot: true, seed: 8 },
+      });
+      expect(
+        (
+          await api(first.url, `/api/matches/${created.body.id}/start`, {
+            method: 'POST',
+            token: halo.token,
+          })
+        ).status,
+      ).toBe(200);
+      await new Promise((r) => setTimeout(r, 500));
+
+      // With the broker closed before the runner finished, this call never returned.
+      const started = Date.now();
+      await first.shutdown();
+      expect(
+        Date.now() - started,
+        'shutdown must not hang on the broker',
+      ).toBeLessThan(5000);
+
+      // The published match.finished waits in the durable queue. A second node with the
+      // same database and queue consumes it and updates the stats.
+      const second = await createTestApp({
+        RABBITMQ_URL: url,
+        RABBITMQ_QUEUE: queue,
+        JSON_DB_PATH: first.dbPath,
+      });
+      try {
+        let stats = { matchesPlayed: 0, draws: 0 };
+        for (let i = 0; i < 50 && stats.matchesPlayed === 0; i++) {
+          await new Promise((r) => setTimeout(r, 200));
+          stats = (
+            await api(second.url, '/api/players/me', { token: halo.token })
+          ).body.stats;
+        }
+        expect(stats).toMatchObject({ matchesPlayed: 1, draws: 1 });
+      } finally {
+        await second.close();
+        await first.close();
+      }
+    }, 30_000);
   },
 );

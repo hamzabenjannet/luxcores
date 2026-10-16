@@ -2,7 +2,7 @@ import {
   ConflictException,
   Injectable,
   Logger,
-  type OnApplicationShutdown,
+  type OnModuleDestroy,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter } from 'node:events';
@@ -96,7 +96,7 @@ interface Run {
  * tick-based.
  */
 @Injectable()
-export class MatchRunnerService implements OnApplicationShutdown {
+export class MatchRunnerService implements OnModuleDestroy {
   private readonly logger = new Logger(MatchRunnerService.name);
   private readonly runs = new Map<string, Run>();
   private readonly emitter = new EventEmitter();
@@ -248,7 +248,12 @@ export class MatchRunnerService implements OnApplicationShutdown {
     return run ? this.snapshotOf(run, true) : null;
   }
 
-  async onApplicationShutdown(): Promise<void> {
+  /**
+   * Ends every live match on shutdown. This is the first shutdown phase, on purpose: saving
+   * a replay and publishing `match.finished` need the database and the broker, which close in
+   * later phases (`beforeApplicationShutdown` for the broker, `onApplicationShutdown` for the database).
+   */
+  async onModuleDestroy(): Promise<void> {
     await Promise.all(
       [...this.runs.values()].map((run) =>
         this.finish(run, MatchEndReason.Stopped).catch(() => undefined),
