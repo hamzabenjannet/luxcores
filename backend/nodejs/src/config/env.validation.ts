@@ -71,6 +71,9 @@ class EnvironmentVariables {
   @IsOptional() @IsString() PUBLIC_DIR?: string;
   @IsOptional() @IsInt() @Min(20) MATCH_MAX_TICKS?: number;
   @IsOptional() @IsInt() @Min(1) @Max(20) SNAPSHOT_EVERY_TICKS?: number;
+  @IsOptional() @IsInt() @Min(1) RATE_LIMIT_PER_MINUTE?: number;
+  @IsOptional() @IsInt() @Min(1) RATE_LIMIT_AUTH_PER_MINUTE?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(10) TRUST_PROXY?: number;
   @IsOptional() @IsInt() @Min(100) WS_AUTH_TIMEOUT_MS?: number;
   @IsOptional() @IsInt() @Min(256) WS_MAX_PAYLOAD_BYTES?: number;
 }

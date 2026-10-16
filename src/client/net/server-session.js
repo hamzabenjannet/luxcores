@@ -6,6 +6,10 @@
  * this client only sends commands and renders what it receives
  * (docs/TECH_ARCHITECTURE.md section 13.1).
  *
+ * Sign-in is a device guest. The first visit creates a guest profile and keeps
+ * its device secret in localStorage, so later visits sign in as the same player.
+ * A recovery code (`requestRecoveryCode`) moves the profile to another device.
+ *
  * Socket.IO loads on demand, so offline play never fetches it.
  */
 
@@ -25,6 +29,10 @@
  * @typedef {Object} ServerSession
  * @property {Feed} feed
  * @property {number} viewerTeam  team of the signed-in player
+ * @property {string} playerId
+ * @property {string} playerName
+ * @property {string | undefined} recoveryCode  set when this session came from a recovery: the replacement code, shown once
+ * @property {() => Promise<string>} requestRecoveryCode  makes a new recovery code; the old one stops working
  * @property {string} matchId
  * @property {() => Promise<void>} start  host only; asks the server to start the match
  * @property {(cmd: { t: string, [field: string]: unknown }) => Promise<{ accepted: boolean, tick?: number, reason?: string }>} sendCommand
@@ -42,17 +50,18 @@
  *   vsBot?: boolean,         // with 'new': fill the second slot with a bot
  *   seed?: number,           // with 'new': map and RNG seed
  *   specVersion: string,     // SPEC_VERSION of this client's sim
+ *   recoveryCode?: string,   // move a profile to this device instead of signing in
  * }} opts
  * @returns {Promise<ServerSession>}
  */
-export async function joinServerMatch({ server, name, matchId, vsBot = false, seed, specVersion }) {
+export async function joinServerMatch({ server, name, matchId, vsBot = false, seed, specVersion, recoveryCode }) {
   const base = server.replace(/\/$/, '');
   const spec = await request(`${base}/api/game/spec`);
   if (spec.specVersion !== specVersion) {
     throw new Error(`This server simulates spec ${spec.specVersion} and this client spec ${specVersion}`);
   }
 
-  const auth = await request(`${base}/api/auth/guest`, { body: { name } });
+  const auth = await signIn(base, name, recoveryCode);
   const token = auth.accessToken;
   let match =
     matchId === 'new'
@@ -102,6 +111,10 @@ export async function joinServerMatch({ server, name, matchId, vsBot = false, se
   return {
     feed,
     viewerTeam: match.players.find((/** @type {any} */ p) => p.playerId === auth.player.id)?.team ?? 0,
+    playerId: auth.player.id,
+    playerName: auth.player.name,
+    recoveryCode: recoveryCode ? auth.recoveryCode : undefined,
+    requestRecoveryCode: async () => (await request(`${base}/api/auth/recovery-code`, { token, method: 'POST' })).recoveryCode,
     matchId: match.id,
     start: async () => { await request(`${base}/api/matches/${match.id}/start`, { token, method: 'POST' }); },
     sendCommand: (cmd) => socket.timeout(5000).emitWithAck('match:command', { matchId: match.id, seq: seq++, cmd }),
@@ -132,3 +145,50 @@ async function request(url, { token, body, method } = {}) {
   if (!res.ok) throw new Error(`${method ?? (body === undefined ? 'GET' : 'POST')} ${url}: ${[json?.message].flat().join(', ') || res.status}`);
   return json;
 }
+
+/** Where a device keeps its secret, one entry per server. */
+const secretKey = (/** @type {string} */ base) => `luxcores.deviceSecret:${base}`;
+
+/** localStorage can be missing or blocked (private windows), so every access is guarded. */
+function readSecret(/** @type {string} */ base) {
+  try {
+    return localStorage.getItem(secretKey(base));
+  } catch {
+    return null;
+  }
+}
+
+function writeSecret(/** @type {string} */ base, /** @type {string | null} */ secret) {
+  try {
+    if (secret) localStorage.setItem(secretKey(base), secret);
+    else localStorage.removeItem(secretKey(base));
+  } catch {
+    // Without storage the device signs in as a new guest next time.
+  }
+}
+
+/**
+ * Recovery code first, then the stored device secret, then a new guest.
+ * @param {string} base
+ * @param {string} name
+ * @param {string | undefined} recoveryCode
+ * @returns {Promise<any>}
+ */
+async function signIn(base, name, recoveryCode) {
+  /** @type {any} */
+  let auth;
+  if (recoveryCode) {
+    auth = await request(`${base}/api/auth/recover`, { body: { recoveryCode } });
+  } else {
+    const secret = readSecret(base);
+    if (secret) {
+      // An unknown secret, such as one a recovery replaced, falls through to a new guest.
+      auth = await request(`${base}/api/auth/device`, { body: { deviceSecret: secret } }).catch(() => null);
+      if (!auth) writeSecret(base, null);
+    }
+  }
+  auth ??= await request(`${base}/api/auth/guest`, { body: { name } });
+  if (auth.deviceSecret) writeSecret(base, auth.deviceSecret);
+  return auth;
+}
+

@@ -102,8 +102,8 @@ Two came from the owners during the session; the rest fill gaps in the docs.
 
 Decided on 2026-10-16 (`docs/prompts/2026-10-16-backend-decisions.md`). Do them in this order:
 
-1. A plain WebSocket gateway beside Socket.IO, with the same events as JSON, so Godot in `vone/` connects with its native `WebSocketPeer`.
-2. A device guest with a recovery code, so a profile survives a restart of the client and moves to another device.
+1. Done: a plain WebSocket gateway at `/ws` (`backend/nodejs/README.md`, Plain WebSocket Protocol).
+2. Done: a device guest with a recovery code, plus rate limits on the sign-in routes.
 3. A Dockerfile and a compose service with Postgres and RabbitMQ, plus a reverse proxy with TLS, for one VPS.
 4. Then M2 (economy), the next game task above.
 

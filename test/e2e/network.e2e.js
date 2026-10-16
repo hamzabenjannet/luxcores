@@ -1,8 +1,10 @@
-// Online play smoke test. It starts the real backend and opens two Chromium
+// Online play smoke tests. It starts the real backend and opens two Chromium
 // pages in the Playwright container. The pages play a server match, and each
 // must receive the same state hashes that the repo's own sim computes. That
 // proves the loop end to end: REST lobby, Socket.IO room, server-authoritative
-// ticks, snapshots, and the networked client.
+// ticks, snapshots, and the networked client. A second test checks the device
+// guest: a page signs in as the same player on every visit, and a recovery code
+// moves the profile to a fresh browser profile.
 //
 // Run: (cd backend/nodejs && npm install && npm run build)   once
 //      npm run test:e2e
@@ -75,7 +77,13 @@ const skip = !reachable
     ? 'the backend is not built; run: cd backend/nodejs && npm install && npm run build'
     : false;
 
-test('two browsers play a server match and receive the sim hashes', { timeout: 120_000, skip }, async () => {
+/**
+ * Starts the backend and a browser, runs `body`, and cleans up. `open(context, query)`
+ * loads the game in online mode and collects console and page errors in `errors`.
+ * @param {(env: { browser: import('playwright-core').Browser, errors: string[], newContext: () => Promise<import('playwright-core').BrowserContext>, open: (context: import('playwright-core').BrowserContext, query: string) => Promise<import('playwright-core').Page> }) => Promise<void>} body
+ * @param {Record<string, string>} [extraEnv]
+ */
+async function withBackend(body, extraEnv = {}) {
   const dbDir = mkdtempSync(join(tmpdir(), 'luxcores-net-'));
   let output = '';
   const backend = spawn(process.execPath, ['dist/main.js'], {
@@ -89,8 +97,10 @@ test('two browsers play a server match and receive the sim hashes', { timeout: 1
       JWT_SECRET: 'e2e-secret-with-enough-length',
       ADMIN_API_KEY: 'e2e-admin-key-with-enough-length',
       MATCH_MAX_TICKS: '600', // 30 s: software rendering in the container is slow, and the match must outlast the checks
+      RATE_LIMIT_AUTH_PER_MINUTE: '1000',
       RABBITMQ_URL: '',
       LUXCORES_ROOT: ROOT,
+      ...extraEnv,
     },
   });
   backend.stdout.on('data', (d) => { output += d; });
@@ -101,26 +111,40 @@ test('two browsers play a server match and receive the sim hashes', { timeout: 1
   try {
     await waitForBackend(backend, () => output);
     browser = await chromium.connect(PW_WS_ENDPOINT);
-    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-
     /** @type {string[]} */ const errors = [];
-    const open = async (/** @type {string} */ query) => {
+    const newContext = () => browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    const open = async (/** @type {import('playwright-core').BrowserContext} */ context, /** @type {string} */ query) => {
       const page = await context.newPage();
       page.on('console', (m) => { if (m.type() === 'error') errors.push(`console error: ${m.text()}`); });
       page.on('pageerror', (e) => errors.push(`page error: ${e.message}`));
       await page.goto(`${BROWSER_URL}/?test=1&server=&${query}`, { waitUntil: 'load', timeout: 30_000 });
+      await page.waitForFunction(() => /** @type {any} */ (window).__luxTest?.matchId, null, { timeout: 30_000 });
       return page;
     };
+    await body({ browser, errors, newContext, open });
+  } finally {
+    await browser?.close();
+    backend.kill('SIGTERM');
+    await new Promise((r) => setTimeout(r, 300));
+    rmSync(dbDir, { recursive: true, force: true });
+  }
+}
+
+const luxTest = (/** @type {import('playwright-core').Page} */ page, /** @type {string} */ field) =>
+  page.evaluate((f) => /** @type {any} */ (window).__luxTest[f], field);
+
+test('two browsers play a server match and receive the sim hashes', { timeout: 120_000, skip }, async () => {
+  await withBackend(async ({ errors, newContext, open }) => {
+    const context = await newContext();
 
     // The host opens a lobby, the guest joins it, then the host starts the match.
-    const host = await open(`name=Halo&match=new&seed=${SEED}`);
-    await host.waitForFunction(() => /** @type {any} */ (window).__luxTest?.matchId, null, { timeout: 30_000 });
-    const matchId = await host.evaluate(() => /** @type {any} */ (window).__luxTest.matchId);
-    const guest = await open(`name=Prism&match=${matchId}`);
-    await guest.waitForFunction(() => /** @type {any} */ (window).__luxTest?.matchId, null, { timeout: 30_000 });
+    const host = await open(context, `name=Halo&match=new&seed=${SEED}`);
+    const matchId = await luxTest(host, 'matchId');
+    // A second browser profile, like a second phone: pages that share a profile are the same player.
+    const guest = await open(await newContext(), `name=Prism&match=${matchId}`);
 
-    assert.equal(await host.evaluate(() => /** @type {any} */ (window).__luxTest.viewerTeam), 0);
-    assert.equal(await guest.evaluate(() => /** @type {any} */ (window).__luxTest.viewerTeam), 1);
+    assert.equal(await luxTest(host, 'viewerTeam'), 0);
+    assert.equal(await luxTest(guest, 'viewerTeam'), 1);
 
     await host.evaluate(() => /** @type {any} */ (window).__luxTest.start());
     for (const page of [host, guest]) {
@@ -144,10 +168,40 @@ test('two browsers play a server match and receive the sim hashes', { timeout: 1
     await guest.screenshot({ path: join(SHOTS, 'network-guest.png') });
     assert.deepEqual(errors, [], 'the pages must log no console or page errors');
     console.log(`tick 20 hash ${referenceHash(20)} and tick 40 hash ${referenceHash(40)} reached both browsers; screenshots in ${SHOTS}`);
-  } finally {
-    await browser?.close();
-    backend.kill('SIGTERM');
-    await new Promise((r) => setTimeout(r, 300));
-    rmSync(dbDir, { recursive: true, force: true });
-  }
+  });
+});
+
+test('a device signs in as the same player, and a recovery code moves the profile', { timeout: 120_000, skip }, async () => {
+  await withBackend(async ({ errors, newContext, open }) => {
+    const device = await newContext();
+
+    // First visit creates a guest; the next visit in the same browser profile is the same player.
+    const first = await open(device, 'name=Halo&match=new');
+    const playerId = await luxTest(first, 'playerId');
+    assert.equal(await luxTest(first, 'playerName'), 'Halo');
+    const again = await open(device, 'name=SomeoneElse&match=new');
+    assert.equal(await luxTest(again, 'playerId'), playerId, 'the stored device secret must sign in as the same player');
+    assert.equal(await luxTest(again, 'playerName'), 'Halo', 'the name parameter applies to a new guest only');
+
+    // A recovery code moves the profile to a fresh browser profile.
+    const code = await first.evaluate(() => /** @type {any} */ (window).__luxTest.recoveryCode());
+    assert.match(code, /^[2-9A-HJKMNP-Z]{4}(-[2-9A-HJKMNP-Z]{4}){3}$/);
+    const phone = await newContext();
+    const moved = await open(phone, `recover=${code}&match=new`);
+    assert.equal(await luxTest(moved, 'playerId'), playerId, 'the recovery code must open the same profile');
+    const nextCode = await luxTest(moved, 'recoveredCode');
+    assert.match(nextCode, /^[2-9A-HJKMNP-Z]{4}(-[2-9A-HJKMNP-Z]{4}){3}$/);
+    assert.notEqual(nextCode, code);
+    assert.equal(errors.length, 0, `unexpected errors: ${errors.join(' | ')}`);
+
+    // The recovery replaced the old device secret, so the old browser profile starts over as a new guest.
+    const stale = await open(device, 'name=Late&match=new');
+    assert.notEqual(await luxTest(stale, 'playerId'), playerId);
+    assert.equal(await luxTest(stale, 'playerName'), 'Late');
+    assert.ok(errors.every((e) => e.includes('401')), `only the expected 401 may be logged: ${errors.join(' | ')}`);
+
+    // The new browser profile keeps working across visits.
+    const back = await open(phone, 'match=new');
+    assert.equal(await luxTest(back, 'playerId'), playerId);
+  });
 });

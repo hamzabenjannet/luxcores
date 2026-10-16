@@ -20,6 +20,11 @@ export function configureApp(app: INestApplication): void {
   const config = app.get<ConfigService<AppConfig, true>>(ConfigService);
   const origin = config.get('corsOrigin', { infer: true });
 
+  const trustProxy = config.get('trustProxy', { infer: true });
+  if (trustProxy > 0) {
+    // Behind a reverse proxy the client address is in X-Forwarded-For; without this every client looks like the proxy.
+    app.getHttpAdapter().getInstance().set('trust proxy', trustProxy);
+  }
   app.setGlobalPrefix('api', {
     exclude: [
       { path: '/', method: RequestMethod.GET },

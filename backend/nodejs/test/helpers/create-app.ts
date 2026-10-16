@@ -38,6 +38,8 @@ export async function createTestApp(
     JSON_DB_PATH: dbPath,
     RABBITMQ_URL: '',
     MATCH_MAX_TICKS: '60',
+    RATE_LIMIT_PER_MINUTE: '100000', // tests make many requests from one address
+    RATE_LIMIT_AUTH_PER_MINUTE: '100000',
     ...env,
   };
   const saved = new Map(Object.keys(settings).map((k) => [k, process.env[k]]));

@@ -10,7 +10,36 @@ import { api, createTestApp, guest } from './helpers/create-app.js';
 async function run(driver: string, env: Record<string, string>) {
   const t = await createTestApp(env);
   try {
-    const halo = await guest(t.url, 'Halo');
+    // Credential lookups filter on a hashed field, so check them on every adapter.
+    const signedIn = await api(t.url, '/api/auth/guest', {
+      body: { name: 'Halo' },
+    });
+    const again = await api(t.url, '/api/auth/device', {
+      body: { deviceSecret: signedIn.body.deviceSecret },
+    });
+    expect(again.body.player.id).toBe(signedIn.body.player.id);
+    const code = (
+      await api(t.url, '/api/auth/recovery-code', {
+        method: 'POST',
+        token: signedIn.body.accessToken,
+      })
+    ).body.recoveryCode;
+    const recovered = await api(t.url, '/api/auth/recover', {
+      body: { recoveryCode: code },
+    });
+    expect(recovered.body.player.id).toBe(signedIn.body.player.id);
+    expect(
+      (
+        await api(t.url, '/api/auth/device', {
+          body: { deviceSecret: signedIn.body.deviceSecret },
+        })
+      ).status,
+    ).toBe(401);
+    const halo = {
+      token: recovered.body.accessToken,
+      player: recovered.body.player,
+    };
+
     const prism = await guest(t.url, 'Prism');
     const created = await api(t.url, '/api/matches', {
       token: halo.token,

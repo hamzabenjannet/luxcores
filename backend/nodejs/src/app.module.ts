@@ -1,9 +1,12 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AdminModule } from './admin/admin.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
+import { HttpThrottlerGuard, throttlerOptions } from './common/rate-limit.js';
+import type { AppConfig } from './config/configuration.js';
 import configuration from './config/configuration.js';
 import { validateEnv } from './config/env.validation.js';
 import { DatabaseModule } from './database/database.module.js';
@@ -23,6 +26,11 @@ import { StaticModule } from './static/static.module.js';
       load: [configuration],
       validate: validateEnv,
     }),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<AppConfig, true>) =>
+        throttlerOptions(config),
+    }),
     DatabaseModule,
     SimulationModule,
     EventsModule,
@@ -35,6 +43,9 @@ import { StaticModule } from './static/static.module.js';
     AdminModule,
     StaticModule,
   ],
-  providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
+  providers: [
+    { provide: APP_GUARD, useClass: HttpThrottlerGuard },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+  ],
 })
 export class AppModule {}

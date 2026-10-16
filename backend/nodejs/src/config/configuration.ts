@@ -26,6 +26,9 @@ export interface AppConfig {
     snapshotEveryTicks: number;
   };
   static: { publicDir: string };
+  rateLimit: { perMinute: number; authPerMinute: number };
+  /** Reverse proxies in front of the app. The client address then comes from X-Forwarded-For. */
+  trustProxy: number;
   /** Plain WebSocket at /ws. */
   ws: { authTimeoutMs: number; maxPayloadBytes: number };
 }
@@ -69,6 +72,11 @@ export default (): AppConfig => {
       snapshotEveryTicks: int(env.SNAPSHOT_EVERY_TICKS, 2),
     },
     static: { publicDir: resolve(env.PUBLIC_DIR ?? 'public') },
+    rateLimit: {
+      perMinute: int(env.RATE_LIMIT_PER_MINUTE, 300),
+      authPerMinute: int(env.RATE_LIMIT_AUTH_PER_MINUTE, 10),
+    },
+    trustProxy: int(env.TRUST_PROXY, 0),
     ws: {
       authTimeoutMs: int(env.WS_AUTH_TIMEOUT_MS, 5000),
       maxPayloadBytes: int(env.WS_MAX_PAYLOAD_BYTES, 16384),

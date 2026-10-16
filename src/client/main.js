@@ -5,8 +5,15 @@
  *   offline (default)  data -> local sim -> fixed-tick loop -> renderer + HUD
  *   online (?server=)  backend snapshots -> renderer + HUD; the server owns the sim
  *
- * Online URL parameters: server (backend origin, empty for this page's origin),
- * name (guest name), match ('new' or a match id), vsBot=1, seed, autostart=1.
+ * Online URL parameters:
+ *   server     backend origin; empty means this page's origin
+ *   name       guest name, used for a new guest only
+ *   match      'new' or a match id
+ *   vsBot=1    with match=new: play against a bot
+ *   seed       with match=new: map seed
+ *   autostart=1  start the match as soon as the lobby exists
+ *   recover    a recovery code that moves a profile to this device
+ *   showcode=1   print a new recovery code in the lobby text
  * No game logic here; the sim owns the rules.
  */
 
@@ -52,16 +59,29 @@ if (serverParam) {
     vsBot: query.get('vsBot') === '1',
     seed: query.has('seed') ? seed : undefined,
     specVersion: SPEC_VERSION,
+    recoveryCode: query.get('recover') ?? undefined,
   });
   view = networkWorldView(session.feed);
   viewerTeam = session.viewerTeam;
-  Object.assign(luxTest, { matchId: session.matchId, viewerTeam, start: session.start, send: session.sendCommand });
+  Object.assign(luxTest, {
+    matchId: session.matchId,
+    viewerTeam,
+    playerId: session.playerId,
+    playerName: session.playerName,
+    recoveredCode: session.recoveryCode,
+    recoveryCode: session.requestRecoveryCode,
+    start: session.start,
+    send: session.sendCommand,
+  });
   session.onSnapshot((s) => {
     if (s.hash && testHashes) testHashes[s.tick] = s.hash;
   });
   if (query.get('autostart') === '1') await session.start();
 
-  $('hud-debug').textContent = `Lobby ${session.matchId}\nShare it as ?server=${serverParam}&match=${session.matchId}`;
+  const code = query.get('showcode') === '1' ? await session.requestRecoveryCode() : session.recoveryCode;
+  $('hud-debug').textContent =
+    `${session.playerName}  lobby ${session.matchId}\nShare it as ?server=${serverParam}&match=${session.matchId}` +
+    (code ? `\nRecovery code (shown once): ${code}` : '');
   await session.firstSnapshot; // the scene reads the layout once, so wait for the match to start
   debugLine = () => `online  seed ${session.feed.map.usedSeed}  tick ${session.feed.tick}  hash ${session.feed.hash ?? ''}  ${session.feed.status}`;
 } else {

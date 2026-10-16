@@ -42,6 +42,8 @@ To play against the server from a browser, open `http://localhost:3000/?server=&
 | `POSTGRES_URL` | none | PostgreSQL connection string |
 | `RABBITMQ_URL` | empty | Empty keeps events inside the process |
 | `RABBITMQ_QUEUE`, `RABBITMQ_PREFETCH` | `luxcores.events`, `10` | Queue name and consumer prefetch |
+| `RATE_LIMIT_PER_MINUTE`, `RATE_LIMIT_AUTH_PER_MINUTE` | `300`, `10` | Requests per client address and minute: every HTTP route, and the sign-in routes on top |
+| `TRUST_PROXY` | `0` | Reverse proxies in front of the app. Set `1` behind Caddy or nginx, or every client shares the proxy's address |
 | `WS_AUTH_TIMEOUT_MS`, `WS_MAX_PAYLOAD_BYTES` | `5000`, `16384` | Plain WebSocket auth window and largest frame |
 | `LUXCORES_ROOT` | `../..` | Repo root with `src/sim`, `data/` and `index.html` |
 | `PUBLIC_DIR` | `public` | Backend static folder |
@@ -79,7 +81,10 @@ All routes live under `/api`. A route needs `Authorization: Bearer <token>` unle
 
 | Method and path | Auth | Purpose |
 |---|---|---|
-| `POST /auth/guest` | public | Create a guest profile and get a token |
+| `POST /auth/guest` | public | Create a guest profile; returns a token and a `deviceSecret` |
+| `POST /auth/device` | public | Sign in again as the same guest from the device secret |
+| `POST /auth/recovery-code` | token | Make a recovery code that moves this profile to another device |
+| `POST /auth/recover` | public | Exchange a recovery code for a token, a new device secret and a new code |
 | `GET /players`, `GET /players/leaderboard` | token | List profiles, top players by wins |
 | `GET /players/me`, `PATCH /players/me`, `GET /players/:id` | token | Profiles |
 | `POST /matches`, `GET /matches`, `GET /matches/:id` | token | Open and browse lobbies |
@@ -123,6 +128,19 @@ const ack = await socket.emitWithAck('match:command', {
 | `match:ended` | server to room | `{ matchId, endedTick, result, replayId }` |
 
 `GET /api/game/spec` lists the same events in machine-readable form, and the Swagger schemas include their payload DTOs.
+
+## Sign-In and Recovery
+
+There are no passwords. A device proves who it is with a random secret.
+
+1. `POST /auth/guest` creates a profile and returns a JWT with a `deviceSecret` (256 random bits). The client keeps the secret; the web client uses `localStorage`, one entry per server.
+2. On the next visit, `POST /auth/device` with that secret returns a fresh JWT for the same player.
+3. `POST /auth/recovery-code` (signed in) returns a code like `K7QM-2XWD-9TFB-HN4C`. The player writes it down. Only the newest code works.
+4. On another device, `POST /auth/recover` with the code returns a JWT, a new `deviceSecret` and a replacement code. The code works once, and the old device secret stops working, so a lost device cannot sign in any more.
+
+Only sha256 hashes of the secret and the code are stored. A test checks that no response holds a hash and no file on disk holds a raw value. Codes have 16 characters from a 31-symbol alphabet without look-alike pairs, which is about 79 bits. Rate limits cover the sign-in routes per address.
+
+In the web client, `?recover=<code>` moves a profile to the browser, and `?showcode=1` prints a new recovery code in the lobby text.
 
 ## Plain WebSocket Protocol
 
@@ -202,7 +220,7 @@ npm test && npm run test:e2e
 
 ## Limits and Next Steps
 
-- Sign-in is guest only. There are no passwords, no refresh tokens and no rate limiting yet.
+- Sign-in is a device guest. There are no passwords, no email, no refresh tokens and no way to list or revoke devices. A recovery code is the only way to move a profile, and it appears once, so a player who loses both the device and the code loses the profile.
 - Snapshots carry every entity. Fog of war and delta snapshots are post-MVP work (`docs/TECH_ARCHITECTURE.md` sections 6.2 and 13.1).
 - A running match lives in the memory of one process, and a restart ends it. Scaling out needs sticky routing or a shared match registry.
 - The JSON driver suits development. Use Postgres or MongoDB when more than one process shares the data.
