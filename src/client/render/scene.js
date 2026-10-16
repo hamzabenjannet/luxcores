@@ -25,8 +25,9 @@ const VIEW_TILES_WIDE = 32;
  * @param {any} mapgen raw data/mapgen.json (tile units)
  * @param {import('../world-view.js').WorldView} view
  * @param {{ core: number, default: number }} hpFactor raw data/balance.json hpFactor
+ * @param {number} [viewerTeam] the camera starts at this team's Core
  */
-export function createScene(canvas, mapgen, view, hpFactor) {
+export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   const scene = new THREE.Scene();
@@ -93,8 +94,9 @@ export function createScene(canvas, mapgen, view, hpFactor) {
 
   // Camera: orthographic, isometric tilt, framing 32 tiles across.
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 500);
-  // Start framed on the viewer's 3 rows (Core row, build row, DMZ): z 48 to 112.
-  const target = new THREE.Vector3(corePos[0][0], 0, 80);
+  // Start framed on the viewer's 3 rows (Core row, build row, DMZ): z 48 to 112 for team 0, z 0 to 64 for team 1.
+  // Team 0's base is at the bottom, team 1's at the top; the camera stays north-up for both.
+  const target = new THREE.Vector3(corePos[viewerTeam][0], 0, viewerTeam === 0 ? 80 : 32);
   const OFFSET = new THREE.Vector3(0, 60, 42); // looking north, tilted
 
   const composer = new EffectComposer(renderer);

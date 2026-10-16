@@ -32,3 +32,20 @@ export function localWorldView(state, _viewerTeam) {
     isVisibleToViewer: () => true,
   };
 }
+
+/**
+ * The same view over server snapshots (online play). `feed` is the object that
+ * `joinServerMatch` fills, so this view always shows the latest snapshot.
+ * @param {import('./net/server-session.js').Feed} feed
+ * @returns {WorldView}
+ */
+export function networkWorldView(feed) {
+  return {
+    tick: () => feed.tick,
+    entities: () => feed.entities,
+    map: () => feed.map,
+    team: (t) => ({ coreLux: feed.teams[t]?.coreLux ?? 0, pendingLux: feed.teams[t]?.pendingLux ?? 0 }),
+    isVisibleToViewer: () => true,
+  };
+}
+
