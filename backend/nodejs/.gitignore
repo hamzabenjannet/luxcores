@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.local
+# The JSON database is created at the first start
+data/db.json
+data/db.json.tmp
+*.tsbuildinfo

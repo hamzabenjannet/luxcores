@@ -1,0 +1,42 @@
+# Optional services for local development. The backend runs without any of them:
+# it defaults to a JSON file and an in-process event bus.
+#
+#   docker compose --profile postgres up -d     # then DATABASE_DRIVER=postgres, POSTGRES_URL below
+#   docker compose --profile mongodb up -d      # then DATABASE_DRIVER=mongodb, MONGODB_URL below
+#   docker compose --profile rabbitmq up -d     # then RABBITMQ_URL below
+#
+# Postgres:  POSTGRES_URL=postgres://luxcores:luxcores@localhost:5432/luxcores
+# MongoDB:   MONGODB_URL=mongodb://localhost:27017
+# RabbitMQ:  RABBITMQ_URL=amqp://guest:guest@localhost:5672   (management UI on :15672)
+services:
+  postgres:
+    profiles: [postgres]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: luxcores
+      POSTGRES_PASSWORD: luxcores
+      POSTGRES_DB: luxcores
+    ports: ['5432:5432']
+    volumes: [postgres-data:/var/lib/postgresql/data]
+
+  mongodb:
+    profiles: [mongodb]
+    image: mongodb/mongodb-community-server:7.0-ubuntu2204
+    ports: ['27017:27017']
+    volumes: [mongo-data:/data/db]
+
+  rabbitmq:
+    profiles: [rabbitmq]
+    image: rabbitmq:3.13-management-alpine
+    # Verified on Docker Desktop for Mac: without an explicit user and cookie the broker
+    # stops at start-up with "eacces" on .erlang.cookie. Both settings are harmless elsewhere.
+    user: rabbitmq
+    environment:
+      RABBITMQ_ERLANG_COOKIE: luxcores-dev-cookie
+    ports: ['5672:5672', '15672:15672']
+    volumes: [rabbitmq-data:/var/lib/rabbitmq]
+
+volumes:
+  postgres-data:
+  mongo-data:
+  rabbitmq-data:
