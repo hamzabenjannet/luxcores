@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { KIND, createState } from '../src/sim/index.js';
-import { ATTACK_TYPES, PALETTE, actionsFor, canAfford, pickEntity, resolveTap } from '../src/client/ui/controls.js';
+import { ABILITY_SLOTS, ATTACK_TYPES, PALETTE, abilityStates, actionsFor, canAfford, heroLuxChoices, heroPickState, immediateCast, pickEntity, resolveTap, secondsText } from '../src/client/ui/controls.js';
 import { loadData } from './helpers/load-data.js';
 
 const { raw, config } = loadData();
@@ -94,4 +94,60 @@ test('the panel offers the upgrades a tower still has, and recycle or cancel by 
   assert.deepEqual(actionsFor({ ...tower, recycle: 30 }, data.buildings.tower).map((a) => a.id), ['cancel'], 'a recycling tower takes no upgrade');
   assert.deepEqual(actionsFor({ ...state.entities[0], kind: KIND.SOLAR, recycle: 0 }, data.buildings.tower).map((a) => a.command.t), ['recycle']);
   assert.deepEqual(actionsFor(tower, data.buildings.tower)[0].command, { t: 'upgrade', towerId: 80, track: 'power' });
+});
+
+test('the ability bar follows the four slots of the data, M R A S', () => {
+  assert.deepEqual(ABILITY_SLOTS.map((a) => a.type), Object.keys(raw.abilities.templates));
+  assert.deepEqual(ABILITY_SLOTS.map((a) => a.letter).join(''), 'MRAS');
+  const states = abilityStates({ cd0: 0, cd1: 0, cd2: 0, cd3: 0 }, raw.abilities, 100_000, 1, 20);
+  assert.deepEqual(states.map((s) => s.costLux), [5, 5, 5, 10]);
+  assert.ok(states.every((s) => s.ready && !s.poor));
+  assert.deepEqual(states.map((s) => s.aim), ['none', 'target', 'point', 'none']);
+});
+
+test('a cooldown shows seconds rounded up to a tenth, and a spent cooldown shows the cost again', () => {
+  assert.equal(secondsText(99, 20), '5.0s');
+  assert.equal(secondsText(1, 20), '0.1s');
+  assert.equal(secondsText(0, 20), '0.0s');
+  const [melee] = abilityStates({ cd0: 41, cd1: 0, cd2: 0, cd3: 0 }, raw.abilities, 100_000, 1, 20);
+  assert.equal(melee.text, 'M 2.1s');
+  assert.equal(melee.ready, false);
+});
+
+test('melee and shield cast at once, ranged and area wait for a tap', () => {
+  assert.deepEqual(immediateCast(0, { id: 9 }), { t: 'castAbility', slot: 0 });
+  assert.deepEqual(immediateCast(3, { id: 9 }), { t: 'castAbility', slot: 3, targetId: 9 });
+  assert.equal(immediateCast(1, { id: 9 }), null);
+  assert.equal(immediateCast(2, { id: 9 }), null);
+});
+
+test('the hero pick offers the whole roster, greys out locked heroes, and waits while a hero lives, builds or cools down', () => {
+  const roster = raw.heroes.roster;
+  const open = heroPickState({ player: { heroLock: 0b00110, heroCooldown: 0 }, heroAlive: false, heroQueued: false, roster, tickHz: 20 });
+  assert.equal(open.note, '');
+  assert.deepEqual(open.options.map((o) => o.enabled), [true, false, false, true, true]);
+  assert.deepEqual(open.options.map((o) => o.locked), [false, true, true, false, false]);
+  for (const busy of [{ heroAlive: true }, { heroQueued: true }]) {
+    const state = heroPickState({ player: { heroLock: 0, heroCooldown: 0 }, heroAlive: false, heroQueued: false, roster, tickHz: 20, ...busy });
+    assert.ok(state.note.length > 0 && state.options.every((o) => !o.enabled));
+  }
+  assert.equal(heroPickState({ player: { heroLock: 0, heroCooldown: 100 }, heroAlive: false, heroQueued: false, roster, tickHz: 20 }).note, 'Next pick in 5.0s');
+});
+
+test('the lux a hero can take is a share of the Core, whole, and never more than the Core can spare', () => {
+  assert.deepEqual(heroLuxChoices(100_000, 1).map((c) => c.lux), [25, 50, 75, 99]);
+  assert.deepEqual(heroLuxChoices(2_000, 1), [{ label: '50%', lux: 1 }]);
+  assert.deepEqual(heroLuxChoices(1_000, 1), []);
+  for (const core of [3_000, 17_000, 123_456]) for (const c of heroLuxChoices(core, 1)) assert.ok(c.lux >= 1 && core - c.lux * 1000 >= 1000, `${c.lux} of ${core}`);
+});
+
+test('an aimed ranged ability needs an enemy or a blocker, and an aimed area ability takes any point', () => {
+  const entities = [
+    { id: 2, kind: KIND.HERO, team: 0, owner: 0, x: 40000, z: 60000, hp: 1, maxHp: 1 },
+    { id: 3, kind: KIND.CREEP, team: 1, owner: 1, x: 42000, z: 60000, hp: 1, maxHp: 1 },
+    { id: 4, kind: KIND.BARRACKS, team: 0, owner: 0, x: 44000, z: 90000, hp: 1, maxHp: 1 },
+  ];
+  assert.deepEqual(tap({ entities, ground: { x: 42, z: 60 }, ability: 1 }), { command: { t: 'castAbility', slot: 1, targetId: 3 } });
+  assert.deepEqual(tap({ entities, ground: { x: 44, z: 90 }, ability: 1 }), { message: 'Tap an enemy to hit.' });
+  assert.deepEqual(tap({ entities, ground: { x: 10.25, z: 20.75 }, ability: 2 }), { command: { t: 'castAbility', slot: 2, x: 10250, z: 20750 } });
 });

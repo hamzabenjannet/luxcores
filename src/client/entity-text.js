@@ -37,14 +37,16 @@ export function luxOf(e, hpFactor) {
 }
 
 /**
- * Label text of an entity, or null for kinds with no name (projectiles).
- * Examples: "Solar 20", "Tower R P2 S1 18", "Barracks 40 REC", "Lumen Core 94".
- * @param {{ kind: number, hp: number, attack?: number, powerLevel?: number, shellLevel?: number, stunTicks?: number, recycle?: number }} e
+ * Label text of an entity, or null for kinds with no name (projectiles). A hero shows its roster
+ * name when `heroNames` has one, and any entity under a shield shows SHIELD.
+ * Examples: "Solar 20", "Tower R P2 S1 18", "Barracks 40 REC", "Lumen Core 94", "Halo 30 SHIELD".
+ * @param {{ kind: number, hp: number, attack?: number, powerLevel?: number, shellLevel?: number, stunTicks?: number, recycle?: number, heroType?: number, shieldHp?: number }} e
  * @param {{ core: number, default: number }} hpFactor
+ * @param {readonly string[]} [heroNames] roster names in roster order, from data/heroes.json
  * @returns {string | null}
  */
-export function entityText(e, hpFactor) {
-  const name = KIND_NAMES[e.kind];
+export function entityText(e, hpFactor, heroNames = []) {
+  const name = e.kind === KIND.HERO && e.heroType ? (heroNames[e.heroType - 1] ?? KIND_NAMES[e.kind]) : KIND_NAMES[e.kind];
   if (!name) return null;
   const parts = [name];
   if (e.kind === KIND.TOWER) {
@@ -54,6 +56,7 @@ export function entityText(e, hpFactor) {
   }
   parts.push(String(luxOf(e, hpFactor)));
   if (e.stunTicks) parts.push('STUN');
+  if (e.shieldHp) parts.push('SHIELD');
   if (e.recycle) parts.push('REC');
   return parts.join(' ');
 }

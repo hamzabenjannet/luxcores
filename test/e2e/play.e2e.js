@@ -74,6 +74,60 @@ test('a human builds, upgrades and recycles through the controls, against a bot'
   }, { MATCH_MAX_TICKS: '2400' });
 });
 
+test('a human picks a hero at a barracks, shields it and aims its area ability, through the controls', { timeout: 180_000, skip }, async () => {
+  await withBackend(async ({ errors, newContext, open }) => {
+    const page = await open(await newContext(), `name=Halo&match=new&vsBot=1&autostart=1&seed=${SEED}`);
+    await until(page, () => /** @type {any} */ (window).__luxTest.entities().length > 0);
+    const hero = () => page.evaluate(() => /** @type {any} */ (window).__luxTest.entities().find((/** @type {any} */ e) => e.kind === 10 && e.owner === 0));
+
+    // A barracks, then its panel: the hero row shows the roster and the lux to allocate.
+    const barracksTile = freeSpot(SEED, 0);
+    await page.click('button[data-building="barracks"]');
+    await tapTile(page, barracksTile);
+    await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 6 && e.team === 0));
+    await page.click('button[data-building="barracks"]'); // palette off
+    await tapTile(page, barracksTile);
+    await page.waitForSelector('.panel:not([hidden]) .hero-pick[data-hero="1"]');
+    assert.equal(await page.locator('.hero-pick').count(), 5, 'the whole roster is offered');
+    assert.equal(await page.locator('.hero-bar').isHidden(), true, 'no hero yet, no ability bar');
+
+    // Prism with the default allocation (50% of the Core).
+    await page.click('.hero-pick[data-hero="1"]');
+    await until(page, () => /** @type {any} */ (window).__luxTest.orders().some((/** @type {any} */ o) => o.type === 2 && o.owner === 0));
+    await until(page, () => /^Hero Prism \d+ lux/.test(document.querySelector('.queue-text')?.textContent ?? ''));
+    await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 10 && e.owner === 0), undefined, 30_000);
+    assert.equal((await hero()).heroType, 2);
+    await page.waitForSelector('.hero-bar:not([hidden])');
+    assert.match(await page.textContent('.hero-name') ?? '', /^Prism \d+$/);
+    await until(page, () => /** @type {any} */ (window).__luxTest.players().find((/** @type {any} */ p) => p.id === 0)?.heroLock === 2);
+    // With a hero on the field the roster is greyed out and says why. The barracks stays selected, and a tap
+    // on its tile would land under the panel anyway.
+    await until(page, () => document.querySelector('.hero-note')?.textContent === 'Hero: Your hero is on the field.');
+
+    // Shield: one tap, cast on the hero itself.
+    await page.click('.ability[data-slot="3"]');
+    await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 10 && e.owner === 0 && e.shieldHp > 0));
+    assert.match(await page.textContent('.hero-name') ?? '', /SHIELD$/);
+    assert.match(await page.textContent('.ability[data-slot="3"]') ?? '', /^S \d\.\ds$/, 'the button counts the cooldown down');
+
+    // Ranged: the first tap aims, a second tap on the button cancels.
+    await page.click('.ability[data-slot="1"]');
+    await until(page, () => document.querySelector('.ability[data-slot="1"]')?.classList.contains('active') === true);
+    await until(page, () => document.querySelector('.toast.show')?.textContent === 'Tap an enemy to hit.');
+    await page.click('.ability[data-slot="1"]');
+    await until(page, () => document.querySelector('.ability[data-slot="1"]')?.classList.contains('active') === false);
+
+    // Area: aim, then tap the ground next to the hero. The cast costs lux and starts the cooldown, even over empty ground.
+    await page.click('.ability[data-slot="2"]');
+    const h = await hero();
+    await tapTile(page, { tileX: Math.floor(h.x / 1000), tileZ: Math.floor(h.z / 1000) - 3 }); // up the screen, clear of the panel and the hero bar
+    await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 10 && e.owner === 0 && e.cd2 > 0));
+    mkdirSync(SHOTS, { recursive: true });
+    await page.screenshot({ path: join(SHOTS, 'play-hero.png') });
+    assert.deepEqual(errors, [], 'the page must log no console or page errors');
+  }, { MATCH_MAX_TICKS: '2400' });
+});
+
 test('a spectator watches two bots play to the end', { timeout: 180_000, skip }, async () => {
   await withBackend(async ({ errors, newContext, open }) => {
     const page = await open(await newContext(), 'name=Watcher&match=new&botVsBot=1&autostart=1&seed=777');

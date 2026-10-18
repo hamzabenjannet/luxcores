@@ -115,6 +115,40 @@
         "hp": 1
       },
       "expect": null
+    },
+    {
+      "entity": {
+        "kind": 10,
+        "hp": 300000,
+        "heroType": 2
+      },
+      "expect": "Prism 30"
+    },
+    {
+      "entity": {
+        "kind": 10,
+        "hp": 120000,
+        "heroType": 5,
+        "shieldHp": 50000
+      },
+      "expect": "Corona 12 SHIELD"
+    },
+    {
+      "entity": {
+        "kind": 10,
+        "hp": 200000,
+        "heroType": 0
+      },
+      "expect": "Hero 20"
+    },
+    {
+      "entity": {
+        "kind": 6,
+        "hp": 400000,
+        "shieldHp": 1000,
+        "stunTicks": 3
+      },
+      "expect": "Barracks 40 STUN SHIELD"
     }
   ],
   "isDay": [
@@ -568,7 +602,7 @@
       "ctx": {
         "ground": [
           10.1,
-          10.0
+          10
         ],
         "viewerTeam": 0,
         "entities": [
@@ -609,8 +643,8 @@
       "name": "projectiles cannot be picked",
       "ctx": {
         "ground": [
-          10.0,
-          10.0
+          10,
+          10
         ],
         "viewerTeam": 0,
         "entities": [
@@ -851,6 +885,304 @@
       "expect": {
         "message": "Tap one of your other groups to merge."
       }
+    },
+    {
+      "name": "aiming the ranged ability at an enemy casts it on that enemy",
+      "ctx": {
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000,
+        "entities": [
+          {
+            "id": 1,
+            "kind": 1,
+            "team": 0,
+            "owner": -1,
+            "x": 48500,
+            "z": 96500
+          },
+          {
+            "id": 2,
+            "kind": 10,
+            "team": 0,
+            "owner": 0,
+            "x": 40000,
+            "z": 60000
+          },
+          {
+            "id": 3,
+            "kind": 9,
+            "team": 1,
+            "owner": 1,
+            "x": 42000,
+            "z": 60000
+          },
+          {
+            "id": 4,
+            "kind": 6,
+            "team": 0,
+            "owner": 0,
+            "x": 44000,
+            "z": 90000
+          },
+          {
+            "id": 5,
+            "kind": 8,
+            "team": -1,
+            "owner": -1,
+            "x": 36000,
+            "z": 60000
+          }
+        ],
+        "ground": [
+          42,
+          60
+        ],
+        "ability": 1
+      },
+      "expect": {
+        "command": {
+          "t": "castAbility",
+          "slot": 1,
+          "targetId": 3
+        }
+      }
+    },
+    {
+      "name": "aiming the ranged ability at a blocker casts it on the blocker",
+      "ctx": {
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000,
+        "entities": [
+          {
+            "id": 1,
+            "kind": 1,
+            "team": 0,
+            "owner": -1,
+            "x": 48500,
+            "z": 96500
+          },
+          {
+            "id": 2,
+            "kind": 10,
+            "team": 0,
+            "owner": 0,
+            "x": 40000,
+            "z": 60000
+          },
+          {
+            "id": 3,
+            "kind": 9,
+            "team": 1,
+            "owner": 1,
+            "x": 42000,
+            "z": 60000
+          },
+          {
+            "id": 4,
+            "kind": 6,
+            "team": 0,
+            "owner": 0,
+            "x": 44000,
+            "z": 90000
+          },
+          {
+            "id": 5,
+            "kind": 8,
+            "team": -1,
+            "owner": -1,
+            "x": 36000,
+            "z": 60000
+          }
+        ],
+        "ground": [
+          36,
+          60
+        ],
+        "ability": 1
+      },
+      "expect": {
+        "command": {
+          "t": "castAbility",
+          "slot": 1,
+          "targetId": 5
+        }
+      }
+    },
+    {
+      "name": "aiming the ranged ability at an own unit refuses",
+      "ctx": {
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000,
+        "entities": [
+          {
+            "id": 1,
+            "kind": 1,
+            "team": 0,
+            "owner": -1,
+            "x": 48500,
+            "z": 96500
+          },
+          {
+            "id": 2,
+            "kind": 10,
+            "team": 0,
+            "owner": 0,
+            "x": 40000,
+            "z": 60000
+          },
+          {
+            "id": 3,
+            "kind": 9,
+            "team": 1,
+            "owner": 1,
+            "x": 42000,
+            "z": 60000
+          },
+          {
+            "id": 4,
+            "kind": 6,
+            "team": 0,
+            "owner": 0,
+            "x": 44000,
+            "z": 90000
+          },
+          {
+            "id": 5,
+            "kind": 8,
+            "team": -1,
+            "owner": -1,
+            "x": 36000,
+            "z": 60000
+          }
+        ],
+        "ground": [
+          44,
+          90
+        ],
+        "ability": 1
+      },
+      "expect": {
+        "message": "Tap an enemy to hit."
+      }
+    },
+    {
+      "name": "aiming the ranged ability at empty ground refuses",
+      "ctx": {
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000,
+        "entities": [
+          {
+            "id": 1,
+            "kind": 1,
+            "team": 0,
+            "owner": -1,
+            "x": 48500,
+            "z": 96500
+          },
+          {
+            "id": 2,
+            "kind": 10,
+            "team": 0,
+            "owner": 0,
+            "x": 40000,
+            "z": 60000
+          },
+          {
+            "id": 3,
+            "kind": 9,
+            "team": 1,
+            "owner": 1,
+            "x": 42000,
+            "z": 60000
+          },
+          {
+            "id": 4,
+            "kind": 6,
+            "team": 0,
+            "owner": 0,
+            "x": 44000,
+            "z": 90000
+          },
+          {
+            "id": 5,
+            "kind": 8,
+            "team": -1,
+            "owner": -1,
+            "x": 36000,
+            "z": 60000
+          }
+        ],
+        "ground": [
+          20,
+          20
+        ],
+        "ability": 1
+      },
+      "expect": {
+        "message": "Tap an enemy to hit."
+      }
+    },
+    {
+      "name": "aiming the area ability strikes the tapped point in whole units",
+      "ctx": {
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000,
+        "entities": [
+          {
+            "id": 1,
+            "kind": 1,
+            "team": 0,
+            "owner": -1,
+            "x": 48500,
+            "z": 96500
+          },
+          {
+            "id": 2,
+            "kind": 10,
+            "team": 0,
+            "owner": 0,
+            "x": 40000,
+            "z": 60000
+          },
+          {
+            "id": 3,
+            "kind": 9,
+            "team": 1,
+            "owner": 1,
+            "x": 42000,
+            "z": 60000
+          },
+          {
+            "id": 4,
+            "kind": 6,
+            "team": 0,
+            "owner": 0,
+            "x": 44000,
+            "z": 90000
+          },
+          {
+            "id": 5,
+            "kind": 8,
+            "team": -1,
+            "owner": -1,
+            "x": 36000,
+            "z": 60000
+          }
+        ],
+        "ground": [
+          42.3,
+          60.7
+        ],
+        "ability": 2
+      },
+      "expect": {
+        "command": {
+          "t": "castAbility",
+          "slot": 2,
+          "x": 42300,
+          "z": 60700
+        }
+      }
     }
   ],
   "mixFor": [
@@ -968,6 +1300,49 @@
       "tickHz": 20,
       "orders": [],
       "expect": []
+    },
+    {
+      "name": "a hero pick shows the hero and its lux",
+      "barracksId": 20,
+      "tickHz": 20,
+      "orders": [
+        {
+          "id": 70,
+          "barracksId": 20,
+          "owner": 0,
+          "type": 2,
+          "mix": [
+            3,
+            40
+          ],
+          "ticksLeft": 91,
+          "held": 0
+        },
+        {
+          "id": 71,
+          "barracksId": 20,
+          "owner": 0,
+          "type": 1,
+          "mix": [
+            1,
+            1
+          ],
+          "ticksLeft": 40,
+          "held": 0
+        }
+      ],
+      "expect": [
+        {
+          "index": 0,
+          "orderId": 70,
+          "text": "Hero Aurora 40 lux 4.6s"
+        },
+        {
+          "index": 1,
+          "orderId": 71,
+          "text": "Group of 2 MM 2.0s"
+        }
+      ]
     }
   ],
   "groupActions": [
@@ -1005,6 +1380,696 @@
         "path",
         "merge",
         "lane"
+      ]
+    }
+  ],
+  "heroNames": [
+    "Halo",
+    "Prism",
+    "Flare",
+    "Aurora",
+    "Corona"
+  ],
+  "abilities": {
+    "templates": {
+      "melee": {
+        "costLux": 5
+      },
+      "ranged": {
+        "costLux": 5
+      },
+      "area": {
+        "costLux": 5
+      },
+      "shield": {
+        "costLux": 10
+      }
+    }
+  },
+  "roster": [
+    {
+      "id": 0,
+      "name": "Halo",
+      "primary": "melee"
+    },
+    {
+      "id": 1,
+      "name": "Prism",
+      "primary": "ranged"
+    },
+    {
+      "id": 2,
+      "name": "Flare",
+      "primary": "area"
+    },
+    {
+      "id": 3,
+      "name": "Aurora",
+      "primary": "ranged"
+    },
+    {
+      "id": 4,
+      "name": "Corona",
+      "primary": "melee"
+    }
+  ],
+  "secondsText": [
+    {
+      "ticks": 0,
+      "tickHz": 20,
+      "expect": "0.0s"
+    },
+    {
+      "ticks": 1,
+      "tickHz": 20,
+      "expect": "0.1s"
+    },
+    {
+      "ticks": 37,
+      "tickHz": 20,
+      "expect": "1.9s"
+    },
+    {
+      "ticks": 99,
+      "tickHz": 20,
+      "expect": "5.0s"
+    },
+    {
+      "ticks": 100,
+      "tickHz": 20,
+      "expect": "5.0s"
+    },
+    {
+      "ticks": 101,
+      "tickHz": 20,
+      "expect": "5.1s"
+    },
+    {
+      "ticks": -5,
+      "tickHz": 20,
+      "expect": "0.0s"
+    },
+    {
+      "ticks": 45,
+      "tickHz": 10,
+      "expect": "4.5s"
+    }
+  ],
+  "abilityStates": [
+    {
+      "name": "all ready with a full Core",
+      "hero": {
+        "cd0": 0,
+        "cd1": 0,
+        "cd2": 0,
+        "cd3": 0
+      },
+      "coreLuxMilli": 100000,
+      "minLeftLux": 1,
+      "tickHz": 20,
+      "expect": [
+        {
+          "slot": 0,
+          "type": "melee",
+          "letter": "M",
+          "aim": "none",
+          "costLux": 5,
+          "ready": true,
+          "poor": false,
+          "text": "M 5"
+        },
+        {
+          "slot": 1,
+          "type": "ranged",
+          "letter": "R",
+          "aim": "target",
+          "costLux": 5,
+          "ready": true,
+          "poor": false,
+          "text": "R 5"
+        },
+        {
+          "slot": 2,
+          "type": "area",
+          "letter": "A",
+          "aim": "point",
+          "costLux": 5,
+          "ready": true,
+          "poor": false,
+          "text": "A 5"
+        },
+        {
+          "slot": 3,
+          "type": "shield",
+          "letter": "S",
+          "aim": "none",
+          "costLux": 10,
+          "ready": true,
+          "poor": false,
+          "text": "S 10"
+        }
+      ]
+    },
+    {
+      "name": "cooldowns show seconds",
+      "hero": {
+        "cd0": 99,
+        "cd1": 0,
+        "cd2": 37,
+        "cd3": 1
+      },
+      "coreLuxMilli": 100000,
+      "minLeftLux": 1,
+      "tickHz": 20,
+      "expect": [
+        {
+          "slot": 0,
+          "type": "melee",
+          "letter": "M",
+          "aim": "none",
+          "costLux": 5,
+          "ready": false,
+          "poor": false,
+          "text": "M 5.0s"
+        },
+        {
+          "slot": 1,
+          "type": "ranged",
+          "letter": "R",
+          "aim": "target",
+          "costLux": 5,
+          "ready": true,
+          "poor": false,
+          "text": "R 5"
+        },
+        {
+          "slot": 2,
+          "type": "area",
+          "letter": "A",
+          "aim": "point",
+          "costLux": 5,
+          "ready": false,
+          "poor": false,
+          "text": "A 1.9s"
+        },
+        {
+          "slot": 3,
+          "type": "shield",
+          "letter": "S",
+          "aim": "none",
+          "costLux": 10,
+          "ready": false,
+          "poor": false,
+          "text": "S 0.1s"
+        }
+      ]
+    },
+    {
+      "name": "a poor Core marks what it cannot pay",
+      "hero": {
+        "cd0": 0,
+        "cd1": 0,
+        "cd2": 0,
+        "cd3": 0
+      },
+      "coreLuxMilli": 10500,
+      "minLeftLux": 1,
+      "tickHz": 20,
+      "expect": [
+        {
+          "slot": 0,
+          "type": "melee",
+          "letter": "M",
+          "aim": "none",
+          "costLux": 5,
+          "ready": true,
+          "poor": false,
+          "text": "M 5"
+        },
+        {
+          "slot": 1,
+          "type": "ranged",
+          "letter": "R",
+          "aim": "target",
+          "costLux": 5,
+          "ready": true,
+          "poor": false,
+          "text": "R 5"
+        },
+        {
+          "slot": 2,
+          "type": "area",
+          "letter": "A",
+          "aim": "point",
+          "costLux": 5,
+          "ready": true,
+          "poor": false,
+          "text": "A 5"
+        },
+        {
+          "slot": 3,
+          "type": "shield",
+          "letter": "S",
+          "aim": "none",
+          "costLux": 10,
+          "ready": true,
+          "poor": true,
+          "text": "S 10"
+        }
+      ]
+    }
+  ],
+  "immediateCast": [
+    {
+      "slot": 0,
+      "hero": {
+        "id": 42
+      },
+      "expect": {
+        "t": "castAbility",
+        "slot": 0
+      }
+    },
+    {
+      "slot": 1,
+      "hero": {
+        "id": 42
+      },
+      "expect": null
+    },
+    {
+      "slot": 2,
+      "hero": {
+        "id": 42
+      },
+      "expect": null
+    },
+    {
+      "slot": 3,
+      "hero": {
+        "id": 42
+      },
+      "expect": {
+        "t": "castAbility",
+        "slot": 3,
+        "targetId": 42
+      }
+    }
+  ],
+  "heroPickState": [
+    {
+      "name": "nothing locked, nothing in the way",
+      "player": {
+        "heroLock": 0,
+        "heroCooldown": 0
+      },
+      "heroAlive": false,
+      "heroQueued": false,
+      "tickHz": 20,
+      "expect": {
+        "note": "",
+        "options": [
+          {
+            "id": 0,
+            "name": "Halo",
+            "primary": "melee",
+            "locked": false,
+            "enabled": true
+          },
+          {
+            "id": 1,
+            "name": "Prism",
+            "primary": "ranged",
+            "locked": false,
+            "enabled": true
+          },
+          {
+            "id": 2,
+            "name": "Flare",
+            "primary": "area",
+            "locked": false,
+            "enabled": true
+          },
+          {
+            "id": 3,
+            "name": "Aurora",
+            "primary": "ranged",
+            "locked": false,
+            "enabled": true
+          },
+          {
+            "id": 4,
+            "name": "Corona",
+            "primary": "melee",
+            "locked": false,
+            "enabled": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "two heroes locked",
+      "player": {
+        "heroLock": 5,
+        "heroCooldown": 0
+      },
+      "heroAlive": false,
+      "heroQueued": false,
+      "tickHz": 20,
+      "expect": {
+        "note": "",
+        "options": [
+          {
+            "id": 0,
+            "name": "Halo",
+            "primary": "melee",
+            "locked": true,
+            "enabled": false
+          },
+          {
+            "id": 1,
+            "name": "Prism",
+            "primary": "ranged",
+            "locked": false,
+            "enabled": true
+          },
+          {
+            "id": 2,
+            "name": "Flare",
+            "primary": "area",
+            "locked": true,
+            "enabled": false
+          },
+          {
+            "id": 3,
+            "name": "Aurora",
+            "primary": "ranged",
+            "locked": false,
+            "enabled": true
+          },
+          {
+            "id": 4,
+            "name": "Corona",
+            "primary": "melee",
+            "locked": false,
+            "enabled": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "a hero on the field",
+      "player": {
+        "heroLock": 0,
+        "heroCooldown": 0
+      },
+      "heroAlive": true,
+      "heroQueued": false,
+      "tickHz": 20,
+      "expect": {
+        "note": "Your hero is on the field.",
+        "options": [
+          {
+            "id": 0,
+            "name": "Halo",
+            "primary": "melee",
+            "locked": false,
+            "enabled": false
+          },
+          {
+            "id": 1,
+            "name": "Prism",
+            "primary": "ranged",
+            "locked": false,
+            "enabled": false
+          },
+          {
+            "id": 2,
+            "name": "Flare",
+            "primary": "area",
+            "locked": false,
+            "enabled": false
+          },
+          {
+            "id": 3,
+            "name": "Aurora",
+            "primary": "ranged",
+            "locked": false,
+            "enabled": false
+          },
+          {
+            "id": 4,
+            "name": "Corona",
+            "primary": "melee",
+            "locked": false,
+            "enabled": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "a hero in production",
+      "player": {
+        "heroLock": 1,
+        "heroCooldown": 0
+      },
+      "heroAlive": false,
+      "heroQueued": true,
+      "tickHz": 20,
+      "expect": {
+        "note": "Your hero is being built.",
+        "options": [
+          {
+            "id": 0,
+            "name": "Halo",
+            "primary": "melee",
+            "locked": true,
+            "enabled": false
+          },
+          {
+            "id": 1,
+            "name": "Prism",
+            "primary": "ranged",
+            "locked": false,
+            "enabled": false
+          },
+          {
+            "id": 2,
+            "name": "Flare",
+            "primary": "area",
+            "locked": false,
+            "enabled": false
+          },
+          {
+            "id": 3,
+            "name": "Aurora",
+            "primary": "ranged",
+            "locked": false,
+            "enabled": false
+          },
+          {
+            "id": 4,
+            "name": "Corona",
+            "primary": "melee",
+            "locked": false,
+            "enabled": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "the death cooldown runs",
+      "player": {
+        "heroLock": 2,
+        "heroCooldown": 61
+      },
+      "heroAlive": false,
+      "heroQueued": false,
+      "tickHz": 20,
+      "expect": {
+        "note": "Next pick in 3.1s",
+        "options": [
+          {
+            "id": 0,
+            "name": "Halo",
+            "primary": "melee",
+            "locked": false,
+            "enabled": false
+          },
+          {
+            "id": 1,
+            "name": "Prism",
+            "primary": "ranged",
+            "locked": true,
+            "enabled": false
+          },
+          {
+            "id": 2,
+            "name": "Flare",
+            "primary": "area",
+            "locked": false,
+            "enabled": false
+          },
+          {
+            "id": 3,
+            "name": "Aurora",
+            "primary": "ranged",
+            "locked": false,
+            "enabled": false
+          },
+          {
+            "id": 4,
+            "name": "Corona",
+            "primary": "melee",
+            "locked": false,
+            "enabled": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "no player record yet",
+      "player": null,
+      "heroAlive": false,
+      "heroQueued": false,
+      "tickHz": 20,
+      "expect": {
+        "note": "",
+        "options": [
+          {
+            "id": 0,
+            "name": "Halo",
+            "primary": "melee",
+            "locked": false,
+            "enabled": true
+          },
+          {
+            "id": 1,
+            "name": "Prism",
+            "primary": "ranged",
+            "locked": false,
+            "enabled": true
+          },
+          {
+            "id": 2,
+            "name": "Flare",
+            "primary": "area",
+            "locked": false,
+            "enabled": true
+          },
+          {
+            "id": 3,
+            "name": "Aurora",
+            "primary": "ranged",
+            "locked": false,
+            "enabled": true
+          },
+          {
+            "id": 4,
+            "name": "Corona",
+            "primary": "melee",
+            "locked": false,
+            "enabled": true
+          }
+        ]
+      }
+    }
+  ],
+  "heroLuxChoices": [
+    {
+      "coreLuxMilli": 100000,
+      "minLeftLux": 1,
+      "expect": [
+        {
+          "label": "25%",
+          "lux": 25
+        },
+        {
+          "label": "50%",
+          "lux": 50
+        },
+        {
+          "label": "75%",
+          "lux": 75
+        },
+        {
+          "label": "Max",
+          "lux": 99
+        }
+      ]
+    },
+    {
+      "coreLuxMilli": 60000,
+      "minLeftLux": 1,
+      "expect": [
+        {
+          "label": "25%",
+          "lux": 15
+        },
+        {
+          "label": "50%",
+          "lux": 30
+        },
+        {
+          "label": "75%",
+          "lux": 45
+        },
+        {
+          "label": "Max",
+          "lux": 59
+        }
+      ]
+    },
+    {
+      "coreLuxMilli": 3000,
+      "minLeftLux": 1,
+      "expect": [
+        {
+          "label": "50%",
+          "lux": 1
+        },
+        {
+          "label": "75%",
+          "lux": 2
+        }
+      ]
+    },
+    {
+      "coreLuxMilli": 2000,
+      "minLeftLux": 1,
+      "expect": [
+        {
+          "label": "50%",
+          "lux": 1
+        }
+      ]
+    },
+    {
+      "coreLuxMilli": 1500,
+      "minLeftLux": 1,
+      "expect": []
+    },
+    {
+      "coreLuxMilli": 1000,
+      "minLeftLux": 1,
+      "expect": []
+    },
+    {
+      "coreLuxMilli": 4000,
+      "minLeftLux": 1,
+      "expect": [
+        {
+          "label": "25%",
+          "lux": 1
+        },
+        {
+          "label": "50%",
+          "lux": 2
+        },
+        {
+          "label": "75%",
+          "lux": 3
+        }
       ]
     }
   ]

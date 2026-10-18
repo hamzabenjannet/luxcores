@@ -58,19 +58,128 @@ export function mixFor(count, type) {
 /** Initial of an attack code, as the queue text shows it: M, R or A. */
 const ATTACK_INITIAL = /** @type {Record<number, string>} */ ({ 1: 'M', 2: 'R', 3: 'A' });
 
+/** Order type code of a hero pick in `Order.type` (`ORDER_TYPE.hero` in src/sim/creeps.js). */
+const HERO_ORDER = 2;
+
+/**
+ * Seconds as the UI writes them, rounded up to a tenth, with integer math only: 99 ticks at 20 Hz is "5.0s".
+ * @param {number} ticks
+ * @param {number} tickHz
+ */
+export function secondsText(ticks, tickHz) {
+  const tenths = Math.floor((Math.max(0, ticks) * 10 + tickHz - 1) / tickHz);
+  return `${Math.floor(tenths / 10)}.${tenths % 10}s`;
+}
+
 /**
  * The lines of a barracks queue, in queue order. A held group shows HELD; others show seconds left.
+ * A hero pick shows the hero's name and the lux allocated to it.
  * @param {readonly import('../../sim/state.js').Order[]} orders
  * @param {number} barracksId
  * @param {number} tickHz
+ * @param {readonly string[]} [heroNames] roster names in roster order
  * @returns {{ index: number, orderId: number, text: string }[]}
  */
-export function queueLines(orders, barracksId, tickHz) {
+export function queueLines(orders, barracksId, tickHz, heroNames = []) {
   return orders.filter((o) => o.barracksId === barracksId).map((o, index) => ({
     index,
     orderId: o.id,
-    text: `Group of ${o.mix.length} ${o.mix.map((c) => ATTACK_INITIAL[c] ?? '?').join('')} ${o.held ? 'HELD' : `${(Math.max(0, o.ticksLeft) / tickHz).toFixed(1)}s`}`,
+    text: o.type === HERO_ORDER
+      ? `Hero ${heroNames[o.mix[0]] ?? '?'} ${o.mix[1]} lux ${secondsText(o.ticksLeft, tickHz)}`
+      : `Group of ${o.mix.length} ${o.mix.map((c) => ATTACK_INITIAL[c] ?? '?').join('')} ${o.held ? 'HELD' : `${(Math.max(0, o.ticksLeft) / tickHz).toFixed(1)}s`}`,
   }));
+}
+
+/** The four abilities in slot order: the type in data/abilities.json, its letter and how it is aimed. */
+export const ABILITY_SLOTS = /** @type {const} */ ([
+  { slot: 0, type: 'melee', letter: 'M', aim: 'none' },
+  { slot: 1, type: 'ranged', letter: 'R', aim: 'target' },
+  { slot: 2, type: 'area', letter: 'A', aim: 'point' },
+  { slot: 3, type: 'shield', letter: 'S', aim: 'none' },
+]);
+
+/**
+ * The ability buttons of the hero bar. `ready` is false while the cooldown runs, `poor` when the Core
+ * could not pay and keep its minimum. Melee strikes the current target and shield covers the hero,
+ * so neither needs a second tap; ranged takes a target and area a point.
+ * @param {{ cd0: number, cd1: number, cd2: number, cd3: number }} hero
+ * @param {{ templates: Record<string, { costLux: number }> }} abilities data/abilities.json
+ * @param {number} coreLuxMilli
+ * @param {number} minLeftLux whole lux
+ * @param {number} tickHz
+ * @returns {{ slot: number, type: string, letter: string, aim: string, costLux: number, ready: boolean, poor: boolean, text: string }[]}
+ */
+export function abilityStates(hero, abilities, coreLuxMilli, minLeftLux, tickHz) {
+  const cooldowns = [hero.cd0, hero.cd1, hero.cd2, hero.cd3];
+  return ABILITY_SLOTS.map(({ slot, type, letter, aim }) => {
+    const costLux = abilities.templates[type].costLux;
+    const ticks = cooldowns[slot];
+    return {
+      slot,
+      type,
+      letter,
+      aim,
+      costLux,
+      ready: ticks === 0,
+      poor: !canAfford(coreLuxMilli, costLux, minLeftLux),
+      text: ticks > 0 ? `${letter} ${secondsText(ticks, tickHz)}` : `${letter} ${costLux}`,
+    };
+  });
+}
+
+/**
+ * The command of an ability that needs no second tap, or null for the aimed ones.
+ * @param {number} slot
+ * @param {{ id: number }} hero
+ * @returns {import('../../sim/commands.js').Command | null}
+ */
+export function immediateCast(slot, hero) {
+  if (slot === 0) return { t: 'castAbility', slot: 0 };
+  if (slot === 3) return { t: 'castAbility', slot: 3, targetId: hero.id };
+  return null;
+}
+
+/**
+ * What the barracks panel offers for picking a hero (GDD 7.1): a note when no pick is possible now, and
+ * the roster with each hero's lock. A hero is enabled when it is not locked and the note is empty.
+ * @param {{
+ *   player: { heroLock: number, heroCooldown: number } | undefined,
+ *   heroAlive: boolean,
+ *   heroQueued: boolean,
+ *   roster: readonly { id: number, name: string, primary: string }[],
+ *   tickHz: number,
+ * }} ctx
+ * @returns {{ note: string, options: { id: number, name: string, primary: string, locked: boolean, enabled: boolean }[] }}
+ */
+export function heroPickState({ player, heroAlive, heroQueued, roster, tickHz }) {
+  let note = '';
+  if (heroAlive) note = 'Your hero is on the field.';
+  else if (heroQueued) note = 'Your hero is being built.';
+  else if (player && player.heroCooldown > 0) note = `Next pick in ${secondsText(player.heroCooldown, tickHz)}`;
+  const options = roster.map((r) => {
+    const locked = player !== undefined && (player.heroLock & (1 << r.id)) !== 0;
+    return { id: r.id, name: r.name, primary: r.primary, locked, enabled: !locked && note === '' };
+  });
+  return { note, options };
+}
+
+/**
+ * The lux a hero pick can allocate (GDD 7.2): 25%, 50% and 75% of the Core's lux, and the most the Core
+ * can pay while keeping its minimum. Whole lux, at least 1, without repeats.
+ * @param {number} coreLuxMilli
+ * @param {number} minLeftLux whole lux
+ * @returns {{ label: string, lux: number }[]}
+ */
+export function heroLuxChoices(coreLuxMilli, minLeftLux) {
+  const max = Math.floor((coreLuxMilli - minLeftLux * MILLI) / MILLI);
+  if (max < 1) return [];
+  /** @type {{ label: string, lux: number }[]} */
+  const out = [];
+  for (const [label, pct] of /** @type {const} */ ([['25%', 25], ['50%', 50], ['75%', 75], ['Max', 100]])) {
+    const lux = Math.min(max, Math.floor((coreLuxMilli * pct) / (100 * MILLI)));
+    if (lux >= 1 && !out.some((c) => c.lux === lux)) out.push({ label, lux });
+  }
+  return out;
 }
 
 /**
@@ -134,6 +243,7 @@ export function pickEntity(entities, ground) {
  *   mode?: 'path' | 'merge' | null, // path mode adds waypoints, merge mode picks the group to join
  *   selectedGroup?: number | null,
  *   pathCount?: number,             // waypoints already placed in path mode
+ *   ability?: number | null,        // 1 (ranged) or 2 (area) while the next tap aims that ability
  * }} ctx
  * @returns {TapResult}
  */
@@ -141,6 +251,17 @@ export function resolveTap(ctx) {
   const { ground, entities, viewerTeam, building, attack, data } = ctx;
   const tileX = Math.floor(ground.x);
   const tileZ = Math.floor(ground.z);
+
+  if (ctx.ability === 1) {
+    const target = pickEntity(entities, ground);
+    if (target && target.kind !== KIND.PROJECTILE && (target.kind === KIND.BLOCKER || (target.team >= 0 && target.team !== viewerTeam))) {
+      return { command: { t: 'castAbility', slot: 1, targetId: target.id } };
+    }
+    return { message: 'Tap an enemy to hit.' };
+  }
+  if (ctx.ability === 2) {
+    return { command: { t: 'castAbility', slot: 2, x: Math.round(ground.x * UNITS_PER_TILE), z: Math.round(ground.z * UNITS_PER_TILE) } };
+  }
 
   if (building) {
     const zone = buildZoneOf({ mapgen: data.mapgen }, viewerTeam);
@@ -204,7 +325,7 @@ export function actionsFor(e, towerData) {
  *   viewerTeam: number,
  *   spectator: boolean,
  *   tickHz: number,
- *   data: { buildings: any, balance: any, mapgen: any },
+ *   data: { buildings: any, balance: any, mapgen: any, heroes: any, abilities: any },
  *   send: (cmd: import('../../sim/commands.js').Command) => Promise<{ accepted: boolean, reason?: string }>,
  * }} opts
  */
@@ -226,18 +347,38 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   let lastPath = [];
   let orderCount = data.balance.creep.groupMax;
   let orderType = 'mixed';
+  /** The slot (1 ranged, 2 area) whose target the next tap chooses, or null. */
+  let ability = /** @type {number | null} */ (null);
+  /** Label of the chosen hero allocation, one of `heroLuxChoices`. */
+  let heroAlloc = '50%';
   let toastTimer = 0;
   const minLeft = data.balance.core.minLeftAfterSpendLux;
+  const roster = /** @type {{ id: number, name: string, primary: string }[]} */ (data.heroes.roster);
+  const heroNames = roster.map((r) => r.name);
 
   root.replaceChildren();
   const toast = el('div', 'toast');
   const panel = el('div', 'panel');
+  const heroBar = el('div', 'hero-bar');
   const palette = el('div', 'palette');
-  root.append(toast, panel, palette);
+  root.append(toast, panel, heroBar, palette);
+  heroBar.hidden = true;
   if (spectator) {
     palette.hidden = true;
     panel.hidden = true;
   }
+  const heroName = el('div', 'hero-name');
+  const abilityRow = el('div', 'ability-row');
+  heroBar.append(heroName, abilityRow);
+  /** @type {HTMLButtonElement[]} */
+  const abilityButtons = ABILITY_SLOTS.map(({ slot, type, letter }) => {
+    const b = /** @type {HTMLButtonElement} */ (el('button', 'ability', letter));
+    b.dataset.slot = String(slot);
+    b.title = type;
+    b.addEventListener('click', () => castFromBar(slot));
+    abilityRow.append(b);
+    return b;
+  });
 
   /** @type {Map<string, HTMLButtonElement>} */
   const buttons = new Map();
@@ -247,6 +388,7 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     b.append(el('span', 'tool-name', item.label), el('span', 'tool-cost', String(data.buildings[item.key].costLux)));
     b.addEventListener('click', () => {
       building = building === item.key ? null : item.key;
+      ability = null;
       selected = null;
       selectedGroup = null;
       mode = null;
@@ -294,16 +436,67 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     attackRow.hidden = building !== 'tower';
     for (const b of attackRow.children) b.classList.toggle('active', /** @type {HTMLElement} */ (b).dataset.attack === attack);
     renderPanel();
+    renderHeroBar();
+  }
+
+  /** The viewer's living hero, if any. */
+  function myHero() {
+    return spectator ? undefined : view.entities().find((e) => e.kind === KIND.HERO && e.owner === viewerTeam && e.hp > 0);
+  }
+
+  /** The ability buttons: letter and cost, or the seconds until ready; the aimed one is highlighted. */
+  function renderHeroBar() {
+    const hero = myHero();
+    if (!hero) {
+      heroBar.hidden = true;
+      ability = null;
+      return;
+    }
+    heroBar.hidden = false;
+    const text = entityText(hero, data.balance.hpFactor, heroNames) ?? 'Hero';
+    if (heroName.textContent !== text) heroName.textContent = text;
+    const states = abilityStates(hero, data.abilities, view.team(viewerTeam).coreLux, minLeft, tickHz);
+    for (const st of states) {
+      const b = abilityButtons[st.slot];
+      if (b.textContent !== st.text) b.textContent = st.text;
+      b.classList.toggle('poor', !st.ready || st.poor);
+      b.classList.toggle('active', ability === st.slot);
+    }
+  }
+
+  /** @param {number} slot */
+  function castFromBar(slot) {
+    const hero = myHero();
+    if (!hero) return;
+    const st = abilityStates(hero, data.abilities, view.team(viewerTeam).coreLux, minLeft, tickHz)[slot];
+    if (!st.ready) return say(`${st.letter} is not ready: ${st.text.slice(2)}.`);
+    const cast = immediateCast(slot, hero);
+    if (cast) {
+      ability = null;
+      issue(cast);
+    } else if (ability === slot) {
+      ability = null;
+    } else {
+      ability = slot;
+      building = null;
+      selected = null;
+      selectedGroup = null;
+      mode = null;
+      say(slot === 1 ? 'Tap an enemy to hit.' : 'Tap the ground to strike.');
+    }
+    render();
   }
 
   // The panel holds one section at a time: path mode, a selected group, or a selected building.
   const panelTitle = el('div', 'panel-title');
   const panelRow = el('div', 'panel-row');
   const orderRow = el('div', 'panel-row order-row');
+  const heroRow = el('div', 'panel-row hero-row');
   const queueList = el('div', 'queue');
-  panel.append(panelTitle, panelRow, orderRow, queueList);
+  panel.append(panelTitle, panelRow, orderRow, heroRow, queueList);
   let panelKey = '';
   let orderKey = '';
+  let heroKey = '';
   let queueKey = '';
   /** @type {Map<number, HTMLElement>} */
   const queueStatus = new Map();
@@ -335,7 +528,7 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     const e = selected === null ? undefined : view.entities().find((x) => x.id === selected);
     if (!e) {
       selected = null;
-      panelKey = orderKey = queueKey = '';
+      panelKey = orderKey = heroKey = queueKey = '';
       panel.hidden = true;
       return;
     }
@@ -350,8 +543,9 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   function renderPathBar() {
     panel.hidden = false;
     orderRow.replaceChildren();
+    heroRow.replaceChildren();
     queueList.replaceChildren();
-    orderKey = queueKey = '';
+    orderKey = heroKey = queueKey = '';
     panelTitle.textContent = pathTitle(pathPoints.length);
     const key = `path|${pathPoints.length}|${lastPath.length}`;
     if (key === panelKey) return;
@@ -377,8 +571,9 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   function renderGroupPanel(group) {
     panel.hidden = false;
     orderRow.replaceChildren();
+    heroRow.replaceChildren();
     queueList.replaceChildren();
-    orderKey = queueKey = '';
+    orderKey = heroKey = queueKey = '';
     const size = groupSize(view.entities(), group.id);
     panelTitle.textContent = mode === 'merge'
       ? `Group of ${size}: tap another of your groups to merge.`
@@ -425,8 +620,9 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     if (e.kind === KIND.BARRACKS && e.recycle === 0) renderBarracks(e, lux);
     else {
       orderRow.replaceChildren();
+      heroRow.replaceChildren();
       queueList.replaceChildren();
-      orderKey = queueKey = '';
+      orderKey = heroKey = queueKey = '';
     }
   }
 
@@ -464,7 +660,8 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
       if (e.waypoints.length > 0) rows.push(button('Clear Path', () => issue({ t: 'setBarracksPath', barracksId: e.id, waypoints: [] })));
       orderRow.replaceChildren(...rows);
     }
-    const lines = queueLines(view.orders(), e.id, tickHz);
+    renderHeroPicks(e, lux);
+    const lines = queueLines(view.orders(), e.id, tickHz, heroNames);
     const lineKey = `${e.id}|${view.orders().filter((o) => o.barracksId === e.id).map((o) => `${o.id}:${o.held}`).join(',')}`;
     if (lineKey !== queueKey) {
       queueKey = lineKey;
@@ -482,6 +679,43 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
         if (node && node.textContent !== line.text) node.textContent = line.text;
       }
     }
+  }
+
+  /**
+   * The hero part of a barracks panel (GDD 7.1): the lux to allocate and the roster, with locked heroes
+   * and the death cooldown shown. A tap on a hero picks it at this barracks.
+   * @param {import('../../sim/state.js').Entity} e @param {number} lux
+   */
+  function renderHeroPicks(e, lux) {
+    const pickState = heroPickState({
+      player: view.players().find((p) => p.id === viewerTeam),
+      heroAlive: view.entities().some((x) => x.kind === KIND.HERO && x.owner === viewerTeam && x.hp > 0),
+      heroQueued: view.orders().some((o) => o.owner === viewerTeam && o.type === HERO_ORDER),
+      roster,
+      tickHz,
+    });
+    const choices = heroLuxChoices(lux, minLeft);
+    const chosen = choices.find((c) => c.label === heroAlloc) ?? choices[0];
+    const key = `${e.id}|${pickState.note}|${pickState.options.map((o) => `${o.id}${o.locked ? 'L' : ''}${o.enabled ? 'E' : ''}`).join(',')}|${choices.map((c) => c.lux).join(',')}|${chosen?.label}`;
+    if (key === heroKey) return;
+    heroKey = key;
+    const allocation = el('div', 'segments');
+    for (const c of choices) {
+      const b = button(`${c.label} ${c.lux}`, () => { heroAlloc = c.label; render(); }, c === chosen ? 'segment active' : 'segment');
+      b.dataset.alloc = c.label;
+      allocation.append(b);
+    }
+    const heroes = el('div', 'segments');
+    for (const o of pickState.options) {
+      const b = button(`${o.name} ${o.primary.charAt(0).toUpperCase()}`, () => {
+        if (!chosen) return say('Not enough lux for a hero.');
+        issue({ t: 'pickHero', heroId: o.id, lux: chosen.lux, barracksId: e.id });
+      }, o.enabled ? 'segment hero-pick' : 'segment hero-pick poor');
+      b.dataset.hero = String(o.id);
+      if (o.locked) b.title = 'Locked until the other heroes were picked';
+      heroes.append(b);
+    }
+    heroRow.replaceChildren(el('div', 'hero-note', pickState.note ? `Hero: ${pickState.note}` : 'Hero: pick one, with the lux below'), allocation, heroes);
   }
 
   /** Paths to draw: the selected group's remaining route, a barracks default path, and the path being drawn. */
@@ -517,8 +751,10 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
         mode,
         selectedGroup,
         pathCount: pathPoints.length,
+        ability,
       });
       if ('command' in result) {
+        ability = null;
         await issue(result.command);
         if (mode === 'merge') mode = null;
       } else if ('message' in result) say(result.message);

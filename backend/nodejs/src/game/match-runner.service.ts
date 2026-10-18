@@ -65,8 +65,10 @@ export interface MatchSnapshot {
   entities: SimEntity[];
   /** Creep groups with their paths. */
   groups: SimGroup[];
-  /** Barracks queues, held groups included. */
+  /** Barracks queues, held groups and hero picks included. */
   orders: SimOrder[];
+  /** Every player with the rotation lock and the pick cooldown of their hero. */
+  players: { id: number; team: number; kind: 'human' | 'bot'; heroLock: number; heroCooldown: number }[];
 }
 
 export interface CommandAck {
@@ -716,6 +718,20 @@ export class MatchRunnerService
         arrivalTick: e.arrivalTick,
         groupId: e.groupId,
         waypoints: e.waypoints,
+        heroType: e.heroType,
+        shieldHp: e.shieldHp,
+        shieldTicks: e.shieldTicks,
+        cd0: e.cd0,
+        cd1: e.cd1,
+        cd2: e.cd2,
+        cd3: e.cd3,
+      })),
+      players: state.players.map((p) => ({
+        id: p.id,
+        team: p.team,
+        kind: p.kind,
+        heroLock: p.heroLock,
+        heroCooldown: p.heroCooldown,
       })),
       groups: state.groups.map((g) => ({
         id: g.id,

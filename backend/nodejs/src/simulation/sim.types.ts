@@ -40,6 +40,16 @@ export interface SimEntity {
   groupId: number;
   /** Barracks: the default path of new groups, as [x, z] pairs in units. */
   waypoints: number[][];
+  /** Heroes: the roster id plus one, 0 for other kinds. */
+  heroType: number;
+  /** Damage the shield still absorbs, in milli-HP, and the ticks it has left. */
+  shieldHp: number;
+  shieldTicks: number;
+  /** Heroes: ticks left before ability slot 0 (melee), 1 (ranged), 2 (area) and 3 (shield) can be cast again. */
+  cd0: number;
+  cd1: number;
+  cd2: number;
+  cd3: number;
 }
 
 /** A creep group. Its members are the creeps that carry its id in `groupId`. */
@@ -60,11 +70,19 @@ export interface SimOrder {
   barracksId: number;
   owner: number;
   type: number;
-  /** Attack type code of each creep of the group. */
+  /** Creep order: the attack type code of each creep. Hero order (type 2): the roster id and the allocated lux. */
   mix: number[];
   ticksLeft: number;
   /** 1 when the group is finished but the creep cap has no room for it. */
   held: number;
+}
+
+/** A player and the state of their hero rotation. */
+export interface SimPlayerState extends SimPlayer {
+  /** Bit i is set while roster hero i is locked by the rotation. */
+  heroLock: number;
+  /** Ticks until the player may pick a hero again after the last one died. */
+  heroCooldown: number;
 }
 
 export interface SimTeam {
@@ -105,6 +123,7 @@ export type SimOutcome = null | { winnerTeam: number } | { draw: true };
 export interface SimState {
   tick: number;
   teams: SimTeam[];
+  players: SimPlayerState[];
   entities: SimEntity[];
   groups: SimGroup[];
   orders: SimOrder[];

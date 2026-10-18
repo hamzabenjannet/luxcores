@@ -53,7 +53,13 @@ try {
   await showMenu($('menu'), { server, error: `No Luxcores server answers at ${server}. Start one with "npm run serve", or add ?server=<origin> to the address. (${err instanceof Error ? err.message : err})` });
   throw err;
 }
-const data = { buildings: /** @type {any} */ (raw).buildings, balance: /** @type {any} */ (raw).balance, mapgen: /** @type {any} */ (raw).mapgen };
+const data = {
+  buildings: /** @type {any} */ (raw).buildings,
+  balance: /** @type {any} */ (raw).balance,
+  mapgen: /** @type {any} */ (raw).mapgen,
+  heroes: /** @type {any} */ (raw).heroes,
+  abilities: /** @type {any} */ (raw).abilities,
+};
 
 /** The menu is skipped when the address says what to do. */
 const direct = ['match', 'vsBot', 'botVsBot', 'autostart'].some((k) => query.has(k));
@@ -106,6 +112,7 @@ Object.assign(luxTest, {
   entities: () => view.entities(),
   groups: () => view.groups(),
   orders: () => view.orders(),
+  players: () => view.players(),
 });
 session.onSnapshot((s) => {
   if (s.hash && testHashes) testHashes[s.tick] = s.hash;
@@ -129,7 +136,7 @@ $('hud-core').style.color = viewerTeam === 0 ? 'var(--blue)' : 'var(--red)';
 $('hud-enemy').style.color = viewerTeam === 0 ? 'var(--red)' : 'var(--blue)';
 
 const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('view'));
-const scene = createScene(canvas, raw.mapgen, view, raw.balance.hpFactor, viewerTeam);
+const scene = createScene(canvas, raw.mapgen, view, raw.balance.hpFactor, viewerTeam, data.heroes.roster.map((/** @type {{ name: string }} */ r) => r.name));
 const controls = createControls({
   root: $('controls'),
   view,
