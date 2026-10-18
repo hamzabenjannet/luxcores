@@ -68,7 +68,7 @@ export interface MatchSnapshot {
   /** Barracks queues, held groups and hero picks included. */
   orders: SimOrder[];
   /** Every player with the rotation lock and the pick cooldown of their hero. */
-  players: { id: number; team: number; kind: 'human' | 'bot'; heroLock: number; heroCooldown: number }[];
+  players: { id: number; team: number; kind: 'human' | 'bot'; heroLock: number; heroCooldown: number; funnelLux: number; items: number[] }[];
 }
 
 export interface CommandAck {
@@ -725,6 +725,10 @@ export class MatchRunnerService
         cd1: e.cd1,
         cd2: e.cd2,
         cd3: e.cd3,
+        itemId: e.itemId,
+        speedMod: e.speedMod,
+        speedTicks: e.speedTicks,
+        items: e.items,
       })),
       players: state.players.map((p) => ({
         id: p.id,
@@ -732,6 +736,8 @@ export class MatchRunnerService
         kind: p.kind,
         heroLock: p.heroLock,
         heroCooldown: p.heroCooldown,
+        funnelLux: p.funnelLux,
+        items: p.items,
       })),
       groups: state.groups.map((g) => ({
         id: g.id,

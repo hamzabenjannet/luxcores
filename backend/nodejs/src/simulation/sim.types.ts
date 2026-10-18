@@ -50,6 +50,13 @@ export interface SimEntity {
   cd1: number;
   cd2: number;
   cd3: number;
+  /** Ground items: the item id plus one, 0 for other kinds. */
+  itemId: number;
+  /** Attack speed an item added and the ticks it has left. */
+  speedMod: number;
+  speedTicks: number;
+  /** Loot bags: how many of each item id the bag holds. */
+  items: number[];
 }
 
 /** A creep group. Its members are the creeps that carry its id in `groupId`. */
@@ -83,6 +90,10 @@ export interface SimPlayerState extends SimPlayer {
   heroLock: number;
   /** Ticks until the player may pick a hero again after the last one died. */
   heroCooldown: number;
+  /** Milli-lux Energy Grab may still funnel, 0 when it is not active. */
+  funnelLux: number;
+  /** Inventory: how many of each item id the player holds. */
+  items: number[];
 }
 
 export interface SimTeam {

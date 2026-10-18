@@ -104,8 +104,11 @@ Each entity in a snapshot carries `id`, `kind`, `team`, `owner`, `x` and `z` (un
 | `heroType` | Hero: the roster id plus one (0 for any other entity). The names are in `data/heroes.json` |
 | `shieldHp`, `shieldTicks` | What the shield on this entity still absorbs (milli-HP) and the ticks it has left |
 | `cd0` to `cd3` | Hero: ticks until ability slot 0 (melee), 1 (ranged), 2 (area) and 3 (shield) can be cast again |
+| `itemId` | Ground item: the item id plus one (0 for any other entity). The names are in `data/items.json` |
+| `items` | Loot bag: how many of each item id it holds (an empty list for any other entity) |
+| `speedMod`, `speedTicks` | The attack speed an item added (Haste +300, Sluggish −300) and the ticks it has left |
 
-A snapshot also carries `groups`, `orders` and `players`. A `players` entry holds `id`, `team`, `kind`, `heroLock` (bit i set while roster hero i is locked by the rotation) and `heroCooldown` (ticks until the player may pick another hero). A hero pick is an order of `type` 2 whose `mix` is `[rosterId, lux]`; creep orders have type 1 and a `mix` of attack codes.
+A snapshot also carries `groups`, `orders` and `players`. A `players` entry holds `id`, `team`, `kind`, `heroLock` (bit i set while roster hero i is locked by the rotation) and `heroCooldown` (ticks until the player may pick another hero), `items` (how many of each item id the player holds) and `funnelLux` (milli-lux that Energy Grab may still funnel). A hero pick is an order of `type` 2 whose `mix` is `[rosterId, lux]`; creep orders have type 1 and a `mix` of attack codes, and an item order has type 3 with `mix: [itemId]` (`held` is 1 while it waits for a hero or a free slot).
 
 `kind` codes come from `GET /api/game/spec` (`kinds`), so a client never hard-codes them. A projectile lives for one tick, and a snapshot every second tick shows only some of them. Draw an aim line from `targetId` instead of waiting for one.
 
