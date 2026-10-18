@@ -140,6 +140,14 @@ export function immediateCast(slot, hero) {
 }
 
 /**
+ * Whether sending this command ends build mode: a placement frees the palette selection.
+ * @param {{ t: string }} command
+ */
+export function endsBuildMode(command) {
+  return command.t === 'build';
+}
+
+/**
  * What the barracks panel offers for picking a hero (GDD 7.1): a note when no pick is possible now, and
  * the roster with each hero's lock. A hero is enabled when it is not locked and the note is empty.
  * @param {{
@@ -755,6 +763,11 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
       });
       if ('command' in result) {
         ability = null;
+        // A placed building ends build mode at once, so a second tap cannot place a second one.
+        if (endsBuildMode(result.command)) {
+          building = null;
+          render();
+        }
         await issue(result.command);
         if (mode === 'merge') mode = null;
       } else if ('message' in result) say(result.message);

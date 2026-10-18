@@ -533,6 +533,13 @@ func _on_arena_tapped(ground: Vector2) -> void:
 	})
 	if result.has("command"):
 		_ability = -1
+		# A placed building ends build mode at once, so a second tap cannot place a second one.
+		if GameLogic.ends_build_mode(result.command):
+			_building = ""
+			_build_description.visible = false
+			_tower_attack_row.visible = false
+			_arena.set_selection(_building, _selected_entity)
+			_refresh_palette()
 		var acknowledgement: Dictionary = await _backend.send_command(result.command)
 		if acknowledgement.get("accepted", false):
 			_set_status("Order sent. The server will validate it.")

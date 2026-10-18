@@ -1639,6 +1639,12 @@
       ]
     }
   ],
+  "endsBuildMode": [
+    { "command": { "t": "build", "building": "tower", "tileX": 10, "tileZ": 80, "attack": "ranged" }, "expect": true },
+    { "command": { "t": "build", "building": "barracks", "tileX": 10, "tileZ": 80 }, "expect": true },
+    { "command": { "t": "castAbility", "slot": 0 }, "expect": false },
+    { "command": { "t": "heroMove", "x": 1, "z": 2 }, "expect": false }
+  ],
   "immediateCast": [
     {
       "slot": 0,

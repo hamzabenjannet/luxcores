@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { KIND, SPEC_VERSION } from '../src/sim/index.js';
 import { entityText, isDay } from '../src/client/entity-text.js';
-import { abilityStates, actionsFor, canAfford, groupActions, heroLuxChoices, heroPickState, immediateCast, mixFor, queueLines, resolveTap, secondsText } from '../src/client/ui/controls.js';
+import { abilityStates, actionsFor, canAfford, endsBuildMode, groupActions, heroLuxChoices, heroPickState, immediateCast, mixFor, queueLines, resolveTap, secondsText } from '../src/client/ui/controls.js';
 import { ROOT, loadData } from './helpers/load-data.js';
 
 // The Godot client answers the same cases in vone/tests/run_tests.gd. A rule change in
@@ -36,6 +36,7 @@ test('seconds text cases', () => {
 
 test('ability button cases', () => {
   for (const c of fixture.abilityStates) assert.deepEqual(abilityStates(c.hero, fixture.abilities, c.coreLuxMilli, c.minLeftLux, c.tickHz), c.expect, c.name);
+  for (const c of fixture.endsBuildMode) assert.equal(endsBuildMode(c.command), c.expect, JSON.stringify(c));
   for (const c of fixture.immediateCast) assert.deepEqual(immediateCast(c.slot, c.hero), c.expect, JSON.stringify(c));
 });
 

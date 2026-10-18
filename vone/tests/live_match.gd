@@ -21,9 +21,18 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var server := _argument("server", "https://luxcores.webrit.cloud")
-	_main = load("res://scenes/main.tscn").instantiate()
-	root.add_child(_main)
+	# The main scene is the 3D world; its overlay layer holds the interface the checks drive.
+	var world: Node = load("res://scenes/main3d.tscn").instantiate()
+	root.add_child(world)
 	await process_frame
+	for child in world.get_children():
+		if child is CanvasLayer:
+			_main = child.get_child(0) as Control
+			break
+	if _main == null:
+		printerr("FAIL the main scene has no interface layer")
+		quit(1)
+		return
 
 	# Part 1: a human plays a bot through the real UI methods.
 	_main._server_input.text = server
@@ -43,21 +52,24 @@ func _run() -> void:
 	_check("the solar description shows the data cost", _main._build_description.text.contains("costs 20 lux"), true)
 	await _main._on_arena_tapped(Vector2(solar_tile.x + 0.5, solar_tile.y + 0.5))
 	_check("a solar plant appears", await _until(func(): return _find(GameLogic.KIND_SOLAR, 0).size() > 0), true)
+	_check("a placement frees the palette", _main._building, "")
 
 	# Two buildings never share a tile, but a neighbour is fine even right next to an existing building.
+	_main._select_building("solar")
 	await _main._on_arena_tapped(Vector2(solar_tile.x + 0.5, solar_tile.y + 0.5))
 	_check("a second building on the same tile is refused", _main._status_label.text, "That tile is taken.")
 	_main._select_building("wind")
 	var wind_tile := Vector2i(solar_tile.x + 1, solar_tile.y)
-	# Tap by screen position, so the arena's own hit test runs: it must not snap the tap onto the solar plant.
-	_main._arena._handle_map_tap(_main._arena._tile_center(wind_tile.x, wind_tile.y))
+	# The tap on the neighbour tile must not snap onto the solar plant beside it.
+	await _main._on_arena_tapped(Vector2(wind_tile.x + 0.5, wind_tile.y + 0.5))
 	_check("a wind plant fits on the tile beside the solar plant", await _until(func(): return _find(GameLogic.KIND_WIND, 0).size() == 1), true)
-	_main._select_building("wind") # toggles build mode off
+	_check("the second placement frees the palette too", _main._building, "")
 	_main._select_building("solar")
 
-	# Build mode stays on after a placement, like the web client. A refused tap explains itself and sends nothing.
+	# A refused tap explains itself, sends nothing and keeps build mode on.
 	await _main._on_arena_tapped(Vector2(48.5, 56.5))
 	_check("a build in the DMZ is refused with a reason", _main._status_label.text, "Build inside your own zone.")
+	_check("a refused tap keeps the building selected", _main._building, "solar")
 	_main._select_building("solar") # toggles build mode off
 
 	var tower_tile := _free_tile(3)
@@ -69,7 +81,7 @@ func _run() -> void:
 	_check("the bot builds too", await _until(func(): return _find(GameLogic.KIND_SOLAR, 1).size() > 0), true)
 
 	# Select the tower and upgrade its power from the panel.
-	_main._select_building("tower") # toggles build mode off
+	_check("the tower placement freed the palette", _main._building, "")
 	await _main._on_arena_tapped(Vector2(tower_tile.x + 0.5, tower_tile.y + 0.5))
 	_check("the panel shows for the tower", _main._panel.visible, true)
 	_check("the panel offers a power upgrade first", _main._panel_row.get_child(0).text.begins_with("Power 1/3"), true)
@@ -103,7 +115,7 @@ func _run() -> void:
 	await _main._on_arena_tapped(Vector2(barracks_tile.x + 0.5, barracks_tile.y + 0.5))
 	_check("a barracks appears", await _until(func(): return _find(GameLogic.KIND_BARRACKS, 0).size() == 1), true)
 	var barracks_id: int = int(_find(GameLogic.KIND_BARRACKS, 0)[0].id)
-	_main._select_building("barracks") # build mode off
+	_check("the barracks placement freed the palette", _main._building, "")
 	await _main._on_arena_tapped(Vector2(barracks_tile.x + 0.5, barracks_tile.y + 0.5))
 	_check("the barracks panel shows the order controls", _main._panel.visible and _main._order_box.get_child_count() >= 3, true)
 
@@ -164,7 +176,7 @@ func _run() -> void:
 	_main._select_building("barracks")
 	await _main._on_arena_tapped(Vector2(hero_tile.x + 0.5, hero_tile.y + 0.5))
 	_check("the hero barracks appears", await _until(func(): return _find(GameLogic.KIND_BARRACKS, 0).size() == 1), true)
-	_main._select_building("barracks") # build mode off
+	_check("the barracks placement freed the palette", _main._building, "")
 	await _main._on_arena_tapped(Vector2(hero_tile.x + 0.5, hero_tile.y + 0.5))
 	_check("the barracks panel offers the whole roster", _main._hero_box.get_child_count() == 3 and _main._hero_box.get_child(2).get_child_count() == 5, true)
 	_check("no hero, no hero bar", _main._hero_bar.visible, false)

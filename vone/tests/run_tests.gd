@@ -45,6 +45,8 @@ func _init() -> void:
 		_check("seconds text %s" % JSON.stringify(c), GameLogic.seconds_text(int(c.ticks), int(c.tickHz)), String(c.expect))
 	for c in fixture.abilityStates:
 		_check("ability buttons: %s" % String(c.name), _normalize(GameLogic.ability_states(c.hero, fixture.abilities, int(c.coreLuxMilli), int(c.minLeftLux), int(c.tickHz))), _normalize(c.expect))
+	for c in fixture.endsBuildMode:
+		_check("ends build mode %s" % JSON.stringify(c.command), GameLogic.ends_build_mode(c.command), bool(c.expect))
 	for c in fixture.immediateCast:
 		var cast := GameLogic.immediate_cast(int(c.slot), c.hero)
 		_check("immediate cast %s" % JSON.stringify(c), _normalize(cast if not cast.is_empty() else null), _normalize(c.expect))

@@ -132,6 +132,10 @@ static func immediate_cast(slot: int, hero: Dictionary) -> Dictionary:
 		return {"t": "castAbility", "slot": 3, "targetId": int(hero.id)}
 	return {}
 
+## Whether sending this command ends build mode: a placement frees the palette selection.
+static func ends_build_mode(command: Dictionary) -> bool:
+	return String(command.get("t", "")) == "build"
+
 ## What the barracks panel offers for picking a hero (GDD 7.1): {note, options}. note is empty when a
 ## pick is possible. ctx: player ({heroLock, heroCooldown}, or empty), hero_alive, hero_queued,
 ## roster ([{id, name, primary}]) and tick_hz.

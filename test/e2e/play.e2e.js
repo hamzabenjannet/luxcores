@@ -38,10 +38,13 @@ test('a human builds, upgrades and recycles through the controls, against a bot'
     await page.click('button[data-building="solar"]');
     await tapTile(page, solarTile);
     await until(page, (k) => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === k && e.team === 0), KIND.SOLAR);
+    assert.equal(await page.locator('button[data-building].active').count(), 0, 'a placement frees the palette');
 
-    // A refused tap tells the player why, and costs nothing: the DMZ is not buildable.
+    // A refused tap tells the player why, costs nothing and keeps the building picked: the DMZ is not buildable.
+    await page.click('button[data-building="solar"]');
     await page.touchscreen.tap(...(/** @type {[number, number]} */ (Object.values(await page.evaluate(() => /** @type {any} */ (window).__luxTest.screenOf(48.5, 56.5))))));
     await until(page, () => document.querySelector('.toast.show')?.textContent === 'Build inside your own zone.');
+    assert.equal(await page.locator('button[data-building="solar"].active').count(), 1, 'a refused tap keeps the building picked');
 
     // A tower with the Area attack. The segment control shows only while Tower is picked.
     const towerTile = freeSpot(SEED, 3);
@@ -53,8 +56,8 @@ test('a human builds, upgrades and recycles through the controls, against a bot'
     // The bot builds too, and the lux counts follow the rules: both sides paid.
     await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.team === 1 && e.kind >= 2 && e.kind <= 7));
 
-    // Select the tower (palette off), upgrade its power from the panel.
-    await page.click('button[data-building="tower"]'); // toggles the palette off
+    // Select the tower (the placement already freed the palette), upgrade its power from the panel.
+    assert.equal(await page.locator('button[data-building].active').count(), 0, 'the tower placement freed the palette');
     await tapTile(page, towerTile);
     await page.waitForSelector('.panel:not([hidden]) .action');
     assert.match(await page.textContent('.panel-title') ?? '', /^Tower A \d+ \(Area\)$/);
@@ -85,7 +88,7 @@ test('a human picks a hero at a barracks, shields it and aims its area ability, 
     await page.click('button[data-building="barracks"]');
     await tapTile(page, barracksTile);
     await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 6 && e.team === 0));
-    await page.click('button[data-building="barracks"]'); // palette off
+    assert.equal(await page.locator('button[data-building].active').count(), 0, 'the barracks placement freed the palette');
     await tapTile(page, barracksTile);
     await page.waitForSelector('.panel:not([hidden]) .hero-pick[data-hero="1"]');
     assert.equal(await page.locator('.hero-pick').count(), 5, 'the whole roster is offered');
@@ -202,7 +205,7 @@ test('a human orders creeps, then splits, merges and sends a group, through the 
     await page.click('button[data-building="barracks"]');
     await tapTile(page, barracksTile);
     await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 6 && e.team === 0));
-    await page.click('button[data-building="barracks"]'); // palette off
+    assert.equal(await page.locator('button[data-building].active').count(), 0, 'the barracks placement freed the palette');
     await tapTile(page, barracksTile);
     await page.waitForSelector('.order-row .order');
 
