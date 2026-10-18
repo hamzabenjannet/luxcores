@@ -2,6 +2,12 @@
 
 Newest first. One entry per milestone or notable change. Add the commit hash and the verification, not just the intent.
 
+## 2026-10-18: M6 (Items) and the Placement Deselect
+
+- `d259013` a placed building frees the palette. `cdb715d` GDD 7.7 confirmed. `035d8a0` the item sim and the golden replays. `c12bddb` the snapshot fields. `618979e` the web and Godot clients, with GDD 8.4.
+- Verified: see `docs/HANDOVER.md`, validation row. The 100-seed soak passes in 648 s, and Chromium equals Node.
+- Next: the owners approve GDD 8.4 and decide on M7 or the deferred snapshot work. See `handover-2026-10-18-m6.md`.
+
 ## 2026-10-18: M5 (Heroes)
 
 - `4ab84db` the sim, the bot and the golden replays. `56e4b2c` the web client and the snapshot fields. Then the Godot client, the Chromium hash fix and the documentation.

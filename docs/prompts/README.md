@@ -40,4 +40,5 @@ The live status of the repo stays in `docs/HANDOVER.md`. This folder keeps the h
 | `handover-2026-10-18-architecture-b-e.md` | Handover | State after checkpoints, storage fallback, the tiered match log, command queues and several servers |
 | `2026-10-18-m5-heroes.md` | Prompt | The go-ahead for M5 |
 | `handover-2026-10-18-m5.md` | Handover | State after M5: heroes in the sim, bot, server and both clients |
-
+| `2026-10-18-m6-items.md` | Prompt | The deselect-after-placing change, the request to resolve GDD 7.7, and the go-ahead for M6 |
+| `handover-2026-10-18-m6.md` | Handover | State after M6: items in the sim, server and both clients |
