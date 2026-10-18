@@ -32,6 +32,7 @@ import { createControls } from './ui/controls.js';
 import { showLobby } from './ui/lobby.js';
 import { showMenu } from './ui/menu.js';
 import { isDay } from './entity-text.js';
+import { matchSummary } from './ui/summary.js';
 
 const query = new URLSearchParams(location.search);
 const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
@@ -154,17 +155,32 @@ Object.assign(luxTest, { screenOf: scene.screenOf, selectGroup: controls.selectG
 attachPointer(canvas, { groundAt: scene.groundAt, pan: scene.pan, onTap: (ground) => controls.tap(ground) });
 
 const banner = $('banner');
+const summaryCard = $('summary');
 session.onChange(() => {
   const result = session.feed.result;
   if (session.feed.status !== 'finished' || !result) return;
-  const text = result.draw || result.winnerTeam === null
-    ? 'Draw'
-    : spectator
-      ? `${result.winnerTeam === 0 ? 'Blue' : 'Red'} wins`
-      : result.winnerTeam === viewerTeam ? 'Victory' : 'Defeat';
-  banner.textContent = `${text}  (${result.reason})`;
+  const summary = matchSummary(result, { viewerTeam, spectator, endedTick: session.feed.endedTick, tickHz: TICK_HZ });
+  banner.textContent = `${summary.title}  (${summary.reason})`;
   banner.hidden = false;
+  summaryCard.replaceChildren();
+  const table = document.createElement('table');
+  const head = table.insertRow();
+  head.append(cell('th', `Duration ${summary.duration}`), ...summary.columns.map((c, i) => cell('th', c, i === 0 ? 'mine' : 'theirs')));
+  for (const row of summary.rows) table.insertRow().append(cell('td', row.label), ...row.values.map((v) => cell('td', String(v), 'number')));
+  const close = document.createElement('button');
+  close.textContent = 'Close';
+  close.addEventListener('click', () => { summaryCard.hidden = true; });
+  summaryCard.append(table, close);
+  summaryCard.hidden = false;
 });
+
+/** @param {'th' | 'td'} tag @param {string} text @param {string} [className] */
+function cell(tag, text, className = '') {
+  const node = document.createElement(tag);
+  node.textContent = text;
+  node.className = className;
+  return node;
+}
 
 startLoop((timeSec) => {
   scene.render(timeSec);

@@ -387,7 +387,9 @@ func _handle_frame(frame: Dictionary) -> void:
 		match_status_changed.emit(_match_status, data)
 	elif event_name == "match:ended" and data is Dictionary:
 		_match_status = "finished"
-		match_ended.emit(data.get("result", {}))
+		var ended_result: Dictionary = data.get("result", {}).duplicate()
+		ended_result["endedTick"] = int(data.get("endedTick", 0))
+		match_ended.emit(ended_result)
 	elif event_name == "exception" and data is Dictionary:
 		message_received.emit("Backend error: " + str(data.get("error", "unknown error")))
 	elif event_name == "chat:message" and data is Dictionary:

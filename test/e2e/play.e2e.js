@@ -234,6 +234,14 @@ test('a spectator watches two bots play to the end', { timeout: 180_000, skip },
 
     await page.waitForSelector('#banner:not([hidden])', { timeout: 60_000 });
     assert.match(await page.textContent('#banner') ?? '', /^Draw {2}\(tick-limit\)$/);
+    // The end-of-match screen: duration, both sides and the six counters, with some lux collected and spent by the bots.
+    await page.waitForSelector('#summary:not([hidden]) table');
+    assert.deepEqual(await page.$$eval('#summary tr', (rows) => rows.map((r) => r.cells[0].textContent)), ['Duration 0:30', 'Lux collected', 'Lux spent', 'Lux drained', 'Lux funneled', 'Lux recycled', 'Lux lost to entropy']);
+    assert.deepEqual(await page.$$eval('#summary th', (c) => c.map((x) => x.textContent)), ['Duration 0:30', 'Blue', 'Red']);
+    const spent = await page.$$eval('#summary tr:nth-child(3) td.number', (c) => c.map((x) => Number(x.textContent)));
+    assert.ok(spent.every((n) => n > 0), `both bots spent lux: ${spent}`);
+    await page.click('#summary button');
+    assert.equal(await page.isHidden('#summary'), true, 'Close hides the screen');
     assert.deepEqual(errors, [], 'the page must log no console or page errors');
   }, { MATCH_MAX_TICKS: '600' });
 });

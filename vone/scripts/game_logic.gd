@@ -178,6 +178,40 @@ static func shop_states(items: Array, core_lux_milli: int, min_left_lux: int) ->
 		out.append({"id": int(item.id), "name": item_short_name(String(item.name)), "costLux": int(item.costLux), "poor": not can_afford(core_lux_milli, int(item.costLux), min_left_lux)})
 	return out
 
+## The counters of the end-of-match screen in order: [label, field of result.stats] (GDD 13.2).
+const SUMMARY_STATS := [
+	["Lux collected", "collected"], ["Lux spent", "spent"], ["Lux drained", "drained"],
+	["Lux funneled", "funneled"], ["Lux recycled", "recycled"], ["Lux lost to entropy", "entropy"],
+]
+
+## The end-of-match screen (GDD 13.2): {title, reason, duration, columns, rows: [{label, values}]}. Values are
+## whole lux, one per column: a spectator reads Blue (team 0) then Red, a player their own side then the enemy.
+static func match_summary(result: Dictionary, viewer_team: int, spectator: bool, ended_tick: int, tick_hz: int) -> Dictionary:
+	var winner: Variant = result.get("winnerTeam", null)
+	var title := "Draw"
+	if not (bool(result.get("draw", false)) or winner == null):
+		if spectator:
+			title = "%s wins" % ("Blue" if int(winner) == 0 else "Red")
+		else:
+			title = "Victory" if int(winner) == viewer_team else "Defeat"
+	@warning_ignore("integer_division")
+	var seconds := ended_tick / tick_hz
+	@warning_ignore("integer_division")
+	var duration := "%d:%02d" % [seconds / 60, seconds % 60]
+	var order := [0, 1] if spectator else [viewer_team, 1 - viewer_team]
+	var rows: Array = []
+	for entry in SUMMARY_STATS:
+		var values: Array = []
+		for team in order:
+			var amount := 0
+			for stats in result.get("stats", []):
+				if int(stats.get("team", -1)) == int(team):
+					amount = int(stats.get(entry[1], 0))
+			@warning_ignore("integer_division")
+			values.append(amount / MILLI)
+		rows.append({"label": entry[0], "values": values})
+	return {"title": title, "reason": String(result.get("reason", "")), "duration": duration, "columns": ["Blue", "Red"] if spectator else ["You", "Enemy"], "rows": rows}
+
 ## Whether sending this command ends build mode: a placement frees the palette selection.
 static func ends_build_mode(command: Dictionary) -> bool:
 	return String(command.get("t", "")) == "build"

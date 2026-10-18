@@ -25,7 +25,7 @@
  * @property {import('../../sim/state.js').StaticMap} map
  * @property {'lobby' | 'running' | 'finished'} status
  * @property {string | undefined} hash  state hash of the latest tick that carried one
- * @property {{ winnerTeam: number | null, draw: boolean, reason: string } | null} result
+ * @property {{ winnerTeam: number | null, draw: boolean, reason: string, stats?: any[] } | null} result
  * @property {boolean} connected  false while the socket is down and the page is trying to rejoin the match
  */
 
@@ -83,7 +83,7 @@ export async function joinServerMatch({ server, name, matchId, vsBot = false, bo
   const map = await request(`${base}/api/game/maps/${match.seed}`);
 
   /** @type {Feed} */
-  const feed = { tick: 0, entities: [], groups: [], orders: [], players: [], teams: [], map, status: 'lobby', hash: undefined, result: null, connected: true };
+  const feed = { tick: 0, entities: [], groups: [], orders: [], players: [], teams: [], map, status: 'lobby', hash: undefined, result: null, endedTick: 0, connected: true };
   /** @type {((snapshot: any) => void)[]} */
   const snapshotListeners = [];
   /** @type {(() => void)[]} */
@@ -131,7 +131,7 @@ export async function joinServerMatch({ server, name, matchId, vsBot = false, bo
   socket.on('match:private', takePrivate);
   socket.on('match:started', (/** @type {any} */ info) => { apply(info.snapshot); changed(); });
   socket.on('match:updated', (/** @type {any} */ m) => { match = m; changed(); });
-  socket.on('match:ended', (/** @type {any} */ e) => { feed.status = 'finished'; feed.result = e.result; changed(); });
+  socket.on('match:ended', (/** @type {any} */ e) => { feed.status = 'finished'; feed.result = e.result; feed.endedTick = e.endedTick ?? feed.tick; changed(); });
 
   const joined = await socket.timeout(5000).emitWithAck('match:join', { matchId: match.id });
   if (!joined.ok) throw new Error(`Cannot join the match room: ${joined.error}`);

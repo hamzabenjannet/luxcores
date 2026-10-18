@@ -3471,5 +3471,327 @@
         }
       ]
     }
+  ],
+  "matchSummary": [
+    {
+      "name": "the winner reads their own side first",
+      "result": {
+        "winnerTeam": 0,
+        "draw": false,
+        "reason": "victory",
+        "stats": [
+          {
+            "team": 0,
+            "collected": 123456,
+            "spent": 98000,
+            "drained": 45678,
+            "funneled": 9930,
+            "recycled": 12000,
+            "entropy": 2999
+          },
+          {
+            "team": 1,
+            "collected": 88000,
+            "spent": 120500,
+            "drained": 1000,
+            "funneled": 0,
+            "recycled": 0,
+            "entropy": 4123
+          }
+        ]
+      },
+      "viewerTeam": 0,
+      "spectator": false,
+      "endedTick": 3573,
+      "tickHz": 20,
+      "expect": {
+        "title": "Victory",
+        "reason": "victory",
+        "duration": "2:58",
+        "columns": [
+          "You",
+          "Enemy"
+        ],
+        "rows": [
+          {
+            "label": "Lux collected",
+            "values": [
+              123,
+              88
+            ]
+          },
+          {
+            "label": "Lux spent",
+            "values": [
+              98,
+              120
+            ]
+          },
+          {
+            "label": "Lux drained",
+            "values": [
+              45,
+              1
+            ]
+          },
+          {
+            "label": "Lux funneled",
+            "values": [
+              9,
+              0
+            ]
+          },
+          {
+            "label": "Lux recycled",
+            "values": [
+              12,
+              0
+            ]
+          },
+          {
+            "label": "Lux lost to entropy",
+            "values": [
+              2,
+              4
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "the loser on team 1 reads team 1 first",
+      "result": {
+        "winnerTeam": 0,
+        "draw": false,
+        "reason": "victory",
+        "stats": [
+          {
+            "team": 0,
+            "collected": 123456,
+            "spent": 98000,
+            "drained": 45678,
+            "funneled": 9930,
+            "recycled": 12000,
+            "entropy": 2999
+          },
+          {
+            "team": 1,
+            "collected": 88000,
+            "spent": 120500,
+            "drained": 1000,
+            "funneled": 0,
+            "recycled": 0,
+            "entropy": 4123
+          }
+        ]
+      },
+      "viewerTeam": 1,
+      "spectator": false,
+      "endedTick": 1200,
+      "tickHz": 20,
+      "expect": {
+        "title": "Defeat",
+        "reason": "victory",
+        "duration": "1:00",
+        "columns": [
+          "You",
+          "Enemy"
+        ],
+        "rows": [
+          {
+            "label": "Lux collected",
+            "values": [
+              88,
+              123
+            ]
+          },
+          {
+            "label": "Lux spent",
+            "values": [
+              120,
+              98
+            ]
+          },
+          {
+            "label": "Lux drained",
+            "values": [
+              1,
+              45
+            ]
+          },
+          {
+            "label": "Lux funneled",
+            "values": [
+              0,
+              9
+            ]
+          },
+          {
+            "label": "Lux recycled",
+            "values": [
+              0,
+              12
+            ]
+          },
+          {
+            "label": "Lux lost to entropy",
+            "values": [
+              4,
+              2
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "a spectator reads Blue then Red",
+      "result": {
+        "winnerTeam": 1,
+        "draw": false,
+        "reason": "victory",
+        "stats": [
+          {
+            "team": 0,
+            "collected": 123456,
+            "spent": 98000,
+            "drained": 45678,
+            "funneled": 9930,
+            "recycled": 12000,
+            "entropy": 2999
+          },
+          {
+            "team": 1,
+            "collected": 88000,
+            "spent": 120500,
+            "drained": 1000,
+            "funneled": 0,
+            "recycled": 0,
+            "entropy": 4123
+          }
+        ]
+      },
+      "viewerTeam": 0,
+      "spectator": true,
+      "endedTick": 99,
+      "tickHz": 20,
+      "expect": {
+        "title": "Red wins",
+        "reason": "victory",
+        "duration": "0:04",
+        "columns": [
+          "Blue",
+          "Red"
+        ],
+        "rows": [
+          {
+            "label": "Lux collected",
+            "values": [
+              123,
+              88
+            ]
+          },
+          {
+            "label": "Lux spent",
+            "values": [
+              98,
+              120
+            ]
+          },
+          {
+            "label": "Lux drained",
+            "values": [
+              45,
+              1
+            ]
+          },
+          {
+            "label": "Lux funneled",
+            "values": [
+              9,
+              0
+            ]
+          },
+          {
+            "label": "Lux recycled",
+            "values": [
+              12,
+              0
+            ]
+          },
+          {
+            "label": "Lux lost to entropy",
+            "values": [
+              2,
+              4
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "a draw without counters shows zeros",
+      "result": {
+        "winnerTeam": null,
+        "draw": true,
+        "reason": "tick-limit"
+      },
+      "viewerTeam": 0,
+      "spectator": false,
+      "endedTick": 5000,
+      "tickHz": 20,
+      "expect": {
+        "title": "Draw",
+        "reason": "tick-limit",
+        "duration": "4:10",
+        "columns": [
+          "You",
+          "Enemy"
+        ],
+        "rows": [
+          {
+            "label": "Lux collected",
+            "values": [
+              0,
+              0
+            ]
+          },
+          {
+            "label": "Lux spent",
+            "values": [
+              0,
+              0
+            ]
+          },
+          {
+            "label": "Lux drained",
+            "values": [
+              0,
+              0
+            ]
+          },
+          {
+            "label": "Lux funneled",
+            "values": [
+              0,
+              0
+            ]
+          },
+          {
+            "label": "Lux recycled",
+            "values": [
+              0,
+              0
+            ]
+          },
+          {
+            "label": "Lux lost to entropy",
+            "values": [
+              0,
+              0
+            ]
+          }
+        ]
+      }
+    }
   ]
 }

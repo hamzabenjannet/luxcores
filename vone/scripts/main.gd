@@ -40,6 +40,7 @@ var _hero_box: VBoxContainer
 var _hero_key := ""
 var _shop_box: VBoxContainer
 var _shop_key := ""
+var _summary_box: VBoxContainer
 var _hero_bar: HBoxContainer
 var _hero_name_label: Label
 var _ability_buttons: Array = []
@@ -279,6 +280,12 @@ func _build_interface() -> void:
 	_item_bar.visible = false
 	_item_bar.add_theme_constant_override("separation", 8)
 	_game.add_child(_item_bar)
+
+	# The end-of-match screen (GDD 13.2), filled when the match ends.
+	_summary_box = VBoxContainer.new()
+	_summary_box.visible = false
+	_summary_box.add_theme_constant_override("separation", 4)
+	_game.add_child(_summary_box)
 
 	var game_controls := HBoxContainer.new()
 	_start_button = _make_button("START MATCH", Color("#287557"))
@@ -1112,14 +1119,41 @@ func _on_match_ended(result: Dictionary) -> void:
 	_current_match["status"] = "finished"
 	_set_match_phase("finished")
 	_update_start_button()
-	var winner: Variant = result.get("winnerTeam", null)
-	var reason := str(result.get("reason", ""))
-	if bool(result.get("draw", false)) or winner == null:
-		_set_status("Draw (%s)." % reason)
-	elif _role == "spectator":
-		_set_status("%s wins (%s)." % ["Blue" if int(winner) == 0 else "Red", reason])
-	else:
-		_set_status("%s (%s)." % ["Victory" if int(winner) == _viewer_team else "Defeat", reason])
+	var summary := GameLogic.match_summary(result, _viewer_team, _role == "spectator", int(result.get("endedTick", 0)), _tick_hz)
+	_set_status("%s (%s)." % [summary.title, summary.reason])
+	_show_summary(summary)
+
+## Fills the end-of-match box: the title and duration, then one row per counter with a value for each side.
+func _show_summary(summary: Dictionary) -> void:
+	_clear_box(_summary_box)
+	var title := Label.new()
+	title.text = "%s   %s" % [summary.title, summary.duration]
+	title.add_theme_font_size_override("font_size", 24)
+	_summary_box.add_child(title)
+	var grid := GridContainer.new()
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 18)
+	var header := Label.new()
+	header.text = ""
+	grid.add_child(header)
+	for column in summary.columns:
+		var column_label := Label.new()
+		column_label.text = String(column)
+		column_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		column_label.add_theme_color_override("font_color", Color("#8a93a6"))
+		grid.add_child(column_label)
+	for row in summary.rows:
+		var name_label := Label.new()
+		name_label.text = String(row.label)
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		grid.add_child(name_label)
+		for value in row.values:
+			var value_label := Label.new()
+			value_label.text = str(int(value))
+			value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			grid.add_child(value_label)
+	_summary_box.add_child(grid)
+	_summary_box.visible = true
 
 func _update_world_label() -> void:
 	if _current_snapshot.is_empty():
@@ -1159,6 +1193,7 @@ func _leave_match() -> void:
 	_tower_attack_row.visible = false
 	_game.visible = false
 	_home.visible = true
+	_summary_box.visible = false
 	_set_status("Disconnected.")
 
 func _copy_match_id() -> void:

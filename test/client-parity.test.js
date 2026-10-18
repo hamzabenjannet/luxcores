@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { KIND, SPEC_VERSION } from '../src/sim/index.js';
 import { entityText, isDay } from '../src/client/entity-text.js';
 import { abilityStates, actionsFor, canAfford, endsBuildMode, groupActions, heroLuxChoices, heroPickState, immediateCast, immediateUse, itemStates, mixFor, queueLines, resolveTap, secondsText, shopStates } from '../src/client/ui/controls.js';
+import { matchSummary } from '../src/client/ui/summary.js';
 import { ROOT, loadData } from './helpers/load-data.js';
 
 // The Godot client answers the same cases in vone/tests/run_tests.gd. A rule change in
@@ -73,6 +74,10 @@ test('creep order mix cases', () => {
 
 test('queue line cases', () => {
   for (const c of fixture.queueLines) assert.deepEqual(queueLines(c.orders, c.barracksId, c.tickHz, fixture.heroNames, fixture.itemNames), c.expect);
+});
+
+test('end-of-match summary cases', () => {
+  for (const c of fixture.matchSummary) assert.deepEqual(matchSummary(c.result, { viewerTeam: c.viewerTeam, spectator: c.spectator, endedTick: c.endedTick, tickHz: c.tickHz }), c.expect, c.name);
 });
 
 test('item cases', () => {

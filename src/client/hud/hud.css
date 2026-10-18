@@ -151,6 +151,26 @@ button:disabled { opacity: 0.4; }
 }
 #banner[hidden] { display: none; }
 
+/* End-of-match screen (GDD 13.2) */
+#summary {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(92vw, 420px);
+  padding: 12px 14px;
+  background: rgba(13, 18, 32, 0.94);
+  border: 1px solid #2a3550;
+  border-radius: 10px;
+  pointer-events: auto;
+}
+#summary[hidden] { display: none; }
+#summary table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+#summary th, #summary td { padding: 4px 6px; text-align: left; }
+#summary th { color: var(--dim); font-weight: 600; }
+#summary .number, #summary th.mine, #summary th.theirs { text-align: right; }
+#summary button { margin-top: 10px; width: 100%; }
+
 /* Creep orders, groups and path mode */
 .order-row { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; align-items: stretch; }
 .order-row:empty { display: none; }

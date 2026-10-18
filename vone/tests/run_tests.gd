@@ -56,6 +56,8 @@ func _init() -> void:
 		_check("immediate use %s" % JSON.stringify(c), _normalize(use if not use.is_empty() else null), _normalize(c.expect))
 	for c in fixture.shopStates:
 		_check("item shop: %s" % String(c.name), _normalize(GameLogic.shop_states(fixture.items, int(c.coreLuxMilli), int(c.minLeftLux))), _normalize(c.expect))
+	for c in fixture.matchSummary:
+		_check("summary: %s" % String(c.name), _normalize(GameLogic.match_summary(c.result, int(c.viewerTeam), bool(c.spectator), int(c.endedTick), int(c.tickHz))), _normalize(c.expect))
 	for c in fixture.endsBuildMode:
 		_check("ends build mode %s" % JSON.stringify(c.command), GameLogic.ends_build_mode(c.command), bool(c.expect))
 	for c in fixture.immediateCast:

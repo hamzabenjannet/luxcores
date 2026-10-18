@@ -238,6 +238,17 @@ func _run() -> void:
 	_check("the aim ended with the use", _main._item_aim, -1)
 	_main._leave_match()
 
+	# The end-of-match screen reads the counters of the result.
+	_main._viewer_team = 0
+	_main._on_match_ended({"winnerTeam": 0, "draw": false, "reason": "victory", "endedTick": 3573, "stats": [
+		{"team": 0, "collected": 123456, "spent": 98000, "drained": 45678, "funneled": 9930, "recycled": 12000, "entropy": 2999},
+		{"team": 1, "collected": 88000, "spent": 120500, "drained": 1000, "funneled": 0, "recycled": 0, "entropy": 4123}]})
+	_check("the end screen shows", _main._summary_box.visible, true)
+	_check("the end screen names the outcome and the duration", _main._summary_box.get_child(0).text.begins_with("Victory") and _main._summary_box.get_child(0).text.ends_with("2:58"), true)
+	_check("the end screen has a row per counter", _main._summary_box.get_child(1).get_child_count(), 3 + 6 * 3)
+	_main._leave_match()
+	_check("leaving hides the end screen", _main._summary_box.visible, false)
+
 	# Part 2: two bots play, and this client only watches.
 	_main._mode_selector.select(1)
 	_main._match_input.text = ""
