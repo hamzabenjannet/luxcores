@@ -131,6 +131,7 @@ export class GameController {
       tickHz: this.sim.tickHz,
       snapshotEveryTicks: game.snapshotEveryTicks,
       matchMaxTicks: game.matchMaxTicks,
+      kinds: this.sim.kinds,
       socket: SOCKET_DOC,
       webSocket: WEBSOCKET_DOC,
     };

@@ -1,0 +1,1618 @@
+{
+  "version": 1,
+  "specVersion": "0.10.0",
+  "dataHash": "daf8fc27fcac0af09c1ba44dd198403587e8f9a0aad0c403b5dd998e8b35eb87",
+  "mapgenVersion": 1,
+  "seed": 777,
+  "players": [
+    {
+      "id": 0,
+      "team": 0,
+      "kind": "bot"
+    },
+    {
+      "id": 1,
+      "team": 1,
+      "kind": "bot"
+    }
+  ],
+  "ticks": 4000,
+  "commands": [
+    {
+      "tick": 0,
+      "playerId": 0,
+      "seq": 0,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 51,
+        "tileZ": 97
+      }
+    },
+    {
+      "tick": 7,
+      "playerId": 1,
+      "seq": 0,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 46,
+        "tileZ": 12
+      }
+    },
+    {
+      "tick": 20,
+      "playerId": 0,
+      "seq": 1,
+      "cmd": {
+        "t": "build",
+        "building": "barracks",
+        "tileX": 48,
+        "tileZ": 99
+      }
+    },
+    {
+      "tick": 27,
+      "playerId": 1,
+      "seq": 1,
+      "cmd": {
+        "t": "build",
+        "building": "barracks",
+        "tileX": 44,
+        "tileZ": 14
+      }
+    },
+    {
+      "tick": 40,
+      "playerId": 0,
+      "seq": 2,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 14,
+        "tileZ": 64,
+        "attack": "ranged"
+      }
+    },
+    {
+      "tick": 47,
+      "playerId": 1,
+      "seq": 2,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 18,
+        "tileZ": 47,
+        "attack": "ranged"
+      }
+    },
+    {
+      "tick": 240,
+      "playerId": 0,
+      "seq": 3,
+      "cmd": {
+        "t": "build",
+        "building": "wind",
+        "tileX": 45,
+        "tileZ": 97
+      }
+    },
+    {
+      "tick": 247,
+      "playerId": 1,
+      "seq": 3,
+      "cmd": {
+        "t": "build",
+        "building": "wind",
+        "tileX": 50,
+        "tileZ": 14
+      }
+    },
+    {
+      "tick": 380,
+      "playerId": 0,
+      "seq": 4,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 47,
+        "tileZ": 64,
+        "attack": "area"
+      }
+    },
+    {
+      "tick": 427,
+      "playerId": 1,
+      "seq": 4,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 49,
+        "tileZ": 47,
+        "attack": "area"
+      }
+    },
+    {
+      "tick": 580,
+      "playerId": 0,
+      "seq": 5,
+      "cmd": {
+        "t": "build",
+        "building": "geothermal",
+        "tileX": 46,
+        "tileZ": 75
+      }
+    },
+    {
+      "tick": 660,
+      "playerId": 0,
+      "seq": 6,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 82,
+        "tileZ": 64,
+        "attack": "melee"
+      }
+    },
+    {
+      "tick": 720,
+      "playerId": 0,
+      "seq": 7,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 49,
+        "tileZ": 99
+      }
+    },
+    {
+      "tick": 747,
+      "playerId": 1,
+      "seq": 5,
+      "cmd": {
+        "t": "build",
+        "building": "geothermal",
+        "tileX": 49,
+        "tileZ": 36
+      }
+    },
+    {
+      "tick": 780,
+      "playerId": 0,
+      "seq": 8,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 15,
+        "tileZ": 64,
+        "attack": "ranged"
+      }
+    },
+    {
+      "tick": 820,
+      "playerId": 0,
+      "seq": 9,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 47,
+        "tileZ": 99
+      }
+    },
+    {
+      "tick": 880,
+      "playerId": 0,
+      "seq": 10,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 46,
+        "tileZ": 65,
+        "attack": "area"
+      }
+    },
+    {
+      "tick": 887,
+      "playerId": 1,
+      "seq": 6,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 81,
+        "tileZ": 47,
+        "attack": "melee"
+      }
+    },
+    {
+      "tick": 1040,
+      "playerId": 0,
+      "seq": 11,
+      "cmd": {
+        "t": "build",
+        "building": "wind",
+        "tileX": 46,
+        "tileZ": 93
+      }
+    },
+    {
+      "tick": 1047,
+      "playerId": 1,
+      "seq": 7,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 48,
+        "tileZ": 12
+      }
+    },
+    {
+      "tick": 1140,
+      "playerId": 0,
+      "seq": 12,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 82,
+        "tileZ": 65,
+        "attack": "melee"
+      }
+    },
+    {
+      "tick": 1247,
+      "playerId": 1,
+      "seq": 8,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 18,
+        "tileZ": 46,
+        "attack": "ranged"
+      }
+    },
+    {
+      "tick": 1260,
+      "playerId": 0,
+      "seq": 13,
+      "cmd": {
+        "t": "build",
+        "building": "geothermal",
+        "tileX": 17,
+        "tileZ": 87
+      }
+    },
+    {
+      "tick": 1300,
+      "playerId": 0,
+      "seq": 14,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 14,
+        "tileZ": 65,
+        "attack": "ranged"
+      }
+    },
+    {
+      "tick": 1307,
+      "playerId": 1,
+      "seq": 9,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 45,
+        "tileZ": 12
+      }
+    },
+    {
+      "tick": 1320,
+      "playerId": 0,
+      "seq": 15,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 45,
+        "tileZ": 98
+      }
+    },
+    {
+      "tick": 1360,
+      "playerId": 0,
+      "seq": 16,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 45,
+        "tileZ": 64,
+        "attack": "area"
+      }
+    },
+    {
+      "tick": 1367,
+      "playerId": 1,
+      "seq": 10,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 50,
+        "tileZ": 47,
+        "attack": "area"
+      }
+    },
+    {
+      "tick": 1380,
+      "playerId": 0,
+      "seq": 17,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 50,
+        "tileZ": 99
+      }
+    },
+    {
+      "tick": 1400,
+      "playerId": 0,
+      "seq": 18,
+      "cmd": {
+        "t": "build",
+        "building": "wind",
+        "tileX": 46,
+        "tileZ": 99
+      }
+    },
+    {
+      "tick": 1407,
+      "playerId": 1,
+      "seq": 11,
+      "cmd": {
+        "t": "build",
+        "building": "wind",
+        "tileX": 47,
+        "tileZ": 12
+      }
+    },
+    {
+      "tick": 1420,
+      "playerId": 0,
+      "seq": 19,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 19,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1440,
+      "playerId": 0,
+      "seq": 20,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 23,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1447,
+      "playerId": 1,
+      "seq": 12,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 80,
+        "tileZ": 47,
+        "attack": "melee"
+      }
+    },
+    {
+      "tick": 1460,
+      "playerId": 0,
+      "seq": 21,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 26,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1480,
+      "playerId": 0,
+      "seq": 22,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 29,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1500,
+      "playerId": 0,
+      "seq": 23,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 31,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1520,
+      "playerId": 0,
+      "seq": 24,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 35,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1527,
+      "playerId": 1,
+      "seq": 13,
+      "cmd": {
+        "t": "build",
+        "building": "geothermal",
+        "tileX": 78,
+        "tileZ": 24
+      }
+    },
+    {
+      "tick": 1540,
+      "playerId": 0,
+      "seq": 25,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 38,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1560,
+      "playerId": 0,
+      "seq": 26,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 41,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1567,
+      "playerId": 1,
+      "seq": 14,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 14,
+        "tileZ": 47,
+        "attack": "ranged"
+      }
+    },
+    {
+      "tick": 1580,
+      "playerId": 0,
+      "seq": 27,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 19,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 1600,
+      "playerId": 0,
+      "seq": 28,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 23,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 1607,
+      "playerId": 1,
+      "seq": 15,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 49,
+        "tileZ": 12
+      }
+    },
+    {
+      "tick": 1620,
+      "playerId": 0,
+      "seq": 29,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 26,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 1640,
+      "playerId": 0,
+      "seq": 30,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 29,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 1647,
+      "playerId": 1,
+      "seq": 16,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 48,
+        "tileZ": 46,
+        "attack": "area"
+      }
+    },
+    {
+      "tick": 1660,
+      "playerId": 0,
+      "seq": 31,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 31,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 1667,
+      "playerId": 1,
+      "seq": 17,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 49,
+        "tileZ": 18
+      }
+    },
+    {
+      "tick": 1680,
+      "playerId": 0,
+      "seq": 32,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 35,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 1700,
+      "playerId": 0,
+      "seq": 33,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 38,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 1707,
+      "playerId": 1,
+      "seq": 18,
+      "cmd": {
+        "t": "build",
+        "building": "wind",
+        "tileX": 47,
+        "tileZ": 11
+      }
+    },
+    {
+      "tick": 1720,
+      "playerId": 0,
+      "seq": 34,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 41,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 1727,
+      "playerId": 1,
+      "seq": 19,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 20,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1740,
+      "playerId": 0,
+      "seq": 35,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 19,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1747,
+      "playerId": 1,
+      "seq": 20,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 24,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1760,
+      "playerId": 0,
+      "seq": 36,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 23,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1767,
+      "playerId": 1,
+      "seq": 21,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 32,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1780,
+      "playerId": 0,
+      "seq": 37,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 26,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1787,
+      "playerId": 1,
+      "seq": 22,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 36,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1800,
+      "playerId": 0,
+      "seq": 38,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 29,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1807,
+      "playerId": 1,
+      "seq": 23,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 42,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1820,
+      "playerId": 0,
+      "seq": 39,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 31,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1827,
+      "playerId": 1,
+      "seq": 24,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 46,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1840,
+      "playerId": 0,
+      "seq": 40,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 35,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1847,
+      "playerId": 1,
+      "seq": 25,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 48,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1860,
+      "playerId": 0,
+      "seq": 41,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 38,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1867,
+      "playerId": 1,
+      "seq": 26,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 50,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1880,
+      "playerId": 0,
+      "seq": 42,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 41,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 1887,
+      "playerId": 1,
+      "seq": 27,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 20,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 1900,
+      "playerId": 0,
+      "seq": 43,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 19,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 1907,
+      "playerId": 1,
+      "seq": 28,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 24,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 1920,
+      "playerId": 0,
+      "seq": 44,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 23,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 1927,
+      "playerId": 1,
+      "seq": 29,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 32,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 1940,
+      "playerId": 0,
+      "seq": 45,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 26,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 1947,
+      "playerId": 1,
+      "seq": 30,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 36,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 1960,
+      "playerId": 0,
+      "seq": 46,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 29,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 1967,
+      "playerId": 1,
+      "seq": 31,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 42,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 1980,
+      "playerId": 0,
+      "seq": 47,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 31,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 1987,
+      "playerId": 1,
+      "seq": 32,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 46,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2000,
+      "playerId": 0,
+      "seq": 48,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 35,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2007,
+      "playerId": 1,
+      "seq": 33,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 48,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2020,
+      "playerId": 0,
+      "seq": 49,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 38,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2027,
+      "playerId": 1,
+      "seq": 34,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 50,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2040,
+      "playerId": 0,
+      "seq": 50,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 41,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2047,
+      "playerId": 1,
+      "seq": 35,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 20,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2060,
+      "playerId": 0,
+      "seq": 51,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 19,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2067,
+      "playerId": 1,
+      "seq": 36,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 24,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2080,
+      "playerId": 0,
+      "seq": 52,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 23,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2087,
+      "playerId": 1,
+      "seq": 37,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 32,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2100,
+      "playerId": 0,
+      "seq": 53,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 26,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2107,
+      "playerId": 1,
+      "seq": 38,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 36,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2127,
+      "playerId": 1,
+      "seq": 39,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 42,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2140,
+      "playerId": 0,
+      "seq": 54,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 29,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2147,
+      "playerId": 1,
+      "seq": 40,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 46,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2167,
+      "playerId": 1,
+      "seq": 41,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 48,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2187,
+      "playerId": 1,
+      "seq": 42,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 50,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2207,
+      "playerId": 1,
+      "seq": 43,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 20,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2227,
+      "playerId": 1,
+      "seq": 44,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 24,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2240,
+      "playerId": 0,
+      "seq": 55,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 31,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2247,
+      "playerId": 1,
+      "seq": 45,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 32,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2267,
+      "playerId": 1,
+      "seq": 46,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 36,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2287,
+      "playerId": 1,
+      "seq": 47,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 42,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2307,
+      "playerId": 1,
+      "seq": 48,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 46,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2327,
+      "playerId": 1,
+      "seq": 49,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 48,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2347,
+      "playerId": 1,
+      "seq": 50,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 50,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2360,
+      "playerId": 0,
+      "seq": 56,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 35,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2427,
+      "playerId": 1,
+      "seq": 51,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 20,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2460,
+      "playerId": 0,
+      "seq": 57,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 38,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2467,
+      "playerId": 1,
+      "seq": 52,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 24,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2507,
+      "playerId": 1,
+      "seq": 53,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 32,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2520,
+      "playerId": 0,
+      "seq": 58,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 41,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2547,
+      "playerId": 1,
+      "seq": 54,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 36,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2560,
+      "playerId": 0,
+      "seq": 59,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 19,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2600,
+      "playerId": 0,
+      "seq": 60,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 23,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2607,
+      "playerId": 1,
+      "seq": 55,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 42,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2640,
+      "playerId": 0,
+      "seq": 61,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 26,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2647,
+      "playerId": 1,
+      "seq": 56,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 46,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2680,
+      "playerId": 0,
+      "seq": 62,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 29,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2687,
+      "playerId": 1,
+      "seq": 57,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 48,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2720,
+      "playerId": 0,
+      "seq": 63,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 31,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2747,
+      "playerId": 1,
+      "seq": 58,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 50,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2760,
+      "playerId": 0,
+      "seq": 64,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 35,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2787,
+      "playerId": 1,
+      "seq": 59,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 20,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2800,
+      "playerId": 0,
+      "seq": 65,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 38,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2847,
+      "playerId": 1,
+      "seq": 60,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 24,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2860,
+      "playerId": 0,
+      "seq": 66,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 41,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2887,
+      "playerId": 1,
+      "seq": 61,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 32,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2947,
+      "playerId": 1,
+      "seq": 62,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 36,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2987,
+      "playerId": 1,
+      "seq": 63,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 42,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3027,
+      "playerId": 1,
+      "seq": 64,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 46,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3087,
+      "playerId": 1,
+      "seq": 65,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 48,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3127,
+      "playerId": 1,
+      "seq": 66,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 50,
+        "track": "shell"
+      }
+    }
+  ],
+  "hashes": {
+    "20": "75fd982a",
+    "40": "c27b7b28",
+    "60": "457904c9",
+    "80": "8647a089",
+    "100": "7e0c7e59",
+    "120": "25acb215",
+    "140": "45531049",
+    "160": "a3b48a2d",
+    "180": "bef742bd",
+    "200": "1074c849",
+    "220": "3366217d",
+    "240": "910f3b59",
+    "260": "4d5efad7",
+    "280": "56033dce",
+    "300": "9236c98e",
+    "320": "f7c64836",
+    "340": "d016de72",
+    "360": "57e3d88a",
+    "380": "37a32bda",
+    "400": "dabc1192",
+    "420": "77942c8c",
+    "440": "c8609e70",
+    "460": "360d9676",
+    "480": "e0c6cebb",
+    "500": "f8298291",
+    "520": "034aa5a5",
+    "540": "6842aace",
+    "560": "fc3835cc",
+    "580": "52480dad",
+    "600": "0ca9a992",
+    "620": "e22240db",
+    "640": "24f09717",
+    "660": "580f3732",
+    "680": "20ed3040",
+    "700": "fdb057cb",
+    "720": "655f059f",
+    "740": "e07c84aa",
+    "760": "f331a8d5",
+    "780": "15f09d57",
+    "800": "f1ca836f",
+    "820": "729ab883",
+    "840": "beb08386",
+    "860": "81d22146",
+    "880": "2cc45db7",
+    "900": "925d21e8",
+    "920": "812b3595",
+    "940": "d37c2dbc",
+    "960": "425e34c4",
+    "980": "329e1385",
+    "1000": "1c772805",
+    "1020": "bd345de1",
+    "1040": "2e2db777",
+    "1060": "5d0400ac",
+    "1080": "9153344b",
+    "1100": "4d123052",
+    "1120": "462175e2",
+    "1140": "ed835b92",
+    "1160": "01009a79",
+    "1180": "2b7cfc70",
+    "1200": "8f4f8492",
+    "1220": "69427a0a",
+    "1240": "0553d1e8",
+    "1260": "d88be411",
+    "1280": "81dda356",
+    "1300": "9d38b9f3",
+    "1320": "ba9ce4f3",
+    "1340": "859a9dce",
+    "1360": "27aa7762",
+    "1380": "c5d0043e",
+    "1400": "327fb2e5",
+    "1420": "87ddd289",
+    "1440": "293a91e0",
+    "1460": "e9862db8",
+    "1480": "623de125",
+    "1500": "86a20e22",
+    "1520": "a488d6bc",
+    "1540": "eb71a481",
+    "1560": "eadaf4c8",
+    "1580": "e7c6eacb",
+    "1600": "a46bf276",
+    "1620": "88ed1c4d",
+    "1640": "e90ab0c9",
+    "1660": "47a0d87c",
+    "1680": "fc16046b",
+    "1700": "cdadd347",
+    "1720": "d622b958",
+    "1740": "cc01bf27",
+    "1760": "778e96ac",
+    "1780": "e9ea7309",
+    "1800": "8abe1352",
+    "1820": "ce3af16c",
+    "1840": "e21f886c",
+    "1860": "a6e07218",
+    "1880": "23f24d33",
+    "1900": "68aaac25",
+    "1920": "04ab7b89",
+    "1940": "cde3f8c2",
+    "1960": "be9d49cf",
+    "1980": "2f0e07f9",
+    "2000": "0424bcc7",
+    "2020": "f4a035ce",
+    "2040": "888446ce",
+    "2060": "3ee214c0",
+    "2080": "dec56b2e",
+    "2100": "6eaf727c",
+    "2120": "85caf4a2",
+    "2140": "ef6b2d9a",
+    "2160": "eaccbe4a",
+    "2180": "b811f1fa",
+    "2200": "079dd08d",
+    "2220": "f50fe8e4",
+    "2240": "916b6879",
+    "2260": "05056e90",
+    "2280": "19f3d429",
+    "2300": "175a5dad",
+    "2320": "3daad6a3",
+    "2340": "cf84e4b3",
+    "2360": "9b094b6b",
+    "2380": "b2f54651",
+    "2400": "44e07519",
+    "2420": "62fcb621",
+    "2440": "b41135e8",
+    "2460": "77e9f6f3",
+    "2480": "6208c876",
+    "2500": "0d71017d",
+    "2520": "f50519e4",
+    "2540": "7171602b",
+    "2560": "d4b146b5",
+    "2580": "455f1675",
+    "2600": "08426ea7",
+    "2620": "db66a4c5",
+    "2640": "f258e4dc",
+    "2660": "d79e6507",
+    "2680": "0adf9ba1",
+    "2700": "60834c9e",
+    "2720": "d09f5304",
+    "2740": "2c8b666d",
+    "2760": "457f604b",
+    "2780": "74aa9b17",
+    "2800": "ae877328",
+    "2820": "42644da1",
+    "2840": "baecd9ba",
+    "2860": "003e3d17",
+    "2880": "565648d2",
+    "2900": "99b83bc2",
+    "2920": "680c0620",
+    "2940": "9f91d63a",
+    "2960": "8a380b99",
+    "2980": "1acf3af4",
+    "3000": "e6b911a7",
+    "3020": "e527964c",
+    "3040": "07ba59cc",
+    "3060": "7e52828f",
+    "3080": "80a6a95f",
+    "3100": "d8497e3f",
+    "3120": "346ec2dd",
+    "3140": "6213fbbe",
+    "3160": "9ca99ee1",
+    "3180": "2c92c1f7",
+    "3200": "547e35b5",
+    "3220": "daf4243b",
+    "3240": "4b0e5718",
+    "3260": "71b69a4c",
+    "3280": "7189b977",
+    "3300": "ccd424ad",
+    "3320": "065a43cf",
+    "3340": "46741e40",
+    "3360": "344e1517",
+    "3380": "be31fcc8",
+    "3400": "a88e2392",
+    "3420": "493cc150",
+    "3440": "23d3a551",
+    "3460": "7bc415a2",
+    "3480": "e140f864",
+    "3500": "474e13c8",
+    "3520": "f856f630",
+    "3540": "613098eb",
+    "3560": "51528027",
+    "3580": "83cef556",
+    "3600": "d1fa5c08",
+    "3620": "22dc1836",
+    "3640": "00fbd449",
+    "3660": "6f480acf",
+    "3680": "ffcf240e",
+    "3700": "29636642",
+    "3720": "8b0ff37f",
+    "3740": "1feebb12",
+    "3760": "b9d2491c",
+    "3780": "e710e24f",
+    "3800": "cd30148b",
+    "3820": "585a3314",
+    "3840": "73952d20",
+    "3860": "aea78700",
+    "3880": "48aafca0",
+    "3900": "b71a6f53",
+    "3920": "3755ec95",
+    "3940": "95b2e525",
+    "3960": "cd5c7caf",
+    "3980": "e426e564",
+    "4000": "7b822f15"
+  }
+}

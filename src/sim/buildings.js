@@ -32,15 +32,15 @@ export function isBuildingKind(kind) {
 
 /**
  * Inclusive tile rows of a team's build zone (Core row and build row, GDD 10.1).
- * @param {import('./state.js').SimState} state
+ * @param {{ mapgen: { rows: readonly { team: number, height: number }[] } }} config
  * @param {number} team
  * @returns {{ z0: number, z1: number }}
  */
-export function buildZone(state, team) {
+export function buildZoneOf(config, team) {
   let z = 0;
   let z0 = -1;
   let z1 = -1;
-  for (const row of state.config.mapgen.rows) {
+  for (const row of config.mapgen.rows) {
     if (row.team === team) {
       if (z0 < 0) z0 = z;
       z1 = z + row.height - 1;
@@ -48,6 +48,16 @@ export function buildZone(state, team) {
     z += row.height;
   }
   return { z0, z1 };
+}
+
+/**
+ * Inclusive tile rows of a team's build zone, read from the match config.
+ * @param {import('./state.js').SimState} state
+ * @param {number} team
+ * @returns {{ z0: number, z1: number }}
+ */
+export function buildZone(state, team) {
+  return buildZoneOf(state.config, team);
 }
 
 /**

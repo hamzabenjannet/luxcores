@@ -68,12 +68,30 @@ To play against the server from a browser, open `http://localhost:3000/?server=&
 ### Match Flow
 
 1. A player signs in as a guest and opens a lobby (`POST /api/matches`). The host takes team 0.
-2. A second player joins, or the host asks for a bot (`vsBot`).
+2. A second player joins, or the host asks for a bot (`vsBot`), or for two bots (`botVsBot`). In a bot match the host only watches, and any signed-in player may join the room as a spectator.
 3. Both clients connect to the `/game` socket namespace and join the match room.
 4. The host starts the match. `MatchRunnerService` creates the sim state from the match seed and ticks it at 20 Hz from a self-correcting timer.
-5. Clients send commands. The server stamps the tick and the player id itself, so a client cannot act for another player. As in the browser, the sim drops invalid commands.
+5. Clients send commands. The server stamps the tick and the player id itself, so a client cannot act for another player. Invalid commands are dropped by the sim. Each bot (`src/bot/bot.js`) thinks once per tick on the server, and its commands go into the same replay log as a human's.
 6. Every `SNAPSHOT_EVERY_TICKS` ticks the room receives a snapshot. A state `hash` rides along every 20 ticks, so a client that also simulates can detect drift.
 7. A victory, a draw or `MATCH_MAX_TICKS` ends the match. Then the server saves the replay, updates the match and publishes `match.finished`, and the consumer applies the result to the player profiles.
+
+### Snapshot Entities
+
+Each entity in a snapshot carries `id`, `kind`, `team`, `owner`, `x` and `z` (units, 1 tile is 1000), plus `hp` and `maxHp` (milli-HP). It also carries the fields a client needs to draw M3:
+
+| Field | Meaning |
+|---|---|
+| `attack` | Tower attack type: 1 melee, 2 ranged, 3 area |
+| `recycle` | Ticks left in the recycle channel |
+| `stunTicks` | Ticks left on a stun |
+| `targetId` | What a tower or hero aims at, and a projectile's target |
+| `powerLevel`, `shellLevel` | Tower upgrade levels |
+| `roll` | Wind output in milli-lux per second |
+| `arrivalTick` | Projectile impact tick |
+
+`kind` codes come from `GET /api/game/spec` (`kinds`), so a client never hard-codes them. A projectile lives for one tick, and a snapshot every second tick shows only some of them. Draw an aim line from `targetId` instead of waiting for one.
+
+A `match:join` ack also carries `role`: `player`, or `spectator` for a watcher of a bot match. Spectators receive every event of the room and cannot send commands.
 
 ## REST Routes
 
@@ -124,7 +142,7 @@ const ack = await socket.emitWithAck('match:command', {
 | `ping` | client to server | The ack holds the server time |
 | `match:updated` | server to room | The `MatchDto` after a lobby or status change |
 | `match:started` | server to room | `{ matchId, tickHz, players, map, snapshot }` |
-| `match:snapshot` | server to room | `{ matchId, tick, hash?, teams, entities }` |
+| `match:snapshot` | server to room | `{ matchId, tick, hash?, teams, entities }` (see Snapshot Entities) |
 | `match:ended` | server to room | `{ matchId, endedTick, result, replayId }` |
 
 `GET /api/game/spec` lists the same events in machine-readable form, and the Swagger schemas include their payload DTOs.

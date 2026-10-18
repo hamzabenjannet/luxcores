@@ -88,10 +88,15 @@ describe('the economy over the match server (M2)', () => {
         cmd: { t: 'build', building: 'solar', ...tile },
       }),
     ).toMatchObject({ accepted: true });
-    const built = await waitFor<Snapshot>(socket, 'match:snapshot', (s) =>
-      s.entities.some((e) => e.kind === KIND.SOLAR),
+    // The bot also builds solar plants, so every check looks at team 0 only.
+    const mine = (s: Snapshot) =>
+      s.entities.filter((e) => e.kind === KIND.SOLAR && e.team === 0);
+    const built = await waitFor<Snapshot>(
+      socket,
+      'match:snapshot',
+      (s) => mine(s).length > 0,
     );
-    const solar = built.entities.find((e) => e.kind === KIND.SOLAR)!;
+    const solar = mine(built)[0];
     expect(solar).toMatchObject({
       team: 0,
       owner: 0,
@@ -128,9 +133,7 @@ describe('the economy over the match server (M2)', () => {
     );
     expect(settled.teams[0].pendingLux).toBeGreaterThan(0);
     expect(settled.tick).toBeGreaterThanOrEqual(built.tick + 38); // about 40 ticks after the build
-    expect(settled.entities.filter((e) => e.kind === KIND.SOLAR)).toHaveLength(
-      1,
-    );
+    expect(mine(settled)).toHaveLength(1);
 
     // Recycle: only the owner's building, and the refund arrives after the channel.
     expect(
@@ -144,7 +147,7 @@ describe('the economy over the match server (M2)', () => {
       socket,
       'match:snapshot',
       (s) =>
-        s.tick > settled.tick && !s.entities.some((e) => e.kind === KIND.SOLAR),
+        s.tick > settled.tick && mine(s).length === 0,
       20_000,
     );
     expect(gone.teams[0].coreLux).toBeGreaterThan(80_000 + 12_000 - 1); // 60% of 20 lux, plus income
@@ -163,9 +166,15 @@ describe('the economy over the match server (M2)', () => {
     const record = await api(t.url, `/api/replays/${stopped.body.replayId}`, {
       token: halo.token,
     });
-    const log = record.body.replay.commands.map(
-      (c: { cmd: { t: string } }) => c.cmd.t,
+    const commands: { playerId: number; cmd: { t: string } }[] =
+      record.body.replay.commands;
+    // Refused commands are logged too, so the replay shows what the player sent.
+    expect(
+      commands.filter((c) => c.playerId === 0).map((c) => c.cmd.t),
+    ).toEqual(['build', 'build', 'build', 'recycle']);
+    // The bot's commands ride in the same log, so the replay needs no bot code.
+    expect(commands.some((c) => c.playerId === 1 && c.cmd.t === 'build')).toBe(
+      true,
     );
-    expect(log).toEqual(['build', 'build', 'build', 'recycle']); // refused commands are logged too, so the replay shows what the player sent
   }, 60_000);
 });

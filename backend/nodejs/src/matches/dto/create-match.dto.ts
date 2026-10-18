@@ -47,4 +47,13 @@ export class CreateMatchDto {
   @IsOptional()
   @IsBoolean()
   vsBot: boolean = false;
+
+  @ApiPropertyOptional({
+    default: false,
+    description:
+      'Two bots play each other and the host only watches. Any signed-in player can join the room as a spectator. Cannot be combined with `vsBot`.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  botVsBot: boolean = false;
 }

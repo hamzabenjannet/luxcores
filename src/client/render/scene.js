@@ -24,7 +24,7 @@ const VIEW_TILES_WIDE = 32;
 /**
  * @param {HTMLCanvasElement} canvas
  * @param {any} mapgen raw data/mapgen.json (tile units)
- * @param {import('../world-view.js').WorldView} view
+ * @param {import('../../shared/world-view.js').WorldView} view
  * @param {{ core: number, default: number }} hpFactor raw data/balance.json hpFactor
  * @param {number} [viewerTeam] the camera starts at this team's Core
  */
@@ -148,7 +148,7 @@ export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0) {
  * so a destroyed blocker stays on screen until M7 replaces this with instanced
  * entity rendering.
  * @param {THREE.Scene} scene
- * @param {import('../world-view.js').WorldView} view
+ * @param {import('../../shared/world-view.js').WorldView} view
  * @param {ReturnType<typeof createLabels>} labels
  */
 function addGeneratedLayout(scene, view, labels) {

@@ -53,6 +53,12 @@ export class MatchDto {
   seed!: number;
   @ApiProperty({ description: 'The second slot is a bot instead of a human' })
   vsBot!: boolean;
+  @ApiPropertyOptional({
+    default: false,
+    description:
+      'Both slots are bots and nobody plays. The lobby has no human players; anyone signed in may watch.',
+  })
+  botVsBot?: boolean;
   @ApiProperty({ format: 'uuid' }) hostId!: string;
   @ApiProperty({ type: [MatchPlayerDto] }) players!: MatchPlayerDto[];
   @ApiProperty({ format: 'date-time' }) createdAt!: string;

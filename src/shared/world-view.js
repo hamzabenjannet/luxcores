@@ -1,12 +1,12 @@
 // @ts-check
 /**
- * WorldView: the only way client code reads game state.
+ * WorldView: the only way client and bot code read game state.
  *
- * In the MVP it wraps the local sim. After the server-authoritative netcode
- * lands (TECH_ARCHITECTURE.md section 13) a second implementation will wrap
- * the snapshot buffer instead, and nothing else in src/client changes.
+ * Two implementations: `localWorldView` wraps a sim state (the server's match
+ * runner and bots use it), and `networkWorldView` wraps the snapshot feed of a
+ * browser that plays through the server. Nothing else changes between them.
  *
- * Rule: client code must not import sim internals or mutate state.
+ * Rule: client and bot code must not import sim internals or mutate state.
  */
 
 /**
@@ -36,7 +36,7 @@ export function localWorldView(state, _viewerTeam) {
 /**
  * The same view over server snapshots (online play). `feed` is the object that
  * `joinServerMatch` fills, so this view always shows the latest snapshot.
- * @param {import('./net/server-session.js').Feed} feed
+ * @param {import('../client/net/server-session.js').Feed} feed
  * @returns {WorldView}
  */
 export function networkWorldView(feed) {

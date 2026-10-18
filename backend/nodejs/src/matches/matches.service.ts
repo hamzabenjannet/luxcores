@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -33,6 +34,8 @@ export class MatchesService {
     host: AuthenticatedPlayer,
     dto: CreateMatchDto,
   ): Promise<MatchDto> {
+    if (dto.vsBot && dto.botVsBot)
+      throw new BadRequestException('vsBot and botVsBot cannot both be set');
     const match: MatchDto = {
       id: randomUUID(),
       name: dto.name,
@@ -40,8 +43,12 @@ export class MatchesService {
       status: MatchStatus.Lobby,
       seed: dto.seed ?? randomInt(0, MAX_SEED + 1),
       vsBot: dto.vsBot,
+      botVsBot: dto.botVsBot,
       hostId: host.id,
-      players: [{ playerId: host.id, name: host.name, team: 0, kind: 'human' }],
+      // In a bot match the host only watches, so the lobby holds no human.
+      players: dto.botVsBot
+        ? []
+        : [{ playerId: host.id, name: host.name, team: 0, kind: 'human' }],
       createdAt: new Date().toISOString(),
     };
     return this.publish(await this.store.insert(COLLECTIONS.matches, match));
@@ -71,6 +78,8 @@ export class MatchesService {
     if (match.status !== MatchStatus.Lobby)
       throw new ConflictException('The match is no longer open');
     if (match.players.some((p) => p.playerId === player.id)) return match; // joining twice changes nothing
+    if (match.botVsBot)
+      throw new ConflictException('Two bots play this match; watch it instead');
     if (match.vsBot) throw new ConflictException('This match is against a bot');
     if (match.players.length >= MAX_HUMANS)
       throw new ConflictException('The match is full');
@@ -89,7 +98,10 @@ export class MatchesService {
     const match = await this.get(id);
     if (match.status !== MatchStatus.Lobby)
       throw new ConflictException('Only an open lobby can be left');
-    if (!match.players.some((p) => p.playerId === player.id))
+    if (
+      !match.players.some((p) => p.playerId === player.id) &&
+      !(match.botVsBot && match.hostId === player.id)
+    )
       throw new ConflictException('You are not in this match');
     if (match.hostId === player.id)
       return this.update(id, {

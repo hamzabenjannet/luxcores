@@ -21,6 +21,7 @@ import { SimService } from '../simulation/sim.service.js';
 import type {
   SimCommand,
   SimCommandEnvelope,
+  SimBot,
   SimEntity,
   SimMap,
   SimPlayer,
@@ -80,6 +81,7 @@ interface Run {
   state: SimState;
   recorder: SimRecorder;
   inbox: SimCommandEnvelope[];
+  bots: SimBot[];
   lastSeq: Map<number, number>;
   startedAt: number;
   timer?: NodeJS.Timeout;
@@ -145,7 +147,7 @@ export class MatchRunnerService implements OnModuleDestroy {
     const humans = match.players
       .filter((p) => p.kind === 'human')
       .sort((a, b) => a.team - b.team);
-    if (humans.length < 2 && !match.vsBot)
+    if (!match.botVsBot && humans.length < 2 && !match.vsBot)
       throw new ConflictException('Waiting for a second player');
 
     const players: RunnerPlayer[] = humans.map((p) => ({
@@ -157,6 +159,11 @@ export class MatchRunnerService implements OnModuleDestroy {
     }));
     if (match.vsBot)
       players.push({ simId: 1, name: 'Bot', team: 1, kind: 'bot' });
+    if (match.botVsBot)
+      players.push(
+        { simId: 0, name: 'Bot Blue', team: 0, kind: 'bot' },
+        { simId: 1, name: 'Bot Red', team: 1, kind: 'bot' },
+      );
     const simPlayers: SimPlayer[] = players.map((p) => ({
       id: p.simId,
       team: p.team,
@@ -170,6 +177,9 @@ export class MatchRunnerService implements OnModuleDestroy {
       state,
       recorder,
       inbox: [],
+      bots: players
+        .filter((p) => p.kind === 'bot')
+        .map((p) => this.sim.createBot(p.simId, p.team, match.seed)),
       lastSeq: new Map(),
       startedAt: Date.now(),
       ending: false,
@@ -280,9 +290,10 @@ export class MatchRunnerService implements OnModuleDestroy {
   /** Runs one tick. Returns true when the match is over. */
   private tick(run: Run): boolean {
     const { state } = run;
-    const envelopes = run.inbox
-      .splice(0)
-      .map((e) => ({ ...e, tick: state.tick }));
+    const envelopes = [
+      ...run.inbox.splice(0).map((e) => ({ ...e, tick: state.tick })),
+      ...run.bots.flatMap((bot) => bot.think(state)),
+    ];
     this.sim.step(state, envelopes);
     run.recorder.record(state, envelopes);
     if (state.tick % this.snapshotEvery === 0) {
@@ -375,6 +386,14 @@ export class MatchRunnerService implements OnModuleDestroy {
         z: e.z,
         hp: e.hp,
         maxHp: e.maxHp,
+        attack: e.attack,
+        recycle: e.recycle,
+        stunTicks: e.stunTicks,
+        targetId: e.targetId,
+        powerLevel: e.powerLevel,
+        shellLevel: e.shellLevel,
+        roll: e.roll,
+        arrivalTick: e.arrivalTick,
       })),
     };
   }

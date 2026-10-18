@@ -59,6 +59,13 @@ export class GameSpecDto {
   @ApiProperty({ example: 2, description: 'Ticks between snapshots' })
   snapshotEveryTicks!: number;
   @ApiProperty({ example: 12000 }) matchMaxTicks!: number;
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: { type: 'number' },
+    example: { CORE: 1, SOLAR: 2, TOWER: 7 },
+    description: 'Entity kind codes by name, as `entities[].kind` carries them',
+  })
+  kinds!: Record<string, number>;
   @ApiProperty({ type: SocketDocDto }) socket!: SocketDocDto;
   @ApiProperty({ type: WebSocketDocDto }) webSocket!: WebSocketDocDto;
 }

@@ -12,6 +12,8 @@ import { RoomHub } from './room-hub.service.js';
 export type JoinAck =
   | {
       ok: true;
+      /** `spectator` can watch a bot match and cannot send commands. */
+      role: 'player' | 'spectator';
       status: string;
       tick: number | null;
       snapshot: MatchSnapshot | null;
@@ -35,11 +37,14 @@ export class GameActions {
   async join(player: AuthenticatedPlayer, matchId: string): Promise<JoinAck> {
     const match = await this.matches.get(matchId).catch(() => null);
     if (!match) return { ok: false, error: 'Match not found' };
-    if (!match.players.some((p) => p.playerId === player.id))
+    const member = match.players.some((p) => p.playerId === player.id);
+    // Only a bot match is open to watchers. Once fog of war ships, watching a human match would leak hidden state.
+    if (!member && !match.botVsBot)
       return { ok: false, error: 'You are not in this match' };
     const snapshot = this.runner.snapshot(match.id);
     return {
       ok: true,
+      role: member ? 'player' : 'spectator',
       status: match.status,
       tick: snapshot?.tick ?? null,
       snapshot,

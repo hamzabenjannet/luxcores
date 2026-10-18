@@ -6,12 +6,15 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { AppConfig } from '../config/configuration.js';
 import type {
+  BotApi,
   SimApi,
+  SimBot,
   SimMapLayout,
   SimPlayer,
   SimRecorder,
   SimReplay,
   SimState,
+  WorldViewApi,
 } from './sim.types.js';
 
 /**
@@ -26,6 +29,8 @@ import type {
 export class SimService {
   private readonly logger = new Logger(SimService.name);
   private api!: SimApi;
+  private botApi!: BotApi;
+  private worldViewApi!: WorldViewApi;
   private config!: ReturnType<SimApi['normalizeData']>;
   private mapgenRaw!: unknown;
 
@@ -47,6 +52,12 @@ export class SimService {
     }
 
     this.api = (await import(pathToFileURL(entry).href)) as SimApi;
+    this.botApi = (await import(
+      pathToFileURL(join(root, 'src', 'bot', 'bot.js')).href
+    )) as BotApi;
+    this.worldViewApi = (await import(
+      pathToFileURL(join(root, 'src', 'shared', 'world-view.js')).href
+    )) as WorldViewApi;
     const { DATA_FILES } = (await import(
       pathToFileURL(join(root, 'src', 'shared', 'data-files.js')).href
     )) as {
@@ -76,6 +87,11 @@ export class SimService {
     return this.api.TICK_HZ;
   }
 
+  /** Entity kind codes by name (`CORE`, `SOLAR`, `TOWER`, `HERO` ...), so clients need not hard-code them. */
+  get kinds(): Record<string, number> {
+    return { ...this.api.KIND };
+  }
+
   get hashInterval(): number {
     return this.api.HASH_INTERVAL;
   }
@@ -97,6 +113,20 @@ export class SimService {
       mapgenVersion: this.mapgenVersion,
     });
     return { state, recorder };
+  }
+
+  /** A bot for one player. Its commands are ordinary envelopes, so the replay holds them like a human's. */
+  createBot(playerId: number, team: number, seed: number): SimBot {
+    const bot = this.botApi.createBot({
+      playerId,
+      team,
+      config: this.config,
+      seed,
+    });
+    return {
+      think: (state) =>
+        bot.think(this.worldViewApi.localWorldView(state, team)),
+    };
   }
 
   step: SimApi['step'] = (state, envelopes) => this.api.step(state, envelopes);

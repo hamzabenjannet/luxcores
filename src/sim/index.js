@@ -10,4 +10,6 @@ export { hashState } from './hash.js';
 export { Recorder, playReplay, HASH_INTERVAL } from './replay.js';
 export { compareEnvelopes } from './commands.js';
 export { generateMap, isConnected } from './mapgen.js';
+export { buildZoneOf, ATTACK_CODE } from './buildings.js';
+export { createRng, nextInt } from './rng.js';
 export { TICK_HZ, UNITS_PER_TILE, MILLI } from './fixed.js';
