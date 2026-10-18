@@ -2,6 +2,12 @@
 
 Newest first. One entry per milestone or notable change. Add the commit hash and the verification, not just the intent.
 
+## 2026-10-18: Web and Godot Clients Aligned at M3
+
+- `d7f018d` A server-run test bot, bot-vs-bot lobbies, spectators, and combat fields in snapshots. `6f37669` The web client plays only through the server, with a menu, build controls and M3 visuals. `ccb16a9` Godot client at M3 with shared parity cases. A later commit adds the menu click-through test.
+- Verified: Chromium and Node agree on the idle and the bot hash. A 100-seed bot soak passes, and so do the Godot parity (44 checks) and live (22 checks) tests. Nine browser and Godot tests pass in one sequential run, and `docs/HANDOVER.md` has the counts.
+- Next: M4 (creeps), built in both clients together. See `handover-2026-10-18-alignment.md` for the workflow and the open items.
+
 ## 2026-10-16: Transports, Accounts, Deployment and M2
 
 - `5f5b0e8` Plain WebSocket gateway. `db3274e` Device guests, recovery codes, rate limits. `9fe4ec5` Shutdown order fix. `21a64ec` Dockerfile and production stack.

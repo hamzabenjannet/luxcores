@@ -30,3 +30,5 @@ The live status of the repo stays in `docs/HANDOVER.md`. This folder keeps the h
 | `progress.md` | Progress | Dated log of milestones with commit hashes |
 | `2026-10-16-next-steps.md` | Prompt | Go-ahead for the WebSocket gateway, device guests, Docker and M2, and a request for the best course of action |
 | `handover-2026-10-16-economy.md` | Handover | State after those four steps: verified claims, what is not verified and what to remember |
+| `2026-10-18-align-clients.md` | Prompt | Request to align the web and Godot clients at M3 before M4, with the owner's two answers |
+| `handover-2026-10-18-alignment.md` | Handover | State after the alignment: bots on the server, protocol changes, parity tests, what is verified and what is not |

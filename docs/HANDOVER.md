@@ -1,6 +1,6 @@
 # Handover
 
-Status as of 2026-10-18. Read `CLAUDE.md` first for the working rules.
+Status as of 2026-10-18, after the client alignment (commit `ccb16a9` and the docs commit that follows). Read `CLAUDE.md` first for the working rules.
 
 ## Where things stand
 
@@ -21,19 +21,37 @@ Milestones M1 (map generation), M2 (economy) and M3 (combat and physics) are don
 | Replay (`replay.js`) | Record and playback done, mismatch detection tested; the golden replay `replays/golden/seed-1234567.json` (2 400 ticks) plays back in `test/golden.test.js` |
 | Headless runner | `npm run headless`: 12 000 ticks in about 15 ms with empty systems; a third argument saves the run as a replay |
 | Purity guard | `test/sim-boundary.test.js` blocks bare imports, Math.random, wall clock, approximated Math, `**`, DOM, timers, key iteration |
-| Client | Renders the 96 × 112 map, both Cores, the generated lanes, vents, item spawns and blockers (placeholder shapes), the HUD and a one-finger pan; runs the sim at 20 Hz |
+| Web client | Plays only through the server: a start menu (bot, bots to watch, two humans), a lobby card, a build palette, a selection panel (tower upgrades, recycle), hero orders and a result banner. It draws the map, every entity with its name and lux count, tower attack types, aim lines and projectiles, picks tiles by ray-casting, and pans by drag. It never steps the sim |
 | Backend (`backend/nodejs/`) | NestJS 12 multiplayer server: guest auth with JWT guards, players, lobbies, a server-authoritative match runner at 20 Hz, Socket.IO `/game` namespace, replays with server-side verify, static routes for the game files, Swagger at `/api/docs`, JSON file database with MongoDB and PostgreSQL adapters, RabbitMQ events with an in-process fallback. See `backend/nodejs/README.md` |
-| Networked client | `?server=` mode: the web client signs in, opens or joins a match, and renders server snapshots through `networkWorldView`. `npm run test:e2e` plays a match between two Chromium pages and checks their hashes against the sim |
+| Bots | `src/bot/bot.js` follows the GDD 12.1 rotation (collector, barracks, tower) and upgrades towers; the server runs it for a `vsBot` or `botVsBot` lobby, and its commands go into the replay. Creep groups and heroes arrive with M4 and M5. `node tools/run-bots.js --soak 100` plays 100 seeds twice and compares the hashes. Golden replay `bots-seed-777` pins a bot match |
+| Spectators | Any signed-in player may join the room of a `botVsBot` match and receives every event, with no commands. A human match stays closed to strangers |
 | Entity labels | Every entity and map marker shows its name and, for entities, its lux count under it (`render/labels.js`) |
 | Project memory (`docs/prompts/`) | Tracked in git: prompt history, handovers, progress and knowledge notes; see its README |
 | Prose gate | `tools/check_style.py` labels hits `deny` or `ask`, supports `--register informal`, reads `.js` files through their comments and checks the whole repo with `npm run lint:prose:all`; `test/prose.test.js` fails `npm test` on any `deny` hit |
-| Godot project (`vone/`) | Godot 4.6, GL Compatibility renderer; the map supports zoom and drag panning for touch selection |
-| Cross-runtime check | `npm run test:e2e` loads the page in Chromium inside the Playwright container and compares its tick-120 hash with Node's; seed 1234567 gives `4cefa32c` in both |
-| M1 to M3 closure validation | `npm test`: 95 passed; `npm run headless`: 12 000 ticks, hash `16bfd4ba`; `npm run test:e2e`: 3 passed |
+| Godot project (`vone/`) | Godot 4.6, GL Compatibility renderer, a thin client at M3 (see Client Alignment below): spec check, server data, build, upgrade, recycle, hero orders, combat visuals, bot and spectator modes |
+| Cross-runtime check | `determinism.html` plays the sim inside Chromium. The idle hash at tick 120 (`4cefa32c`, seed 1234567) and the bot hash at tick 4000 (`7b822f15`, seed 777) equal the Node values |
+| Alignment validation (2026-10-18) | `npm test`: 124 passed; `npm run headless`: hash `16bfd4ba`; backend `npm test`: 38 passed and 12 skipped without services; backend `npm run test:e2e`: 59 passed and 4 skipped; root `npm run test:e2e`: 9 passed (Chromium, Godot parity 44 checks, Godot live 22 checks); `node tools/run-bots.js --soak 100 6000`: ok |
 
-### Browser Smoke Test
+### Browser and Godot Tests
 
-Start `npm run serve`, then run `npm run test:e2e`. The test reads `PW_WS_ENDPOINT` (default `ws://localhost:42944/`) and `APP_URL` (default `http://host.docker.internal:5173/`, the host as the container sees it). It skips with exit code 0 when nothing listens on the endpoint, fails on any console or page error, and saves `test/e2e/__screenshots__/smoke.png`. The script uses the glob `test/e2e/*.e2e.js` because Node 22.15.1 reads `node --test test/e2e/` as a module path and fails.
+Build the backend once (`npm run serve:install`, then `npm --prefix backend/nodejs run build`) and start the Playwright container (`docker start container-playwright-env09`, port 42944). Then run `npm run test:e2e`. The tests start their own throwaway backend on a free port, so no server needs to run. They read `PW_WS_ENDPOINT` (default `ws://localhost:42944/`) and `BACKEND_HOST_FOR_BROWSER` (default `host.docker.internal`, the host as the container sees it), and the shared set-up is `test/e2e/helpers/backend.js`. Each test skips when its prerequisite is missing: the Playwright server, the built backend or Godot 4 (`GODOT_BIN`, `godot` or the macOS app). The files run one at a time (`--test-concurrency=1`), because Godot and Chromium at once starved each other and made timing checks flaky. The script uses the glob `test/e2e/*.e2e.js` because Node 22.15.1 reads `node --test test/e2e/` as a module path and fails.
+
+| File | Covers |
+|---|---|
+| `smoke.e2e.js` | Chromium and Node agree on the idle and the bot hash; the page loads and shows the menu |
+| `network.e2e.js` | Two browsers play one match and receive the sim hashes; device sign-in and recovery |
+| `play.e2e.js` | A human builds, upgrades and recycles through the controls; a spectator watches two bots; the menu and lobby by hand |
+| `godot.e2e.js` | The Godot game logic against the shared cases; the Godot client against a live backend |
+
+## Client Alignment
+
+Three programs now share one rule engine and one protocol. `src/sim/` runs only in the backend (and in `determinism.html` and the headless tools). The web client and the Godot client are thin clients of the backend, so a rule changes in one place.
+
+- **Protocol.** Snapshots carry the combat fields (`attack`, `recycle`, `stunTicks`, `targetId`, `powerLevel`, `shellLevel`, `roll`, `arrivalTick`), and `GET /api/game/spec` lists the entity `kinds`. Both clients read costs, upgrades, the build zone and the HP factor from `data/*.json` served by the backend.
+- **Parity cases.** `test/fixtures/client-parity.json` holds the cases for label text, affordability, tap resolution and panel actions. `test/client-parity.test.js` runs them in JavaScript and `vone/tests/run_tests.gd` in GDScript. The JavaScript test also reads `GameLogic.SPEC_VERSION` from the `.gd` file and fails when it differs from the sim.
+- **Workflow.** A change to a UI decision goes into `src/client/entity-text.js` or `src/client/ui/controls.js`, into `vone/scripts/game_logic.gd` and into the fixture, in one commit. A rule change goes into `src/sim/` and the GDD. Then both clients grow with the milestone: M4 adds creep orders to both.
+- **Hero controls.** No hero exists before M5, because nothing in the sim spawns one. Both clients wire hero move and attack, and the parity cases cover them. No live match has exercised them yet.
+- **Not verified.** A real phone, a Godot export for web, Android or iOS, and a Godot match between two humans (the protocol is the same as the covered bot match). `[UNVERIFIED]`
 
 ## M1 to M3 Closure
 
@@ -117,8 +135,9 @@ A nuclear plant earns 5 lux/s. It earns 600 lux in the 120 s before it melts dow
 ## Known Gaps
 
 - The backend sends full snapshots with every entity, uses guest sign-in only, has no rate limiting, and keeps a running match in the memory of one process. `backend/nodejs/README.md` lists these limits with the planned fixes.
-- The client has no way to build or recycle yet: commands can only be sent from code or the test hook (M8 adds touch controls). Buildings draw as placeholder boxes.
-- The networked client has no lobby screen and no controls yet. A host starts a match through `?autostart=1` or the test hook, and commands can only be sent from code. The camera stays north-up for team 1, so its base appears at the top.
+- The web controls are the M8 minimum: tap to build, select and order, with no build ghost, path mode, quick slots or pinch zoom. Buildings and units draw as placeholder boxes. A tap on the map takes effect at once, so a stray tap builds.
+- The camera stays north-up for team 1, so its base appears at the top.
+- Projectiles live one tick and snapshots arrive every second tick, so clients draw an aim line from `targetId` to show each shot. Delta snapshots and interpolation belong to M7.
 - The client compares the sim spec version with the server but not the data hash, because `crypto.subtle` needs a secure context and a LAN address is not one.
 
 ## Queued by the Owners
@@ -127,13 +146,14 @@ Decided on 2026-10-16 (`docs/prompts/2026-10-16-backend-decisions.md`). Do them 
 
 1. Done: a plain WebSocket gateway at `/ws` (`backend/nodejs/README.md`, Plain WebSocket Protocol).
 2. Done: a device guest with a recovery code, plus rate limits on the sign-in routes.
-3. A Dockerfile and a compose service with Postgres and RabbitMQ, plus a reverse proxy with TLS, for one VPS.
+3. Done: a Dockerfile and a compose stack with Postgres, RabbitMQ and a TLS reverse proxy for one VPS (`backend/nodejs/deploy/`). Verified through local TLS only.
 4. Done: M2 (economy). The next game task is M4 above.
 
 ## More Gaps
 - Backend adapter and event tests for MongoDB, PostgreSQL and RabbitMQ pass on real containers (Postgres 16, MongoDB 7.0, RabbitMQ 3.13 on a local Docker Desktop) but skip in a plain `npm test`. No CI runs them yet.
 
-- Mobile testing needs the page served over the LAN (`npm run serve`, then `http://<mac-ip>:5173` on the phone). Three.js loads from jsDelivr, so the phone needs internet access.
-- `src/client/input/pan.js` maps screen y to world z 1:1, ignoring the camera tilt. Fine for now; M8 should ray-cast to the ground plane instead.
+- Mobile testing needs the backend reachable over the LAN (`npm run serve`, then `http://<mac-ip>:3000` on the phone). Three.js loads from jsDelivr, so the phone needs internet access.
+- Dragging holds the ground point under the finger, and taps ray-cast to the ground plane (`src/client/input/pointer.js`). Pinch zoom is M8.
+- `README.md.bak` sits in the repo root and is tracked. It looks like a stray editor backup; the owners should delete it or say why it stays.
 - `state.map` stays outside the hash (owners, for now). The hash covers blockers but not lanes, vents or item spawns. A change that moves only those passes the golden replay, `npm run test:e2e` and any future Godot parity check that compares hashes. Placement draws blockers after vents, so most generator changes also move a blocker and get caught; an edit to the item spawn rows or to lane jitter alone may not. The gap closes as systems consume the data. Geothermal collectors read vents (M2), creeps follow lane polylines (M4) and map spawns create ground items (M6), so each puts its result into hashed entities. Until then, a Godot port must compare `generateMap` output directly, for example the layout of seed 1234567. Hashing a digest of `state.map` would close the gap for good and changes the hash layout.
 - No CI yet. A GitHub Actions job running `npm test` on Node 22 is a five-line addition when the repo goes to GitHub.
