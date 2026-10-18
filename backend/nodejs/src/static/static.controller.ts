@@ -13,9 +13,9 @@ import type { AppConfig } from '../config/configuration.js';
 import { Public } from '../common/decorators/public.decorator.js';
 
 /**
- * The two routes that live outside `/api`: the game page at `/` and an empty
- * favicon, so browsers do not log a 404 for it. Every other static file comes
- * from `StaticModule`.
+ * The routes that live outside `/api`: the game page at `/`, the determinism
+ * page, and an empty favicon so browsers do not log a 404 for it. Every other
+ * static file comes from `StaticModule`.
  */
 @ApiExcludeController()
 @Public()
@@ -25,15 +25,22 @@ export class StaticController {
 
   @Get()
   index(@Res() res: Response): void {
-    const page = join(
-      this.config.get('game.repoRoot', { infer: true }),
-      'index.html',
-    );
+    this.sendPage(res, 'index.html');
+  }
+
+  /** Plays the sim in the browser and prints the state hash, for the cross-engine check. */
+  @Get('determinism.html')
+  determinism(@Res() res: Response): void {
+    this.sendPage(res, 'determinism.html');
+  }
+
+  private sendPage(res: Response, file: string): void {
+    const page = join(this.config.get('game.repoRoot', { infer: true }), file);
     res.sendFile(page, (err) => {
       if (err && !res.headersSent)
         res
           .status(404)
-          .json(new NotFoundException('index.html not found').getResponse());
+          .json(new NotFoundException(`${file} not found`).getResponse());
     });
   }
 

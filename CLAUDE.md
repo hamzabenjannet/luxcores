@@ -18,12 +18,12 @@ When code disagrees with the GDD, the GDD wins. To change a rule, edit the GDD i
 
 ```bash
 npm test                             # node --test, nothing to install; includes the prose gate
-npm run test:e2e                     # Chromium smoke test against the Playwright container (needs npm install)
+npm run test:e2e                     # Chromium tests against the Playwright container and a throwaway backend (needs the backend built)
 npm run headless -- <seed> <ticks>   # headless sim run, prints the final hash
 npm run lint:prose -- <file>         # writing-rules checker on one file (see Writing Rules)
 npm run lint:prose:all               # every Markdown file and every JavaScript comment
 npm run gen:sin                      # regenerate src/sim/sin-table.js (rarely)
-npm run serve                        # static server on :5173, open from a phone on the LAN
+npm run serve                        # backend on :3000 serving the game page and every match; run `npm run serve:install` once
 ```
 
 The repo needs Node 22 or newer and Python 3 for the prose checker. There is no build step, and `npm test` needs no install. Two dependency sets are approved: `playwright-core` 1.58.2 (dev, pinned) for `npm run test:e2e`, and the NestJS stack in `backend/nodejs/package.json` (owners, 2026-10-16). Ask the owners before you add anything else.
@@ -58,11 +58,11 @@ Values marked *(default)* in the GDD are tuning points. Change them in data and 
 
 ## Client Rules (`src/client/`)
 
-- Read game state only through `WorldView` (`world-view.js`). Client code never mutates sim state.
+- Read game state only through `WorldView` (`src/shared/world-view.js`). Client and bot code never mutate sim state.
 - Every player action becomes a `CommandEnvelope` (`src/sim/commands.js`). The UI may pre-validate for instant feedback; the sim result is final.
 - Three.js world units are tiles. Team 0 (player, bottom) is blue `#3d8bff`; team 1 (top) is red `#ff4d4d`.
 - The game shows no HP bars and no glow-as-health. Each unit and building shows a small lux count beside it (GDD 13.1); glow is decoration only.
-- Online play is `?server=<origin>` (empty for the page's own origin), with `name`, `match` (`new` or an id), `vsBot=1`, `seed` and `autostart=1`. The client then sends commands and renders server snapshots through `networkWorldView`; it never steps the sim. `npm run test:e2e` plays a two-browser match when `backend/nodejs` is built.
+- The page is served by the backend and always plays through it: the server owns the sim, and the page signs in, sends commands and renders snapshots through `networkWorldView`. It never steps the sim. The start menu offers a bot match, a bot-versus-bot match to watch and a match for two humans. URL parameters skip the menu: `server` (the page's own origin by default), `name`, `match` (`new` or an id), `vsBot=1`, `botVsBot=1`, `seed` and `autostart=1`. `determinism.html` plays the sim in the browser and prints its hash, for the cross-engine check. `npm run test:e2e` covers play through the controls, two browsers on one match, a spectator and that hash check.
 - Mobile comes first: portrait layout, touch input, `devicePixelRatio` capped at 2, bloom at half resolution, instancing for crowds.
 - The `index.html` import map pins `three` to 0.170.0. Change that version only on purpose, then test on a phone.
 

@@ -10,7 +10,7 @@
  * its device secret in localStorage, so later visits sign in as the same player.
  * A recovery code (`requestRecoveryCode`) moves the profile to another device.
  *
- * Socket.IO loads on demand, so offline play never fetches it.
+ * Socket.IO loads on demand from the import map in index.html.
  */
 
 /**
@@ -31,6 +31,9 @@
  * @property {number} viewerTeam  team of the signed-in player
  * @property {string} playerId
  * @property {string} playerName
+ * @property {'player' | 'spectator'} role  a spectator watches a bot match and cannot send commands
+ * @property {boolean} isHost  true for the player who opened the lobby, who also starts the match
+ * @property {() => any} getMatch  the latest lobby or match record (`MatchDto`), kept current by the server
  * @property {string | undefined} recoveryCode  set when this session came from a recovery: the replacement code, shown once
  * @property {() => Promise<string>} requestRecoveryCode  makes a new recovery code; the old one stops working
  * @property {string} matchId
@@ -48,13 +51,14 @@
  *   name: string,            // guest display name
  *   matchId: string,         // an existing match id, or 'new' to open a lobby
  *   vsBot?: boolean,         // with 'new': fill the second slot with a bot
+ *   botVsBot?: boolean,      // with 'new': two bots play and this client only watches
  *   seed?: number,           // with 'new': map and RNG seed
  *   specVersion: string,     // SPEC_VERSION of this client's sim
  *   recoveryCode?: string,   // move a profile to this device instead of signing in
  * }} opts
  * @returns {Promise<ServerSession>}
  */
-export async function joinServerMatch({ server, name, matchId, vsBot = false, seed, specVersion, recoveryCode }) {
+export async function joinServerMatch({ server, name, matchId, vsBot = false, botVsBot = false, seed, specVersion, recoveryCode }) {
   const base = server.replace(/\/$/, '');
   const spec = await request(`${base}/api/game/spec`);
   if (spec.specVersion !== specVersion) {
@@ -65,7 +69,7 @@ export async function joinServerMatch({ server, name, matchId, vsBot = false, se
   const token = auth.accessToken;
   let match =
     matchId === 'new'
-      ? await request(`${base}/api/matches`, { token, body: { name: `${name}'s match`, vsBot, ...(seed === undefined ? {} : { seed }) } })
+      ? await request(`${base}/api/matches`, { token, body: { name: `${name}'s match`, vsBot, botVsBot, ...(seed === undefined ? {} : { seed }) } })
       : await request(`${base}/api/matches/${matchId}/join`, { token, method: 'POST' });
   const map = await request(`${base}/api/game/maps/${match.seed}`);
 
@@ -113,6 +117,9 @@ export async function joinServerMatch({ server, name, matchId, vsBot = false, se
     viewerTeam: match.players.find((/** @type {any} */ p) => p.playerId === auth.player.id)?.team ?? 0,
     playerId: auth.player.id,
     playerName: auth.player.name,
+    role: joined.role,
+    isHost: match.hostId === auth.player.id,
+    getMatch: () => match,
     recoveryCode: recoveryCode ? auth.recoveryCode : undefined,
     requestRecoveryCode: async () => (await request(`${base}/api/auth/recovery-code`, { token, method: 'POST' })).recoveryCode,
     matchId: match.id,

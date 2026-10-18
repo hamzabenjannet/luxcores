@@ -7,12 +7,14 @@ This repo holds the phase 1 MVP: plain HTML and JavaScript with Three.js. Its de
 ## Run
 
 ```bash
-npm test                 # sim tests, no install needed (Node 22+)
+npm test                 # sim, bot and client-logic tests, no install needed (Node 22+)
 npm run headless         # simulate a 10-minute match headless, print the state hash
-npm run serve            # then open http://localhost:5173 (or your LAN IP on a phone)
+node tools/run-bots.js   # two bots play a match headless
+npm run serve:install    # once: install the backend
+npm run serve            # then open http://localhost:3000 (or your LAN IP on a phone)
 ```
 
-Add `?seed=42` to the URL to change the match seed.
+The backend serves the game page and runs every match, so one rule engine serves the web client and the Godot client. The start menu offers a match against a bot, two bots to watch, or a match for two humans. Add `?seed=42` to the URL to choose the map seed, or `?match=new&vsBot=1&autostart=1` to skip the menu.
 
 ## Docs
 

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Luxcores Determinism</title>
+  <style>
+    body { margin: 16px; background: #05060a; color: #e8ecf5; font: 14px/1.4 ui-monospace, Menlo, monospace; }
+    pre { white-space: pre-wrap; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <h1>Luxcores Determinism</h1>
+  <p>Plays the sim in this browser and prints the state hash. Compare it with
+  <code>node tools/run-bots.js SEED TICKS</code> or the headless runner on any machine.
+  Parameters: <code>seed</code>, <code>ticks</code>, <code>bots=1</code> (two bots play; without it nobody sends commands).</p>
+  <pre id="result">running ...</pre>
+  <script type="module" src="src/client/determinism.js"></script>
+</body>
+</html>

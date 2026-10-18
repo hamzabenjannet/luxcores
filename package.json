@@ -14,7 +14,8 @@
     "gen:sin": "node tools/gen-sin-table.js",
     "lint:prose": "python3 tools/check_style.py",
     "lint:prose:all": "python3 tools/check_style.py --all",
-    "serve": "python3 -m http.server 5173 --bind 0.0.0.0"
+    "serve": "npm --prefix backend/nodejs run start",
+    "serve:install": "npm --prefix backend/nodejs install"
   },
   "devDependencies": {
     "playwright-core": "1.58.2"

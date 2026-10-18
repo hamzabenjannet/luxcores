@@ -1,154 +1,21 @@
-// Online play smoke tests. It starts the real backend and opens two Chromium
-// pages in the Playwright container. The pages play a server match, and each
+// Online play browser tests. They start the real backend and open Chromium
+// pages in the Playwright container. Two pages play a server match, and each
 // must receive the same state hashes that the repo's own sim computes. That
-// proves the loop end to end: REST lobby, Socket.IO room, server-authoritative
-// ticks, snapshots, and the networked client. A second test checks the device
-// guest: a page signs in as the same player on every visit, and a recovery code
-// moves the profile to a fresh browser profile.
+// checks the loop end to end: REST lobby, Socket.IO room, server-authoritative
+// ticks, snapshots, and the web client. A second test checks the device guest:
+// a page signs in as the same player on every visit, and a recovery code moves
+// the profile to a fresh browser profile.
 //
 // Run: (cd backend/nodejs && npm install && npm run build)   once
 //      npm run test:e2e
 //
-// Environment (see smoke.e2e.js for the Playwright variables):
-//   BACKEND_PORT              port for the throwaway backend, default 3100
-//   BACKEND_URL_FOR_BROWSER   how the container reaches the host, default http://host.docker.internal:<port>
-//
-// The test skips when the Playwright server is down or the backend is not built.
+// The shared set-up and its environment variables live in helpers/backend.js.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
-import net from 'node:net';
-import { tmpdir } from 'node:os';
+import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { chromium } from 'playwright-core';
-import { loadData, ROOT } from '../helpers/load-data.js';
-import { createState, step, hashState } from '../../src/sim/index.js';
-
-const PW_WS_ENDPOINT = process.env.PW_WS_ENDPOINT ?? 'ws://localhost:42944/';
-const PORT = Number(process.env.BACKEND_PORT ?? 3100);
-const BROWSER_URL = process.env.BACKEND_URL_FOR_BROWSER ?? `http://host.docker.internal:${PORT}`;
-const BACKEND_DIR = join(ROOT, 'backend', 'nodejs');
-const SEED = 1234567;
-const SHOTS = join(ROOT, 'test', 'e2e', '__screenshots__');
-
-/** @param {string} endpoint */
-function canConnect(endpoint) {
-  const url = new URL(endpoint);
-  const port = Number(url.port || (url.protocol === 'wss:' ? 443 : 80));
-  return new Promise((resolve) => {
-    const socket = net.connect({ host: url.hostname, port });
-    const done = (/** @type {boolean} */ ok) => { socket.destroy(); resolve(ok); };
-    socket.setTimeout(2000, () => done(false));
-    socket.once('connect', () => done(true));
-    socket.once('error', () => done(false));
-  });
-}
-
-/** Hash of a 2-human match after `ticks` ticks, as the sim computes it on its own. */
-function referenceHash(ticks) {
-  const players = [
-    { id: 0, team: 0, kind: 'human' },
-    { id: 1, team: 1, kind: 'human' },
-  ];
-  const state = createState({ seed: SEED, players, config: loadData().config });
-  while (state.tick < ticks) step(state, []);
-  return hashState(state);
-}
-
-/** A free tile in team 0's build zone, from the same map the server generated for the seed. */
-function freeSpot() {
-  const state = createState({ seed: SEED, players: [{ id: 0, team: 0, kind: 'human' }, { id: 1, team: 1, kind: 'human' }], config: loadData().config });
-  const taken = new Set(state.entities.map((e) => `${Math.floor(e.x / 1000)},${Math.floor(e.z / 1000)}`));
-  for (const v of state.map.vents) taken.add(`${v.tileX},${v.tileZ}`);
-  // The free tile nearest to the point (44, 90), so it shows in the first screen of the host.
-  let best = null;
-  for (let z = 70; z < 110; z++) {
-    for (let x = 4; x < 92; x++) {
-      const d = (x - 44) ** 2 + (z - 90) ** 2;
-      if (!taken.has(`${x},${z}`) && (best === null || d < best.d)) best = { d, tileX: x, tileZ: z };
-    }
-  }
-  if (!best) throw new Error('no free tile');
-  return { tileX: best.tileX, tileZ: best.tileZ };
-}
-
-/** Resolves once the backend answers its health route. */
-async function waitForBackend(child, log) {
-  for (let i = 0; i < 100; i++) {
-    if (child.exitCode !== null) throw new Error(`the backend exited with code ${child.exitCode}:\n${log()}`);
-    try {
-      if ((await fetch(`http://127.0.0.1:${PORT}/api/health`)).ok) return;
-    } catch { /* not up yet */ }
-    await new Promise((r) => setTimeout(r, 100));
-  }
-  throw new Error(`the backend did not start:\n${log()}`);
-}
-
-const reachable = await canConnect(PW_WS_ENDPOINT);
-const built = existsSync(join(BACKEND_DIR, 'dist', 'main.js')) && existsSync(join(BACKEND_DIR, 'node_modules'));
-const skip = !reachable
-  ? `no Playwright server at ${PW_WS_ENDPOINT}; start the container or set PW_WS_ENDPOINT`
-  : !built
-    ? 'the backend is not built; run: cd backend/nodejs && npm install && npm run build'
-    : false;
-
-/**
- * Starts the backend and a browser, runs `body`, and cleans up. `open(context, query)`
- * loads the game in online mode and collects console and page errors in `errors`.
- * @param {(env: { browser: import('playwright-core').Browser, errors: string[], newContext: () => Promise<import('playwright-core').BrowserContext>, open: (context: import('playwright-core').BrowserContext, query: string) => Promise<import('playwright-core').Page> }) => Promise<void>} body
- * @param {Record<string, string>} [extraEnv]
- */
-async function withBackend(body, extraEnv = {}) {
-  const dbDir = mkdtempSync(join(tmpdir(), 'luxcores-net-'));
-  let output = '';
-  const backend = spawn(process.execPath, ['dist/main.js'], {
-    cwd: BACKEND_DIR,
-    env: {
-      ...process.env,
-      NODE_ENV: 'test',
-      PORT: String(PORT),
-      HOST: '0.0.0.0', // the container reaches the host through host.docker.internal
-      JSON_DB_PATH: join(dbDir, 'db.json'),
-      JWT_SECRET: 'e2e-secret-with-enough-length',
-      ADMIN_API_KEY: 'e2e-admin-key-with-enough-length',
-      MATCH_MAX_TICKS: '600', // 30 s: software rendering in the container is slow, and the match must outlast the checks
-      RATE_LIMIT_AUTH_PER_MINUTE: '1000',
-      RABBITMQ_URL: '',
-      LUXCORES_ROOT: ROOT,
-      ...extraEnv,
-    },
-  });
-  backend.stdout.on('data', (d) => { output += d; });
-  backend.stderr.on('data', (d) => { output += d; });
-
-  /** @type {import('playwright-core').Browser | undefined} */
-  let browser;
-  try {
-    await waitForBackend(backend, () => output);
-    browser = await chromium.connect(PW_WS_ENDPOINT);
-    /** @type {string[]} */ const errors = [];
-    const newContext = () => browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-    const open = async (/** @type {import('playwright-core').BrowserContext} */ context, /** @type {string} */ query) => {
-      const page = await context.newPage();
-      page.on('console', (m) => { if (m.type() === 'error') errors.push(`console error: ${m.text()}`); });
-      page.on('pageerror', (e) => errors.push(`page error: ${e.message}`));
-      await page.goto(`${BROWSER_URL}/?test=1&server=&${query}`, { waitUntil: 'load', timeout: 30_000 });
-      await page.waitForFunction(() => /** @type {any} */ (window).__luxTest?.matchId, null, { timeout: 30_000 });
-      return page;
-    };
-    await body({ browser, errors, newContext, open });
-  } finally {
-    await browser?.close();
-    backend.kill('SIGTERM');
-    await new Promise((r) => setTimeout(r, 300));
-    rmSync(dbDir, { recursive: true, force: true });
-  }
-}
-
-const luxTest = (/** @type {import('playwright-core').Page} */ page, /** @type {string} */ field) =>
-  page.evaluate((f) => /** @type {any} */ (window).__luxTest[f], field);
+import { SEED, SHOTS, freeSpot, luxTest, referenceHash, skip, withBackend } from './helpers/backend.js';
 
 test('two browsers play a server match and receive the sim hashes', { timeout: 120_000, skip }, async () => {
   await withBackend(async ({ errors, newContext, open }) => {

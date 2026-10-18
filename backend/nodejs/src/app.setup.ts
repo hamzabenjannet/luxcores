@@ -29,6 +29,7 @@ export function configureApp(app: INestApplication): void {
     exclude: [
       { path: '/', method: RequestMethod.GET },
       { path: 'favicon.ico', method: RequestMethod.GET },
+      { path: 'determinism.html', method: RequestMethod.GET },
     ],
   });
   app.enableCors({

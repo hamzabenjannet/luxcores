@@ -128,17 +128,52 @@ export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0) {
     target.z = Math.min(H, Math.max(0, target.z + dzTiles));
   }
 
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  const hit = new THREE.Vector3();
+
+  function placeCamera() {
+    camera.position.copy(target).add(OFFSET);
+    camera.lookAt(target);
+    camera.updateMatrixWorld();
+  }
+
+  /**
+   * The ground point in tiles under a screen point. It aims from the camera's
+   * current target, so a drag that pans between two frames stays exact.
+   * @param {number} clientX @param {number} clientY
+   * @returns {{ x: number, z: number } | null}
+   */
+  function groundAt(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    ndc.set(((clientX - rect.left) / rect.width) * 2 - 1, -(((clientY - rect.top) / rect.height) * 2 - 1));
+    placeCamera();
+    raycaster.setFromCamera(ndc, camera);
+    return raycaster.ray.intersectPlane(groundPlane, hit) ? { x: hit.x, z: hit.z } : null;
+  }
+
+  /**
+   * Where a ground point (tiles) appears on screen, in client pixels. The e2e tests tap with it.
+   * @param {number} x @param {number} z
+   */
+  function screenOf(x, z) {
+    placeCamera();
+    const p = new THREE.Vector3(x, 0, z).project(camera);
+    const rect = canvas.getBoundingClientRect();
+    return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height };
+  }
+
   /** @param {number} timeSec */
   function render(timeSec) {
     for (const c of cores) c.rotation.y = timeSec * 0.6;
     labels.update(view.entities());
     entityMeshes.update(view.entities());
-    camera.position.copy(target).add(OFFSET);
-    camera.lookAt(target);
+    placeCamera();
     composer.render();
   }
 
-  return { render, pan, camera, renderer, viewTilesWide: VIEW_TILES_WIDE };
+  return { render, pan, groundAt, screenOf, camera, renderer };
 }
 
 /**

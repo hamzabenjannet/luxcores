@@ -4,30 +4,15 @@
  * sprite that draws its text on a canvas. World units are tiles, like the
  * rest of the scene.
  *
- * Entities get "<name> <lux>" (GDD 13.1: a small lux count replaces the
- * glow-as-health rule). The lux count is the entity's HP divided by its HP
- * factor, in whole lux. Labels follow their entity and appear or vanish as
- * entities are created or destroyed.
+ * Entities get their name and lux count (GDD 13.1 replaces glow-as-health with
+ * a small lux count). A short tail marks tower types, upgrades, stuns and
+ * recycling, and entity-text.js builds the text. Labels follow their entity and
+ * appear or vanish as entities are created or destroyed.
  */
 
 import * as THREE from 'three';
-import { KIND, MILLI } from '../../sim/index.js';
-
-/** Display names by KIND code. */
-const KIND_NAMES = {
-  [KIND.CORE]: 'Lumen Core',
-  [KIND.SOLAR]: 'Solar',
-  [KIND.WIND]: 'Wind',
-  [KIND.GEOTHERMAL]: 'Geothermal',
-  [KIND.NUCLEAR]: 'Nuclear',
-  [KIND.BARRACKS]: 'Barracks',
-  [KIND.TOWER]: 'Tower',
-  [KIND.BLOCKER]: 'Blocker',
-  [KIND.CREEP]: 'Creep',
-  [KIND.HERO]: 'Hero',
-  [KIND.GROUND_ITEM]: 'Item',
-  [KIND.LOOT_BAG]: 'Loot Bag',
-};
+import { KIND } from '../../sim/index.js';
+import { entityText } from '../entity-text.js';
 
 /** Tiles between an entity's center and the center of its label, along z. */
 const OFFSET_Z = { [KIND.CORE]: 1.9 };
@@ -76,16 +61,6 @@ function makeLabel(text, color) {
 }
 
 /**
- * Lux of an entity, rounded to the nearest whole lux: HP divided by its HP factor, milli units to lux.
- * @param {import('../../sim/state.js').Entity} e
- * @param {{ core: number, default: number }} hpFactor from data/balance.json
- */
-export function luxOf(e, hpFactor) {
-  const factor = e.kind === KIND.CORE ? hpFactor.core : hpFactor.default;
-  return Math.round(e.hp / factor / MILLI);
-}
-
-/**
  * @param {THREE.Scene} scene
  * @param {{ core: number, default: number }} hpFactor
  * @param {number[]} teamColors 0xRRGGBB per team
@@ -109,17 +84,17 @@ export function createLabels(scene, hpFactor, teamColors) {
   function update(entities) {
     const alive = new Set();
     for (const e of entities) {
-      const name = KIND_NAMES[e.kind];
-      if (!name) continue; // projectiles and other nameless kinds
+      const text = entityText(e, hpFactor);
+      if (text === null) continue; // projectiles and other nameless kinds
       alive.add(e.id);
       let label = byEntity.get(e.id);
       if (!label) {
         const color = e.team >= 0 ? teamColors[e.team] ?? 0xb8c0d4 : 0xb8c0d4;
-        label = makeLabel(name, color);
+        label = makeLabel(text, color);
         scene.add(label.sprite);
         byEntity.set(e.id, label);
       }
-      label.setText(`${name} ${luxOf(e, hpFactor)}`);
+      label.setText(text);
       label.sprite.position.set(e.x / 1000, 0.3, e.z / 1000 + (OFFSET_Z[e.kind] ?? DEFAULT_OFFSET_Z));
     }
     for (const [id, label] of byEntity) {

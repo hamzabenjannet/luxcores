@@ -35,7 +35,7 @@ Phase 2 reimplements the sim in Rust. If the JS version follows the portability 
 |---|---|---|
 | Language | Plain JavaScript (ES modules) with JSDoc types and `// @ts-check` | No build step; editors still type-check |
 | Loading | `index.html` with an import map pointing `three` and `three/addons/` to a pinned CDN version | Matches the three.js installation docs; no bundler |
-| Dev server | Any static server (`npx serve`, or `python3 -m http.server`) | Test on a phone over LAN |
+| Dev server | The NestJS backend (`npm run serve`), which also serves the page and runs every match | One rule engine for the web and Godot clients; test on a phone over LAN |
 | Rendering | Three.js, orthographic isometric camera | Mobile-friendly, instancing for crowds |
 | 3D assets | glTF/GLB | Loads in Three.js (`GLTFLoader`) and imports natively in Godot 4 |
 | Glow | Emissive materials + `UnrealBloomPass` at half resolution | Light-energy look within mobile budget |
@@ -68,13 +68,17 @@ luxcores/
         grid2d.js         # MVP implementation
     shared/
       data-files.js       # data file list + browser loader
-    bot/bot.js
+      world-view.js       # read-only facade over sim state or a snapshot feed
+    bot/bot.js            # test bot, run by the server
     client/
-      main.js             # wiring: data -> sim -> loop -> render + HUD
-      loop.js             # fixed-tick driver + interpolation alpha
-      world-view.js       # read-only facade over sim state
-      render/scene.js     # camera, ground, glow pipeline
-      input/pan.js        # one-finger pan (M8 extends)
+      main.js             # wiring: server session -> render + controls + HUD
+      loop.js             # render loop (M7 adds snapshot interpolation)
+      determinism.js      # headless sim in the browser, for the cross-engine hash check
+      entity-text.js      # label text, shared by the renderer and the tests
+      net/server-session.js  # sign-in, lobby, Socket.IO, snapshot feed
+      ui/                 # start menu, lobby card, build palette and selection panel
+      render/             # scene, labels, placeholder meshes, aim lines
+      input/pointer.js    # drag to pan, tap to act (M8 extends)
       hud/hud.css
   data/                   # balance, buildings, heroes, abilities, items, mapgen
   tools/

@@ -421,6 +421,9 @@ describe('REST API', () => {
       const page = await fetch(`${t.url}/`);
       expect(page.status).toBe(200);
       expect(await page.text()).toContain('<canvas id="view">');
+      const determinism = await fetch(`${t.url}/determinism.html`);
+      expect(determinism.status).toBe(200);
+      expect(await determinism.text()).toContain('src/client/determinism.js');
 
       expect((await fetch(`${t.url}/src/sim/index.js`)).status).toBe(200);
       const data = await fetch(`${t.url}/data/mapgen.json`);

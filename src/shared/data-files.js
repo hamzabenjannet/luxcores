@@ -13,14 +13,17 @@ export const DATA_FILES = Object.freeze({
 });
 
 /**
- * Browser loader. Paths are relative to the page (index.html at repo root).
+ * Browser loader. The paths are relative to `base`, the origin of the server
+ * that simulates the match, so the page draws with the data that server runs.
+ * An empty `base` means the page's own origin.
+ * @param {string} [base]
  * @returns {Promise<import('../sim/config.js').RawData>}
  */
-export async function loadDataBrowser() {
+export async function loadDataBrowser(base = '') {
   /** @type {Record<string, any>} */
   const raw = {};
   for (const [key, path] of Object.entries(DATA_FILES)) {
-    const res = await fetch(path);
+    const res = await fetch(`${base.replace(/\/$/, '')}/${path}`);
     if (!res.ok) throw new Error(`failed to load ${path}: ${res.status}`);
     raw[key] = await res.json();
   }
