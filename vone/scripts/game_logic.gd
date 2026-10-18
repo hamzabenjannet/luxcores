@@ -49,11 +49,54 @@ const KIND_NAMES := {
 ## Tower attack type by code (ATTACK_CODE in src/sim/buildings.js).
 const ATTACK_NAMES := {1: "Melee", 2: "Ranged", 3: "Area"}
 const ATTACK_TYPES := ["melee", "ranged", "area"]
+## Attack choices of a creep order; Mixed cycles melee, ranged, area.
+const ORDER_TYPES := ["melee", "ranged", "area", "mixed"]
 ## The build palette, in display order: [building key, label].
 const PALETTE := [
 	["solar", "Solar"], ["wind", "Wind"], ["geothermal", "Geothermal"],
 	["nuclear", "Nuclear"], ["barracks", "Barracks"], ["tower", "Tower"],
 ]
+
+## The attack types of a creep order: one type repeated, or melee, ranged, area in turn.
+static func mix_for(count: int, type: String) -> Array:
+	var cycle := ["melee", "ranged", "area"]
+	var out: Array = []
+	for i in count:
+		out.append(cycle[i % cycle.size()] if type == "mixed" else type)
+	return out
+
+## The lines of a barracks queue, in queue order: [{index, orderId, text}]. A held group shows HELD.
+static func queue_lines(orders: Array, barracks_id: int, tick_hz: int) -> Array:
+	var initials := {1: "M", 2: "R", 3: "A"}
+	var out: Array = []
+	var index := 0
+	for order in orders:
+		if int(order.get("barracksId", -1)) != barracks_id:
+			continue
+		var mix := ""
+		for code in order.get("mix", []):
+			mix += String(initials.get(int(code), "?"))
+		var status := "HELD" if int(order.get("held", 0)) == 1 else "%.1fs" % (maxf(0.0, float(order.get("ticksLeft", 0))) / float(tick_hz))
+		out.append({"index": index, "orderId": int(order.id), "text": "Group of %d %s %s" % [order.get("mix", []).size(), mix, status]})
+		index += 1
+	return out
+
+## Buttons of the group panel. Split needs 2 or more creeps; the lane route button shows only after a custom path.
+static func group_actions(size: int, custom: bool) -> Array:
+	var out: Array = [{"id": "path", "label": "Path"}, {"id": "merge", "label": "Merge"}]
+	if size >= 2:
+		out.append({"id": "split", "label": "Split"})
+	if custom:
+		out.append({"id": "lane", "label": "Lane Route"})
+	return out
+
+## Creeps in a group.
+static func group_size(entities: Array, group_id: int) -> int:
+	var n := 0
+	for entity in entities:
+		if int(entity.get("kind", 0)) == KIND_CREEP and int(entity.get("groupId", 0)) == group_id:
+			n += 1
+	return n
 
 static func is_building_kind(kind: int) -> bool:
 	return kind >= KIND_SOLAR and kind <= KIND_TOWER
@@ -127,7 +170,9 @@ static func pick_entity(entities: Array, ground: Vector2) -> Dictionary:
 ## What a tap does, as a Dictionary with one key: "command", "message", "select"
 ## (an entity id, or null to clear) or nothing else. The ctx holds:
 ##   ground (Vector2, tiles), entities, viewer_team, building ("" for none),
-##   attack, core_lux_milli, data ({buildings, balance, mapgen}), vents.
+##   attack, core_lux_milli, data ({buildings, balance, mapgen}), vents, and for creeps
+##   mode ("path" adds waypoints, "merge" picks the group to join, "" for none),
+##   selected_group (id, or -1) and path_count (waypoints placed so far).
 static func resolve_tap(ctx: Dictionary) -> Dictionary:
 	var ground: Vector2 = ctx.ground
 	var entities: Array = ctx.get("entities", [])
@@ -162,7 +207,18 @@ static func resolve_tap(ctx: Dictionary) -> Dictionary:
 			command["attack"] = String(ctx.get("attack", "ranged"))
 		return {"command": command}
 
+	var mode := String(ctx.get("mode", ""))
+	if mode == "path":
+		var max_waypoints := int(data.balance.creep.maxWaypoints)
+		if int(ctx.get("path_count", 0)) >= max_waypoints:
+			return {"message": "A path holds at most %d waypoints." % max_waypoints}
+		return {"addWaypoint": [roundi(ground.x * UNITS_PER_TILE), roundi(ground.y * UNITS_PER_TILE)]}
+
 	var picked := pick_entity(entities, ground)
+	if mode == "merge":
+		if not picked.is_empty() and int(picked.kind) == KIND_CREEP and int(picked.get("owner", -1)) == viewer_team and int(picked.get("groupId", 0)) != int(ctx.get("selected_group", -1)):
+			return {"command": {"t": "mergeGroups", "intoGroupId": int(ctx.selected_group), "fromGroupId": int(picked.groupId)}}
+		return {"message": "Tap one of your other groups to merge."}
 	var hero := {}
 	for entity in entities:
 		if int(entity.get("kind", 0)) == KIND_HERO and int(entity.get("owner", -1)) == viewer_team:
@@ -170,6 +226,8 @@ static func resolve_tap(ctx: Dictionary) -> Dictionary:
 			break
 	if not picked.is_empty() and is_building_kind(int(picked.kind)) and int(picked.get("owner", -1)) == viewer_team:
 		return {"select": int(picked.id)}
+	if not picked.is_empty() and int(picked.kind) == KIND_CREEP and int(picked.get("owner", -1)) == viewer_team:
+		return {"selectGroup": int(picked.groupId)}
 	if not picked.is_empty() and not hero.is_empty() and int(picked.id) != int(hero.id) and int(picked.get("team", -1)) != viewer_team:
 		return {"command": {"t": "heroAttack", "targetId": int(picked.id)}}
 	if not hero.is_empty():

@@ -42,6 +42,15 @@ func _init() -> void:
 		_check("can afford %s" % JSON.stringify(c), GameLogic.can_afford(int(c.coreLuxMilli), int(c.costLux), int(c.minLeftLux)), bool(c.expect))
 	for c in fixture.actionsFor:
 		_check("actions for %s" % JSON.stringify(c.entity), _normalize(GameLogic.actions_for(c.entity, data.buildings.tower)), _normalize(c.expect))
+	for c in fixture.mixFor:
+		_check("order mix %s" % JSON.stringify(c), _normalize(GameLogic.mix_for(int(c.count), String(c.type))), _normalize(c.expect))
+	for c in fixture.queueLines:
+		_check("queue lines for barracks %d" % int(c.barracksId), _normalize(GameLogic.queue_lines(c.orders, int(c.barracksId), int(c.tickHz))), _normalize(c.expect))
+	for c in fixture.groupActions:
+		var ids: Array = []
+		for action in GameLogic.group_actions(int(c.size), bool(c.custom)):
+			ids.append(action.id)
+		_check("group actions %s" % JSON.stringify(c), ids, _normalize(c.expect))
 	for c in fixture.resolveTap:
 		var ctx: Dictionary = c.ctx
 		var result := GameLogic.resolve_tap({
@@ -53,6 +62,9 @@ func _init() -> void:
 			"core_lux_milli": int(ctx.get("coreLuxMilli", 100000)),
 			"data": data,
 			"vents": ctx.get("vents", []),
+			"mode": String(ctx.get("mode", "")),
+			"selected_group": int(ctx.get("selectedGroup", -1)) if ctx.get("selectedGroup") != null else -1,
+			"path_count": int(ctx.get("pathCount", 0)),
 		})
 		_check("tap: %s" % String(c.name), _normalize(result), _normalize(c.expect))
 

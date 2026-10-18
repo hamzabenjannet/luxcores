@@ -86,6 +86,67 @@ func _run() -> void:
 	_check("the HUD shows both Cores and the clock", _main._world_label.text.contains("Core") and _main._world_label.text.contains("Enemy") and _main._world_label.text.contains(":"), true)
 	_main._leave_match()
 
+	# Part 1b: creeps. A fresh match against the bot: order groups, cancel, split, merge and send one.
+	_main._mode_selector.select(0)
+	await _main._connect_match()
+	await _main._start_match()
+	_check("part 1b starts", await _until(func(): return _entities().size() > 0), true)
+	var barracks_tile := _free_tile(0)
+	_main._select_building("barracks")
+	await _main._on_arena_tapped(Vector2(barracks_tile.x + 0.5, barracks_tile.y + 0.5))
+	_check("a barracks appears", await _until(func(): return _find(GameLogic.KIND_BARRACKS, 0).size() == 1), true)
+	var barracks_id: int = int(_find(GameLogic.KIND_BARRACKS, 0)[0].id)
+	_main._select_building("barracks") # build mode off
+	await _main._on_arena_tapped(Vector2(barracks_tile.x + 0.5, barracks_tile.y + 0.5))
+	_check("the barracks panel shows the order controls", _main._panel.visible and _main._order_box.get_child_count() >= 3, true)
+
+	# One group through the panel buttons: 2 ranged creeps.
+	_main._set_order_count(2)
+	_main._set_order_type("ranged")
+	_main._order_box.get_child(2).pressed.emit()
+	_check("the queue lists the order", await _until(func(): return _main._queue_box.get_child_count() == 1 and _main._queue_labels[0].text.begins_with("Group of 2 RR")), true)
+	# A group of 5 and three of 1 go in at once; the panel cancels the last.
+	for mix in [["melee", "ranged", "area", "melee", "ranged"], ["melee"], ["melee"], ["melee"]]:
+		await _main._backend.send_command({"t": "orderCreeps", "barracksId": barracks_id, "mix": mix})
+	_check("the queue holds five orders", await _until(func(): return _main._queue_box.get_child_count() == 5), true)
+	var lux_before: int = int(_main._viewer_core_lux_milli())
+	_main._queue_box.get_child(4).get_child(1).pressed.emit()
+	_check("cancelling by order id refunds the last order", await _until(func(): return _main._viewer_core_lux_milli() >= lux_before + 5000 and _main._queue_box.get_child_count() == 4), true)
+
+	_check("four groups spawn with the lane route", await _until(func(): return _main._current_snapshot.get("groups", []).size() == 4), true)
+	var groups: Array = _main._current_snapshot.groups
+	var ids: Array = groups.map(func(g): return int(g.id))
+	var sizes: Array = ids.map(func(id): return GameLogic.group_size(_entities(), int(id)))
+	_check("the groups hold 2, 5, 1 and 1 creeps", sizes, [2, 5, 1, 1])
+	_check("every group walks the lane route", groups.all(func(g): return int(g.custom) == 0 and g.waypoints.size() >= 8), true)
+
+	# Tap a creep of the 5-group: its panel opens. Split it into 3 and 2.
+	var five: Dictionary = _creep_of(int(ids[1]))
+	await _main._on_arena_tapped(Vector2(float(five.x) / 1000.0, float(five.z) / 1000.0))
+	_check("tapping a creep selects its group", _main._selected_group == int(ids[1]) and _main._panel_title.text.begins_with("Group of 5"), true)
+	_main._panel_row.get_child(2).pressed.emit() # Path, Merge, Split
+	_check("the split makes five groups", await _until(func(): return _main._current_snapshot.groups.size() == 5), true)
+	_check("the original group keeps the odd creep", GameLogic.group_size(_entities(), int(ids[1])), 3)
+
+	# Merge: the 3-group joins the single creep's group with Merge, then a tap on that creep.
+	_main._selected_group = int(ids[1])
+	_main._group_action("merge", int(ids[1]))
+	_check("merge mode asks for another group", _main._panel_title.text.contains("tap another of your groups"), true)
+	var single: Dictionary = _creep_of(int(ids[2]))
+	await _main._on_arena_tapped(Vector2(float(single.x) / 1000.0, float(single.z) / 1000.0))
+	_check("the merge leaves four groups", await _until(func(): return _main._current_snapshot.groups.size() == 4), true)
+	_check("B joined A", GameLogic.group_size(_entities(), int(ids[1])), 4)
+
+	# Path mode: two waypoints, Go.
+	_main._selected_group = int(ids[1])
+	_main._group_action("path", int(ids[1]))
+	await _main._on_arena_tapped(Vector2(40.5, 84.5))
+	await _main._on_arena_tapped(Vector2(44.5, 80.5))
+	_check("path mode counts two waypoints", _main._path_points.size() == 2 and _main._panel_title.text.contains("2/10"), true)
+	_main._path_go()
+	_check("the group takes the custom path", await _until(func(): return _main._current_snapshot.groups.any(func(g): return int(g.id) == int(ids[1]) and int(g.custom) == 1 and g.waypoints.size() == 2)), true)
+	_main._leave_match()
+
 	# Part 2: two bots play, and this client only watches.
 	_main._mode_selector.select(1)
 	_main._match_input.text = ""
@@ -106,6 +167,12 @@ func _run() -> void:
 
 	print("%d checks, %d failed" % [_checks, _failures])
 	quit(_failures)
+
+func _creep_of(group_id: int) -> Dictionary:
+	for e in _entities():
+		if int(e.kind) == GameLogic.KIND_CREEP and int(e.get("groupId", 0)) == group_id:
+			return e
+	return {}
 
 func _entities() -> Array:
 	return _main._current_snapshot.get("entities", [])

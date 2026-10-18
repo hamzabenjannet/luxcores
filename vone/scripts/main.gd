@@ -38,6 +38,18 @@ var _panel: VBoxContainer
 var _panel_title: Label
 var _panel_row: HBoxContainer
 var _panel_key := ""
+var _order_box: VBoxContainer
+var _queue_box: VBoxContainer
+var _order_key := ""
+var _queue_key := ""
+var _queue_labels := {}
+var _mode := ""
+var _selected_group := -1
+var _path_target := {}
+var _path_points: Array = []
+var _last_path: Array = []
+var _order_count := 5
+var _order_type := "mixed"
 var _tower_attack_row: HBoxContainer
 var _tower_attack_selector: OptionButton
 var _arena: Control
@@ -224,6 +236,12 @@ func _build_interface() -> void:
 	_panel_row = HBoxContainer.new()
 	_panel_row.add_theme_constant_override("separation", 10)
 	_panel.add_child(_panel_row)
+	_order_box = VBoxContainer.new()
+	_order_box.add_theme_constant_override("separation", 6)
+	_panel.add_child(_order_box)
+	_queue_box = VBoxContainer.new()
+	_queue_box.add_theme_constant_override("separation", 4)
+	_panel.add_child(_queue_box)
 	_game.add_child(_panel)
 
 	var game_controls := HBoxContainer.new()
@@ -421,6 +439,9 @@ func _start_match() -> void:
 	_set_status("Match running. Waiting for the first server snapshot...")
 
 func _select_building(building: String) -> void:
+	_selected_group = -1
+	_mode = ""
+	_path_points = []
 	# A second press on the same building puts it back.
 	_building = "" if _building == building else building
 	_selected_entity = -1
@@ -468,15 +489,31 @@ func _on_arena_tapped(ground: Vector2) -> void:
 		"core_lux_milli": _viewer_core_lux_milli(),
 		"data": _data,
 		"vents": _current_map.get("vents", []),
+		"mode": _mode,
+		"selected_group": _selected_group,
+		"path_count": _path_points.size(),
 	})
 	if result.has("command"):
 		var acknowledgement: Dictionary = await _backend.send_command(result.command)
 		if acknowledgement.get("accepted", false):
 			_set_status("Order sent. The server will validate it.")
+		if _mode == "merge":
+			_mode = ""
 	elif result.has("message"):
 		_set_status(String(result.message))
+	elif result.has("addWaypoint"):
+		_path_points.append(result.addWaypoint)
+	elif result.has("selectGroup"):
+		_selected_group = int(result.selectGroup)
+		_selected_entity = -1
+		_mode = ""
+		_building = ""
+		_build_description.visible = false
+		_tower_attack_row.visible = false
+		_set_status("Selected a group of %d creeps." % GameLogic.group_size(_current_snapshot.get("entities", []), _selected_group))
 	elif result.has("select"):
 		_selected_entity = -1 if result.select == null else int(result.select)
+		_selected_group = -1
 		if _selected_entity >= 0:
 			_building = ""
 			_build_description.visible = false
@@ -507,8 +544,23 @@ func _refresh_palette() -> void:
 		button.button_pressed = false
 		button.flat = _building != item[0]
 
-## Shows the selected own building with its actions. The buttons are rebuilt only when the actions change.
+## Shows one section of the panel: path mode, a selected group, or a selected building. The buttons
+## are rebuilt only when they change, so a tap never lands on a button that was just replaced.
 func _refresh_panel() -> void:
+	if _data.is_empty():
+		return
+	_arena.set_paths(_paths_to_draw())
+	if _mode == "path":
+		_show_path_bar()
+		return
+	var group := _group_record(_selected_group)
+	if _selected_group >= 0 and group.is_empty():
+		_selected_group = -1
+		if _mode == "merge":
+			_mode = ""
+	if not group.is_empty():
+		_show_group_panel(group)
+		return
 	var selected := {}
 	for entity in _current_snapshot.get("entities", []):
 		if int(entity.get("id", -1)) == _selected_entity and GameLogic.is_building_kind(int(entity.get("kind", 0))) and int(entity.get("owner", -1)) == _viewer_team:
@@ -518,7 +570,116 @@ func _refresh_panel() -> void:
 		_selected_entity = -1 if _selected_entity >= 0 and not _entity_exists(_selected_entity) else _selected_entity
 		_panel.visible = false
 		_panel_key = ""
+		_order_key = ""
+		_queue_key = ""
 		return
+	_show_building_panel(selected)
+
+func _group_record(group_id: int) -> Dictionary:
+	if group_id < 0:
+		return {}
+	for group in _current_snapshot.get("groups", []):
+		if int(group.get("id", -1)) == group_id:
+			return group
+	return {}
+
+func _clear_box(box: Node) -> void:
+	for child in box.get_children():
+		box.remove_child(child)
+		child.queue_free()
+
+## Fills a row with buttons: each item is {label, color, call (Callable), dim (bool)}.
+func _fill_row(row: Container, items: Array) -> void:
+	_clear_box(row)
+	for item in items:
+		var button := _make_button(String(item.label), item.color)
+		button.custom_minimum_size = Vector2(0, 48)
+		if bool(item.get("dim", false)):
+			button.modulate = Color(1, 1, 1, 0.5)
+		button.pressed.connect(item.call)
+		row.add_child(button)
+
+func _show_path_bar() -> void:
+	_panel.visible = true
+	_clear_box(_order_box)
+	_clear_box(_queue_box)
+	_order_key = ""
+	_queue_key = ""
+	_panel_title.text = "Path: %d/%d waypoints. Tap the map to add one." % [_path_points.size(), int(_data.balance.creep.maxWaypoints)]
+	var key := "path|%d|%d" % [_path_points.size(), _last_path.size()]
+	if key == _panel_key:
+		return
+	_panel_key = key
+	var items: Array = [
+		{"label": "Undo", "color": Color("#2f4c75"), "call": _path_undo},
+		{"label": "Go", "color": Color("#287557"), "call": _path_go},
+		{"label": "Cancel", "color": Color("#52313b"), "call": _path_cancel},
+	]
+	if not _last_path.is_empty():
+		items.append({"label": "Reuse Last", "color": Color("#2f4c75"), "call": _path_reuse})
+	_fill_row(_panel_row, items)
+
+func _path_undo() -> void:
+	if not _path_points.is_empty():
+		_path_points.pop_back()
+	_refresh_panel()
+
+func _path_cancel() -> void:
+	_mode = ""
+	_path_target = {}
+	_path_points = []
+	_refresh_panel()
+
+func _path_reuse() -> void:
+	_path_points = _last_path.duplicate(true)
+	_refresh_panel()
+
+func _path_go() -> void:
+	if _path_target.is_empty():
+		return
+	_last_path = _path_points.duplicate(true)
+	var waypoints: Array = []
+	for point in _path_points:
+		waypoints.append([int(point[0]), int(point[1])])
+	var command := {"t": "setGroupPath", "groupId": int(_path_target.id), "waypoints": waypoints} if _path_target.type == "group" else {"t": "setBarracksPath", "barracksId": int(_path_target.id), "waypoints": waypoints}
+	_path_cancel()
+	_run_panel_action(command)
+
+func _show_group_panel(group: Dictionary) -> void:
+	_panel.visible = true
+	_clear_box(_order_box)
+	_clear_box(_queue_box)
+	_order_key = ""
+	_queue_key = ""
+	var size := GameLogic.group_size(_current_snapshot.get("entities", []), int(group.id))
+	_panel_title.text = "Group of %d: tap another of your groups to merge." % size if _mode == "merge" else "Group of %d, %s" % [size, "custom path" if int(group.get("custom", 0)) == 1 else "lane route"]
+	var actions := GameLogic.group_actions(size, int(group.get("custom", 0)) == 1)
+	var key := "group|%d|%s" % [int(group.id), _mode]
+	for action in actions:
+		key += "|" + String(action.id)
+	if key == _panel_key:
+		return
+	_panel_key = key
+	var items: Array = []
+	for action in actions:
+		items.append({"label": action.label, "color": Color("#315f95") if _mode == "merge" and action.id == "merge" else Color("#2f4c75"), "call": _group_action.bind(String(action.id), int(group.id))})
+	_fill_row(_panel_row, items)
+
+func _group_action(action_id: String, group_id: int) -> void:
+	match action_id:
+		"path":
+			_mode = "path"
+			_path_target = {"type": "group", "id": group_id}
+			_path_points = []
+		"merge":
+			_mode = "" if _mode == "merge" else "merge"
+		"split":
+			_run_panel_action({"t": "splitGroup", "groupId": group_id})
+		"lane":
+			_run_panel_action({"t": "setGroupPath", "groupId": group_id, "waypoints": []})
+	_refresh_panel()
+
+func _show_building_panel(selected: Dictionary) -> void:
 	_panel.visible = true
 	var title := GameLogic.entity_text(selected, _data.balance.hpFactor)
 	if int(selected.kind) == GameLogic.KIND_TOWER:
@@ -531,22 +692,138 @@ func _refresh_panel() -> void:
 	for action in actions:
 		var poor: bool = action.has("costLux") and not GameLogic.can_afford(lux, int(action.costLux), min_left)
 		key += "|%s:%s" % [action.id, str(poor)]
-	if key == _panel_key:
-		return
-	_panel_key = key
-	for child in _panel_row.get_children():
-		_panel_row.remove_child(child)
-		child.queue_free()
-	for action in actions:
-		var label := String(action.label)
-		if action.has("costLux"):
-			label += "  %d" % int(action.costLux)
-		var button := _make_button(label, Color("#75582b") if action.id == "recycle" or action.id == "cancel" else Color("#2f4c75"))
-		button.custom_minimum_size = Vector2(0, 48)
-		if action.has("costLux") and not GameLogic.can_afford(lux, int(action.costLux), min_left):
-			button.modulate = Color(1, 1, 1, 0.5)
-		button.pressed.connect(_run_panel_action.bind(action.command))
-		_panel_row.add_child(button)
+	if key != _panel_key:
+		_panel_key = key
+		var items: Array = []
+		for action in actions:
+			var label := String(action.label)
+			if action.has("costLux"):
+				label += "  %d" % int(action.costLux)
+			items.append({
+				"label": label,
+				"color": Color("#75582b") if action.id == "recycle" or action.id == "cancel" else Color("#2f4c75"),
+				"call": _run_panel_action.bind(action.command),
+				"dim": action.has("costLux") and not GameLogic.can_afford(lux, int(action.costLux), min_left),
+			})
+		_fill_row(_panel_row, items)
+	if int(selected.kind) == GameLogic.KIND_BARRACKS and int(selected.get("recycle", 0)) == 0:
+		_show_barracks_controls(selected, lux, min_left)
+	else:
+		_clear_box(_order_box)
+		_clear_box(_queue_box)
+		_order_key = ""
+		_queue_key = ""
+
+## Creep order controls and the queue of a barracks.
+func _show_barracks_controls(barracks: Dictionary, lux: int, min_left: int) -> void:
+	var creep: Dictionary = _data.balance.creep
+	var cost := _order_count * int(creep.costLux)
+	var poor := not GameLogic.can_afford(lux, cost, min_left)
+	var waypoints: Array = barracks.get("waypoints", [])
+	var order_key := "%d|%d|%s|%s|%d" % [int(barracks.id), _order_count, _order_type, str(poor), waypoints.size()]
+	if order_key != _order_key:
+		_order_key = order_key
+		_clear_box(_order_box)
+		var counts := HBoxContainer.new()
+		counts.add_theme_constant_override("separation", 6)
+		for n in range(int(creep.groupMin), int(creep.groupMax) + 1):
+			var count_button := _make_button(str(n), Color("#315f95") if n == _order_count else Color("#24364a"))
+			count_button.custom_minimum_size = Vector2(0, 44)
+			count_button.pressed.connect(_set_order_count.bind(n))
+			counts.add_child(count_button)
+		_order_box.add_child(counts)
+		var types := HBoxContainer.new()
+		types.add_theme_constant_override("separation", 6)
+		for type in GameLogic.ORDER_TYPES:
+			var type_button := _make_button(String(type).capitalize(), Color("#315f95") if type == _order_type else Color("#24364a"))
+			type_button.custom_minimum_size = Vector2(0, 44)
+			type_button.pressed.connect(_set_order_type.bind(String(type)))
+			types.add_child(type_button)
+		_order_box.add_child(types)
+		var order_button := _make_button("Order %d creeps  %d lux" % [_order_count, cost], Color("#287557"))
+		order_button.custom_minimum_size = Vector2(0, 48)
+		if poor:
+			order_button.modulate = Color(1, 1, 1, 0.5)
+		order_button.pressed.connect(_run_panel_action.bind({"t": "orderCreeps", "barracksId": int(barracks.id), "mix": GameLogic.mix_for(_order_count, _order_type)}))
+		_order_box.add_child(order_button)
+		var path_button := _make_button("Default Path" if not waypoints.is_empty() else "Set Default Path", Color("#2f4c75"))
+		path_button.custom_minimum_size = Vector2(0, 48)
+		path_button.pressed.connect(_start_barracks_path.bind(int(barracks.id)))
+		_order_box.add_child(path_button)
+		if not waypoints.is_empty():
+			var clear_button := _make_button("Clear Path", Color("#52313b"))
+			clear_button.custom_minimum_size = Vector2(0, 48)
+			clear_button.pressed.connect(_run_panel_action.bind({"t": "setBarracksPath", "barracksId": int(barracks.id), "waypoints": []}))
+			_order_box.add_child(clear_button)
+
+	var lines := GameLogic.queue_lines(_current_snapshot.get("orders", []), int(barracks.id), _tick_hz)
+	var queue_key := str(barracks.id)
+	for order in _current_snapshot.get("orders", []):
+		if int(order.barracksId) == int(barracks.id):
+			queue_key += "|%d:%d" % [int(order.id), int(order.held)]
+	if queue_key != _queue_key:
+		_queue_key = queue_key
+		_queue_labels.clear()
+		_clear_box(_queue_box)
+		for line in lines:
+			var row := HBoxContainer.new()
+			var label := Label.new()
+			label.text = String(line.text)
+			label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			row.add_child(label)
+			var cancel := _make_button("✕", Color("#52313b"))
+			cancel.custom_minimum_size = Vector2(56, 40)
+			cancel.pressed.connect(_run_panel_action.bind({"t": "cancelQueue", "barracksId": int(barracks.id), "orderId": int(line.orderId)}))
+			row.add_child(cancel)
+			_queue_box.add_child(row)
+			_queue_labels[int(line.index)] = label
+	else:
+		for line in lines:
+			var node: Label = _queue_labels.get(int(line.index))
+			if node != null and node.text != String(line.text):
+				node.text = String(line.text)
+
+func _set_order_count(count: int) -> void:
+	_order_count = count
+	_refresh_panel()
+
+func _set_order_type(type: String) -> void:
+	_order_type = type
+	_refresh_panel()
+
+func _start_barracks_path(barracks_id: int) -> void:
+	_mode = "path"
+	_path_target = {"type": "barracks", "id": barracks_id}
+	_path_points = []
+	_refresh_panel()
+
+## Paths to draw: the selected group's remaining route, a barracks default path and the path being drawn.
+func _paths_to_draw() -> Array:
+	var out: Array = []
+	var gold := Color("#ffd76a")
+	var group := _group_record(_selected_group)
+	if not group.is_empty():
+		var points: Array = []
+		for entity in _current_snapshot.get("entities", []):
+			if int(entity.get("kind", 0)) == GameLogic.KIND_CREEP and int(entity.get("groupId", 0)) == int(group.id):
+				points.append(Vector2(float(entity.x), float(entity.z)) / GameLogic.UNITS_PER_TILE)
+				break
+		var waypoints: Array = group.get("waypoints", [])
+		for i in range(int(group.get("wpIndex", 0)), waypoints.size()):
+			points.append(Vector2(float(waypoints[i][0]), float(waypoints[i][1])) / GameLogic.UNITS_PER_TILE)
+		out.append({"points": points, "color": gold})
+	for entity in _current_snapshot.get("entities", []):
+		if int(entity.get("id", -1)) == _selected_entity and int(entity.get("kind", 0)) == GameLogic.KIND_BARRACKS and not entity.get("waypoints", []).is_empty():
+			var points: Array = [Vector2(float(entity.x), float(entity.z)) / GameLogic.UNITS_PER_TILE]
+			for waypoint in entity.waypoints:
+				points.append(Vector2(float(waypoint[0]), float(waypoint[1])) / GameLogic.UNITS_PER_TILE)
+			out.append({"points": points, "color": gold})
+	if _mode == "path":
+		var points: Array = []
+		for point in _path_points:
+			points.append(Vector2(float(point[0]), float(point[1])) / GameLogic.UNITS_PER_TILE)
+		out.append({"points": points, "color": Color.WHITE})
+	return out
 
 func _entity_exists(entity_id: int) -> bool:
 	for entity in _current_snapshot.get("entities", []):
@@ -633,6 +910,9 @@ func _leave_match() -> void:
 	_is_host = false
 	_phase_label.text = "DISCONNECTED"
 	_selected_entity = -1
+	_selected_group = -1
+	_mode = ""
+	_path_points = []
 	_building = ""
 	_build_description.visible = false
 	_tower_attack_row.visible = false

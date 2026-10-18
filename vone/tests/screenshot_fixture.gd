@@ -1,6 +1,6 @@
 extends SceneTree
 ## Draws a hand-made snapshot with every M3 entity (towers of each attack type,
-## aim lines, a projectile, a stun, a recycle channel, a hero and a creep) and saves
+## aim lines, a projectile, a stun, a recycle channel, a hero, creeps and group paths) and saves
 ## a screenshot. No creep or hero exists in a live match before M4 and M5, so this is
 ## how the combat drawing gets checked. It needs a window, so do not pass --headless:
 ##
@@ -37,6 +37,14 @@ func _run() -> void:
 		_entity(50, 11, 0, 0, 44500, 80500, 1, 1, {"targetId": 40, "arrivalTick": 100}),
 	]
 	arena.set_balance({"hpFactor": {"core": 1, "default": 10}, "economy": {"recycleChannelTicks": 60}})
+	entities.append(_entity(60, 9, 0, 0, 40500, 84500, 50000, 50000, {"attack": 1, "groupId": 70}))
+	entities.append(_entity(61, 9, 0, 0, 41500, 84500, 50000, 50000, {"attack": 2, "groupId": 70}))
+	arena.set_balance({"hpFactor": {"core": 1, "default": 10}, "economy": {"recycleChannelTicks": 60}})
+	# The selected group's route and a path being drawn, as the main script hands them over.
+	arena.set_paths([
+		{"points": [Vector2(40.5, 84.5), Vector2(44.5, 78.5), Vector2(52.5, 74.5), Vector2(60.5, 66.5)], "color": Color("#ffd76a")},
+		{"points": [Vector2(30.5, 90.5), Vector2(34.5, 84.5), Vector2(36.5, 80.5)], "color": Color.WHITE},
+	])
 	arena.set_world(map_data, {"tick": 100, "entities": entities}, 0)
 	await process_frame
 	arena._zoom = 3.0

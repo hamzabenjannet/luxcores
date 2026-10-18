@@ -30,6 +30,8 @@ var hp_factor := {"core": 1, "default": 10}
 ## Ticks of the recycle channel, from the server's balance data (economy.recycleChannelTicks).
 var recycle_channel_ticks := 60
 var selected_building := ""
+## Paths to draw: [{points: Array of Vector2 in tiles, color: Color}]. The main script decides what to show.
+var paths: Array = []
 var selected_entity_id := -1
 var _bounds := Rect2()
 var _tile_size := Vector2.ONE
@@ -62,6 +64,10 @@ func set_balance(balance: Dictionary) -> void:
 func ground_at(position: Vector2) -> Vector2:
 	return (position - _bounds.position) / _tile_size
 
+func set_paths(new_paths: Array) -> void:
+	paths = new_paths
+	queue_redraw()
+
 func set_selection(building: String, entity_id := -1) -> void:
 	selected_building = building
 	selected_entity_id = entity_id
@@ -87,6 +93,7 @@ func _draw() -> void:
 	_draw_lanes()
 	_draw_markers(map_data.get("vents", []), Color("#4cf3c5"), 2.4, "VENT")
 	_draw_markers(map_data.get("itemSpawns", []), Color("#f7dc69"), 1.8, "ITEM SPAWN")
+	_draw_paths()
 	_draw_entities(snapshot.get("entities", []))
 	_draw_selection_hint()
 	_draw_zoom_controls()
@@ -181,6 +188,17 @@ func _draw_entities(entities: Array) -> void:
 		var text := GameLogic.entity_text(entity, hp_factor)
 		if not text.is_empty():
 			_draw_map_label(text, center, tint.lightened(0.18))
+
+## Waypoint paths: a line through the points and a dot on every point after the first.
+func _draw_paths() -> void:
+	for path in paths:
+		var points: Array = path.points
+		var color: Color = path.color
+		for i in range(1, points.size()):
+			var from: Vector2 = _bounds.position + points[i - 1] * _tile_size
+			var to: Vector2 = _bounds.position + points[i] * _tile_size
+			draw_line(from, to, Color(color.r, color.g, color.b, 0.85), maxf(1.0, _tile_size.x * 0.16), true)
+			draw_circle(to, maxf(2.0, _tile_size.x * 0.3), color)
 
 func _world_center(entity: Dictionary) -> Vector2:
 	return _tile_center(float(entity.get("x", 0)) / GameLogic.UNITS_PER_TILE - 0.5, float(entity.get("z", 0)) / GameLogic.UNITS_PER_TILE - 0.5)
