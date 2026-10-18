@@ -10,7 +10,7 @@ Status: draft v0.9.8. Numbers marked *(default)* live in `data/balance.json` and
 
 ### v0.9.7 → v0.9.8
 
-Details that the hero milestone (M5) needed. They await the owners' approval; section 7.7 states each one.
+Details that the hero milestone (M5) needed. Section 7.7 states each one, and Hamza confirmed its four open choices on 2026-10-18.
 
 | Area | Change |
 |---|---|
@@ -383,9 +383,9 @@ Ability template:
 - Pick up items and loot bags (walk over them, auto pickup).
 - Attack and destroy environment blockers.
 
-### 7.7 Rules as Implemented (M5, awaiting approval)
+### 7.7 Rules as Implemented (M5)
 
-The sections above left these details open. `src/sim/heroes.js` and the hero systems follow them.
+The sections above left these details open. `src/sim/heroes.js` and the hero systems follow them. Hamza confirmed four of them on 2026-10-18 from options he was shown: the rotation lock at spawn, instant resolution of abilities, the Area ability hitting enemy buildings and the Lumen Core, and no casting while stunned. Hama has not reviewed the feel of the abilities yet.
 
 - **Picking.** `pickHero` names the roster hero, the whole lux to allocate and the barracks. It is refused when the hero is locked, the death cooldown runs, the player already has a hero or a hero order, the barracks is not theirs or is recycling, or the lux would leave the Core under 1. The pick pays at once and queues like a creep order. `cancelQueue` refunds a hero order in full, and a barracks that dies with the order in its queue loses the lux.
 - **Rotation lock.** A hero is locked when it spawns, not when it is ordered, so a cancelled or lost pick counts for nothing. The fifth distinct hero resets the lock, which makes the sixth pick free again. Each player has a rotation of their own.

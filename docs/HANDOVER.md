@@ -91,7 +91,7 @@ Open for the owners:
 
 ## M5 (Heroes)
 
-Done on 2026-10-18 in the sim, the bot, the server, the web client and the Godot client. `src/sim/heroes.js` holds the pick, the rotation lock, the abilities and the shield; `damage.js` applies damage so a shield absorbs every source; `systems/hero.js`, `effects.js` and `cleanup.js` run the cooldowns and the death wait. GDD 7.7 states the rules that the GDD left open, and they await the owners' approval (`SPEC_VERSION` stays 0.10.0, so the golden replays were re-recorded and `heroes-seed-515151` was added). The acceptance checks are tests in `test/heroes.test.js`:
+Done on 2026-10-18 in the sim, the bot, the server, the web client and the Godot client. `src/sim/heroes.js` holds the pick, the rotation lock, the abilities and the shield; `damage.js` applies damage so a shield absorbs every source; `systems/hero.js`, `effects.js` and `cleanup.js` run the cooldowns and the death wait. GDD 7.7 states the rules that the GDD left open, and Hamza confirmed its four open choices on 2026-10-18 (`SPEC_VERSION` stays 0.10.0, so the golden replays were re-recorded and `heroes-seed-515151` was added). The acceptance checks are tests in `test/heroes.test.js`:
 
 - The rotation lock across six picks: a picked hero stays locked until the other four were picked, the fifth pick unlocks the whole roster, and the sixth pick may be the first hero again.
 - A pick pays its lux at once, builds for 5 seconds and puts a hero with ten HP per lux next to the barracks. Cancelling refunds in full, and a barracks that dies with the order in its queue loses the lux.
@@ -104,7 +104,7 @@ The bot fields heroes as GDD 12.1 says. It found two bugs while I tested: the mi
 
 Open for the owners:
 
-- **Approve GDD 7.7.** The details most likely to matter: the rotation lock applies at spawn, an ability resolves in the tick of the cast (no projectile), the area ability also hits enemy buildings and the Lumen Core, and a stunned hero cannot cast.
+- **Hama's review of GDD 7.7.** Hamza confirmed the rotation lock at spawn, instant abilities, the Area ability hitting buildings and the Lumen Core, and no casting while stunned. Hama has not yet judged how the abilities feel.
 - **Bots and balance.** Of seeds 1 to 6 of `tools/run-bots.js`, five now end in a victory between ticks 1 034 and 5 413, and seed 4 reaches the 10 000-tick limit. The bot spends half of its Core on a hero as soon as it has a barracks, so its first tower comes at tick 248 in seed 11 and later than before `[UNVERIFIED]`: I did not measure the older timing. Whether that is the balance the owners want is their judgment.
 - **Hero roster.** Names and kits are still the placeholders in `data/heroes.json` until Hama designs them.
 - **No camera follow, no portrait, no hold-to-aim.** M7 and M8 own those, as the milestone table says.
