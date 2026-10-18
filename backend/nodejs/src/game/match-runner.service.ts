@@ -7,6 +7,9 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter } from 'node:events';
+import type { JoinInfo, MatchRpc } from '../cluster/cluster.types.js';
+import { CommandBus } from '../cluster/command-bus.js';
+import { MatchOwnership } from '../cluster/match-ownership.js';
 import type { AppConfig } from '../config/configuration.js';
 import { EventBus } from '../events/event-bus.js';
 import {
@@ -128,6 +131,10 @@ export class MatchRunnerService
   private readonly checkpointEvery: number;
   private readonly onShutdown: 'resume' | 'end';
   private readonly keepFinishedLogs: boolean;
+  private readonly adoptEveryMs: number;
+  private adoptTimer?: NodeJS.Timeout;
+  /** Matches being rebuilt right now, so the periodic look does not start a second rebuild. */
+  private readonly resuming = new Set<string>();
   private closing = false;
   /** Settles when every match that was running at start-up has been rebuilt or given up. Tests wait on it. */
   resumed: Promise<void> = Promise.resolve();
@@ -138,6 +145,8 @@ export class MatchRunnerService
     private readonly replays: ReplaysService,
     private readonly bus: EventBus,
     private readonly log: EventLog,
+    private readonly ownership: MatchOwnership,
+    private readonly commands: CommandBus,
     config: ConfigService<AppConfig, true>,
   ) {
     const game = config.get('game', { infer: true });
@@ -148,6 +157,9 @@ export class MatchRunnerService
     this.onShutdown = game.onShutdown;
     this.keepFinishedLogs = config.get('eventLog', { infer: true }).keepFinished;
     this.tickMs = 1000 / this.sim.tickHz;
+    this.adoptEveryMs = this.ownership.mode === 'redis' ? config.get('cluster', { infer: true }).adoptEveryMs : 0;
+    // Another node now holds a match this node ran: stop it here, the other node rebuilds it from the log.
+    this.ownership.onLost((matchId) => void this.dropLocal(matchId));
   }
 
   onStarted(listener: (info: StartedInfo) => void): void {
@@ -206,6 +218,9 @@ export class MatchRunnerService
       kind: p.kind,
     }));
 
+    if (!(await this.ownership.claim(match.id))) {
+      throw new ConflictException('Another server runs this match');
+    }
     const { state, recorder } = this.sim.createMatch(match.seed, simPlayers);
     const run: Run = {
       matchId: match.id,
@@ -231,6 +246,7 @@ export class MatchRunnerService
       );
     } catch (err) {
       this.runs.delete(match.id); // the match never started, so leave nothing behind
+      await this.ownership.release(match.id);
       throw err;
     }
     this.log.append(match.id, {
@@ -261,6 +277,7 @@ export class MatchRunnerService
     } satisfies StartedInfo);
 
     run.startedAt = Date.now();
+    await this.serveRun(run);
     this.schedule(run);
     this.logger.log(
       `Match ${match.id} started: seed ${match.seed}, ${players.length} players`,
@@ -324,11 +341,15 @@ export class MatchRunnerService
    */
   async onModuleDestroy(): Promise<void> {
     this.closing = true;
+    clearInterval(this.adoptTimer);
     if (this.onShutdown === 'resume') {
       // Leave the matches `running` in the database. Their logs hold everything, and the next start rebuilds them.
-      for (const run of this.runs.values()) clearTimeout(run.timer);
+      const runs = [...this.runs.values()];
+      for (const run of runs) clearTimeout(run.timer);
       this.runs.clear();
       await this.log.flush();
+      // Hand the matches back at once, so another node (or this one, restarted) need not wait for the leases to expire.
+      for (const run of runs) await this.letGo(run.matchId);
       return;
     }
     await Promise.all(
@@ -343,20 +364,70 @@ export class MatchRunnerService
     this.resumed = this.resumeAll().catch((err: Error) =>
       this.logger.error(`Resuming matches failed: ${err.message}`),
     );
+    if (this.adoptEveryMs > 0) {
+      // With several nodes, a node that dies leaves running matches that no lease covers. Any node may take them.
+      this.adoptTimer = setInterval(() => {
+        if (!this.closing) void this.resumeAll().catch((err: Error) => this.logger.error(`Looking for orphaned matches failed: ${err.message}`));
+      }, this.adoptEveryMs);
+      this.adoptTimer.unref();
+    }
   }
 
+  /** Rebuilds the running matches that this node does not run and no other node holds. */
   private async resumeAll(): Promise<void> {
     const running = await this.matches.running();
-    if (running.length > 0)
-      this.logger.log(`Resuming ${running.length} running match(es) from their logs`);
     for (const match of running) {
       if (this.closing) return;
+      if (this.runs.has(match.id) || this.resuming.has(match.id)) continue;
+      this.resuming.add(match.id);
       try {
-        await this.resume(match);
-      } catch (err) {
-        this.logger.error(`Match ${match.id} cannot be resumed: ${(err as Error).message}`);
-        await this.abandon(match);
+        if (!(await this.ownership.claim(match.id))) continue; // another node runs it
+        this.logger.log(`Resuming match ${match.id} from its log`);
+        try {
+          await this.resume(match);
+        } catch (err) {
+          this.logger.error(`Match ${match.id} cannot be resumed: ${(err as Error).message}`);
+          await this.abandon(match);
+          await this.ownership.release(match.id);
+        }
+      } finally {
+        this.resuming.delete(match.id);
       }
+    }
+  }
+
+  /** Stops answering for a match and gives its lease back. */
+  private async letGo(matchId: string): Promise<void> {
+    await this.commands.unserve(matchId).catch(() => undefined);
+    await this.ownership.release(matchId);
+  }
+
+  /** Another node holds the match now. Stop ticking it here without ending it: the new owner rebuilds it from the log. */
+  private async dropLocal(matchId: string): Promise<void> {
+    const run = this.runs.get(matchId);
+    if (!run) return;
+    run.ending = true;
+    clearTimeout(run.timer);
+    this.runs.delete(matchId);
+    await this.log.flush();
+    await this.commands.unserve(matchId).catch(() => undefined);
+  }
+
+  /** Answers the requests that other nodes send for a match this node runs. */
+  private async serveRun(run: Run): Promise<void> {
+    await this.commands
+      .serve(run.matchId, (rpc) => this.handleRpc(run.matchId, rpc))
+      .catch((err: Error) => this.logger.warn(`Cannot take commands for ${run.matchId} from other nodes: ${err.message}`));
+  }
+
+  private async handleRpc(matchId: string, rpc: MatchRpc): Promise<unknown> {
+    switch (rpc.t) {
+      case 'command':
+        return this.submitCommand(matchId, rpc.playerId, rpc.seq, rpc.cmd);
+      case 'join':
+        return { nextSeq: this.nextSeq(matchId, rpc.playerId), snapshot: this.snapshot(matchId) } satisfies JoinInfo;
+      case 'stop':
+        return this.stop(matchId);
     }
   }
 
@@ -398,7 +469,10 @@ export class MatchRunnerService
         this.logger.warn(`Match ${match.id}: rebuilding from ${where} failed: ${(err as Error).message}`);
       }
     }
-    if (this.closing) return;
+    if (this.closing) {
+      await this.ownership.release(match.id);
+      return;
+    }
     if (!rebuilt || !used) {
       throw new Error(
         failures.length > 0
@@ -439,6 +513,7 @@ export class MatchRunnerService
       await this.finish(run, stopped ? MatchEndReason.Stopped : undefined);
       return;
     }
+    await this.serveRun(run);
     this.schedule(run);
   }
 
@@ -535,7 +610,18 @@ export class MatchRunnerService
     run.ending = true;
     clearTimeout(run.timer);
     this.runs.delete(run.matchId);
+    await this.commands.unserve(run.matchId).catch(() => undefined); // no more commands for a match that ended
 
+    try {
+      return await this.conclude(run, forced);
+    } finally {
+      // Last, so no other node finds the match unowned while it still reads `running`.
+      await this.ownership.release(run.matchId);
+    }
+  }
+
+  /** The part of `finish` that saves the result. */
+  private async conclude(run: Run, forced?: MatchEndReason): Promise<MatchDto> {
     const result = resultOf(run.state, forced);
     if (!run.loggedEnd) {
       this.log.append(run.matchId, {

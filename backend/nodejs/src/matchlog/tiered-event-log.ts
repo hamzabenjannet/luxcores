@@ -132,7 +132,10 @@ export class TieredEventLog extends EventLog {
     await this.flush();
     const keep = this.options.keepStoredEvents;
     let drained = true;
-    if (keep) drained = await this.queue(() => this.drain(matchId));
+    if (keep) {
+      for (const tier of [this.buffer, this.store]) if (tier) tier.downUntil = 0; // the match ended: one more try
+      drained = await this.queue(() => this.drain(matchId));
+    }
     this.next.delete(matchId);
     const jobs: Promise<unknown>[] = [this.file.sink.purge(matchId)];
     // Entries that never reached the store stay in the buffer, so the store can still get them later.
@@ -147,6 +150,8 @@ export class TieredEventLog extends EventLog {
     this.closed = true;
     clearInterval(this.drainTimer);
     await this.flush();
+    // Try the buffer and the store once more even if one failed a moment ago: this is the last chance to hand the events on.
+    for (const tier of [this.buffer, this.store]) if (tier) tier.downUntil = 0;
     // A service that is away must not hold the shutdown: give the last move a few seconds.
     await Promise.race([this.queue(() => this.drainAll()), new Promise((resolve) => setTimeout(resolve, CLOSE_DRAIN_MS).unref())]);
     for (const tier of [this.buffer, this.store, this.file]) {

@@ -5,6 +5,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Matches,
   Max,
   Min,
   MinLength,
@@ -77,9 +78,16 @@ class EnvironmentVariables {
 
   @IsOptional() @IsString() REDIS_URL?: string;
   @IsOptional() @IsInt() @Min(200) @Max(60000) REDIS_TIMEOUT_MS?: number;
+  @IsOptional() @IsString() @Matches(/^[0-9a-zA-Z._-]{1,32}$/) REDIS_KEY_PREFIX?: string;
+  @IsOptional() @IsString() @Matches(/^[0-9a-zA-Z._-]{1,64}$/) NODE_ID?: string;
+  @IsOptional() @IsInt() @Min(1000) @Max(600000) CLUSTER_LEASE_MS?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(600000) CLUSTER_ADOPT_EVERY_MS?: number;
+  @IsOptional() @IsIn(['auto', 'queue']) COMMAND_TRANSPORT?: string;
+  @IsOptional() @IsInt() @Min(100) @Max(30000) CLUSTER_RPC_TIMEOUT_MS?: number;
   @IsOptional() @IsString() RABBITMQ_URL?: string;
   @IsOptional() @IsString() RABBITMQ_QUEUE?: string;
   @IsOptional() @IsInt() @Min(1) RABBITMQ_PREFETCH?: number;
+  @IsOptional() @IsInt() @Min(200) @Max(60000) RABBITMQ_TIMEOUT_MS?: number;
 
   @IsOptional() @IsString() LUXCORES_ROOT?: string;
   @IsOptional() @IsString() PUBLIC_DIR?: string;

@@ -9,7 +9,7 @@ import { type MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter.js';
 import type { AppConfig } from './config/configuration.js';
-import { assertBrokerReachable } from './events/rabbitmq-event-bus.js';
+import { EventBus } from './events/event-bus.js';
 import { APP_VERSION } from './version.js';
 
 /**
@@ -83,8 +83,8 @@ export async function startRabbitConsumer(
 ): Promise<boolean> {
   const config = app.get<ConfigService<AppConfig, true>>(ConfigService);
   const rabbit = config.get('rabbitmq', { infer: true });
-  if (!rabbit.url) return false;
-  await assertBrokerReachable(rabbit.url); // fail fast; Nest's consumer would retry for ever
+  // The publisher decided at start-up whether the broker is there. Attach a consumer only if it is.
+  if (!rabbit.url || app.get(EventBus).mode !== 'rabbitmq') return false;
   app.connectMicroservice<MicroserviceOptions>(
     {
       transport: Transport.RMQ,

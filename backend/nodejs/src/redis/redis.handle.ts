@@ -19,7 +19,8 @@ export class RedisHandle {
 
   private constructor(
     readonly client: RedisClientType,
-    private readonly url: string,
+    /** Starts every key and channel the server uses, so deployments can share one Redis. */
+    readonly prefix: string,
   ) {
     client.on('error', (err: Error) => {
       // The client emits an error for every failed reconnect. Say it once per outage.
@@ -34,7 +35,7 @@ export class RedisHandle {
   }
 
   /** Connects within `timeoutMs`, or rejects. */
-  static async connect(url: string, timeoutMs = 3000): Promise<RedisHandle> {
+  static async connect(url: string, timeoutMs = 3000, prefix = 'lux'): Promise<RedisHandle> {
     let connected = false;
     const client = createClient({
       url,
@@ -45,7 +46,7 @@ export class RedisHandle {
         reconnectStrategy: (retries: number) => (connected ? Math.min(250 * (retries + 1), MAX_BACKOFF_MS) : false),
       },
     }) as RedisClientType;
-    const handle = new RedisHandle(client, url);
+    const handle = new RedisHandle(client, prefix);
     try {
       await client.connect();
       connected = true;
@@ -57,9 +58,9 @@ export class RedisHandle {
   }
 
   /** Like `connect`, but answers null and logs a warning when Redis is unreachable. */
-  static async tryConnect(url: string, timeoutMs = 3000): Promise<RedisHandle | null> {
+  static async tryConnect(url: string, timeoutMs = 3000, prefix = 'lux'): Promise<RedisHandle | null> {
     try {
-      return await RedisHandle.connect(url, timeoutMs);
+      return await RedisHandle.connect(url, timeoutMs, prefix);
     } catch (err) {
       new Logger(RedisHandle.name).warn(`Redis is unreachable (${(err as Error).message || 'connection refused'})`);
       return null;

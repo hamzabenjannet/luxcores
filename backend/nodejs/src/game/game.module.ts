@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module.js';
+import { ClusterService } from '../cluster/cluster.service.js';
 import { MatchesModule } from '../matches/matches.module.js';
 import { ReplaysModule } from '../replays/replays.module.js';
 import { GameController } from './game.controller.js';
@@ -16,12 +17,13 @@ import { WsJwtGuard } from './ws-jwt.guard.js';
   controllers: [GameController, MatchControlController],
   providers: [
     MatchRunnerService,
+    ClusterService,
     GameActions,
     RoomHub,
     GameGateway,
     RawWsGateway,
     WsJwtGuard,
   ],
-  exports: [MatchRunnerService],
+  exports: [MatchRunnerService, ClusterService],
 })
 export class GameModule {}

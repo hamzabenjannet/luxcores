@@ -19,6 +19,7 @@ import { ErrorResponseDto } from '../common/dto/error-response.dto.js';
 import type { AuthenticatedPlayer } from '../common/types.js';
 import { MatchDto } from '../matches/dto/match.dto.js';
 import { MatchesService } from '../matches/matches.service.js';
+import { ClusterService } from '../cluster/cluster.service.js';
 import { MatchRunnerService } from './match-runner.service.js';
 
 @ApiTags('matches')
@@ -36,6 +37,7 @@ export class MatchControlController {
   constructor(
     private readonly matches: MatchesService,
     private readonly runner: MatchRunnerService,
+    private readonly cluster: ClusterService,
   ) {}
 
   @Post(':id/start')
@@ -74,6 +76,6 @@ export class MatchControlController {
     @CurrentPlayer() player: AuthenticatedPlayer,
   ): Promise<MatchDto> {
     await this.matches.requireHost(id, player);
-    return this.runner.stop(id);
+    return this.cluster.stop(id);
   }
 }

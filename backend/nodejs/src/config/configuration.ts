@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto';
+import { hostname } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 
 import type { DatabaseDriver } from '../database/data-store.js';
@@ -24,9 +26,9 @@ export interface AppConfig {
     postgresUrl: string;
   };
   /** An empty `url` turns Redis off. It buffers the match log and carries match ownership and cross-node fan-out. */
-  redis: { url: string; timeoutMs: number };
+  redis: { url: string; timeoutMs: number; prefix: string };
   /** An empty `url` turns RabbitMQ off and the app uses an in-process event bus. */
-  rabbitmq: { url: string; queue: string; prefetch: number };
+  rabbitmq: { url: string; queue: string; prefetch: number; timeoutMs: number };
   game: {
     /** Repo root that holds `src/sim`, `data` and the web client. */
     repoRoot: string;
@@ -36,6 +38,19 @@ export interface AppConfig {
     checkpointEveryTicks: number;
     /** What a graceful shutdown does to live matches: `resume` keeps them for the next start, `end` draws them. */
     onShutdown: 'resume' | 'end';
+  };
+  /** How several servers share the matches. A lone server ignores all of it. */
+  cluster: {
+    /** Names this server in the match leases. Unique per running server. */
+    nodeId: string;
+    /** Milliseconds a match lease lasts without renewal. A node that dies loses its matches after this long. */
+    leaseMs: number;
+    /** Milliseconds between two looks for running matches that no node holds. 0 turns the look off. */
+    adoptEveryMs: number;
+    /** `auto` runs the commands of a local match directly. `queue` sends them through the command bus even then. */
+    commandTransport: 'auto' | 'queue';
+    /** Milliseconds a request to another node may take. */
+    rpcTimeoutMs: number;
   };
   /** The write-ahead log of every running match (see `src/matchlog`). */
   eventLog: {
@@ -82,11 +97,12 @@ export default (): AppConfig => {
       mongoDb: env.MONGODB_DB ?? 'luxcores',
       postgresUrl: env.POSTGRES_URL ?? '',
     },
-    redis: { url: env.REDIS_URL ?? '', timeoutMs: int(env.REDIS_TIMEOUT_MS, 3000) },
+    redis: { url: env.REDIS_URL ?? '', timeoutMs: int(env.REDIS_TIMEOUT_MS, 3000), prefix: env.REDIS_KEY_PREFIX ?? 'lux' },
     rabbitmq: {
       url: env.RABBITMQ_URL ?? '',
       queue: env.RABBITMQ_QUEUE ?? 'luxcores.events',
       prefetch: int(env.RABBITMQ_PREFETCH, 10),
+      timeoutMs: int(env.RABBITMQ_TIMEOUT_MS, 5000),
     },
     game: {
       repoRoot: resolve(env.LUXCORES_ROOT ?? '../..'),
@@ -95,6 +111,13 @@ export default (): AppConfig => {
       snapshotEveryTicks: int(env.SNAPSHOT_EVERY_TICKS, 2),
       checkpointEveryTicks: int(env.CHECKPOINT_EVERY_TICKS, 400),
       onShutdown: env.MATCH_ON_SHUTDOWN === 'end' ? 'end' : 'resume',
+    },
+    cluster: {
+      nodeId: env.NODE_ID ?? `${hostname()}-${process.pid}-${randomBytes(3).toString('hex')}`,
+      leaseMs: int(env.CLUSTER_LEASE_MS, 10_000),
+      adoptEveryMs: int(env.CLUSTER_ADOPT_EVERY_MS, 3000),
+      commandTransport: env.COMMAND_TRANSPORT === 'queue' ? 'queue' : 'auto',
+      rpcTimeoutMs: int(env.CLUSTER_RPC_TIMEOUT_MS, 1500),
     },
     eventLog: {
       // Next to the JSON database by default, so one data folder holds all server state.

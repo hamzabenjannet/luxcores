@@ -1,4 +1,4 @@
-import { Global, Module } from '@nestjs/common';
+import { Global, Logger, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '../config/configuration.js';
 import { PlayerStatsService } from '../players/player-stats.service.js';
@@ -16,14 +16,22 @@ import { RabbitMqEventBus } from './rabbitmq-event-bus.js';
     {
       provide: EventBus,
       inject: [ConfigService, PlayerStatsService],
-      useFactory: (
+      useFactory: async (
         config: ConfigService<AppConfig, true>,
         stats: PlayerStatsService,
-      ): EventBus => {
-        const { url, queue } = config.get('rabbitmq', { infer: true });
-        return url
-          ? new RabbitMqEventBus(url, queue)
-          : new LocalEventBus(stats);
+      ): Promise<EventBus> => {
+        const { url, queue, timeoutMs } = config.get('rabbitmq', { infer: true });
+        const local = new LocalEventBus(stats);
+        if (!url) return local;
+        const bus = new RabbitMqEventBus(url, queue, local, timeoutMs);
+        try {
+          await bus.connect();
+          return bus;
+        } catch (err) {
+          // The server must work alone: without the broker, events stay in this process until the next restart.
+          new Logger('EventBus').warn(`${(err as Error).message}; domain events stay in this process`);
+          return local;
+        }
       },
     },
   ],

@@ -8,6 +8,7 @@ import {
 import { Public } from '../common/decorators/public.decorator.js';
 import { COLLECTIONS, DataStore } from '../database/data-store.js';
 import { POSTGRES_PROBE, type PostgresProbe } from '../database/postgres.probe.js';
+import { ClusterService } from '../cluster/cluster.service.js';
 import { EventLog } from '../matchlog/event-log.js';
 import { EventBus } from '../events/event-bus.js';
 import { MatchRunnerService } from '../game/match-runner.service.js';
@@ -37,6 +38,18 @@ class HealthDto {
   })
   eventLog!: { writing: string; tiers: { name: string; up: boolean }[] };
   @ApiProperty({
+    example: { nodeId: 'host-123-ab12cd', ownership: 'local', commands: 'local', transport: 'auto', matches: [] },
+    description:
+      'This server in a group of servers. `ownership` is `redis` when match leases are shared, `commands` is `rabbitmq` when each match has a command queue.',
+  })
+  cluster!: {
+    nodeId: string;
+    ownership: string;
+    commands: string;
+    transport: string;
+    matches: string[];
+  };
+  @ApiProperty({
     example: { configured: false, reachable: false },
     description: 'PostgreSQL is not used yet; this only tells whether it answered at start-up',
   })
@@ -59,6 +72,7 @@ export class HealthController {
     private readonly sim: SimService,
     private readonly runner: MatchRunnerService,
     private readonly log: EventLog,
+    private readonly cluster: ClusterService,
     @Inject(POSTGRES_PROBE) private readonly postgres: PostgresProbe,
   ) {}
 
@@ -85,6 +99,7 @@ export class HealthController {
         ...(status.reason ? { reason: status.reason } : {}),
       },
       eventLog: this.log.status(),
+      cluster: this.cluster.status(),
       postgres: this.postgres,
       events: this.bus.mode,
       runningMatches: this.runner.runningMatchIds.length,

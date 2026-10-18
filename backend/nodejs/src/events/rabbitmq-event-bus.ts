@@ -1,8 +1,4 @@
-import {
-  Logger,
-  type BeforeApplicationShutdown,
-  type OnModuleInit,
-} from '@nestjs/common';
+import { Logger, type BeforeApplicationShutdown } from '@nestjs/common';
 import {
   type AmqpConnectionManager,
   type ChannelWrapper,
@@ -11,6 +7,8 @@ import {
 import { EventBus, type EventMap, type EventPattern } from './event-bus.js';
 
 const CONNECT_TIMEOUT_MS = 10_000;
+/** A publish that takes longer than this is treated as lost, and the in-process bus delivers the event instead. */
+const PUBLISH_TIMEOUT_MS = 2000;
 
 /**
  * Publishes events to a durable RabbitMQ queue, in the `{ pattern, data }` format
@@ -23,7 +21,7 @@ const CONNECT_TIMEOUT_MS = 10_000;
  */
 export class RabbitMqEventBus
   extends EventBus
-  implements OnModuleInit, BeforeApplicationShutdown
+  implements BeforeApplicationShutdown
 {
   readonly mode = 'rabbitmq' as const;
   private readonly logger = new Logger('EventBus');
@@ -33,12 +31,15 @@ export class RabbitMqEventBus
   constructor(
     private readonly url: string,
     private readonly queue: string,
+    /** Takes an event when the broker cannot, so a result is never lost to an outage. */
+    private readonly fallback: EventBus,
+    private readonly connectTimeoutMs = CONNECT_TIMEOUT_MS,
   ) {
     super();
   }
 
-  /** Fails the start-up with a clear message when the broker is unreachable. */
-  async onModuleInit(): Promise<void> {
+  /** Connects, or rejects with a clear message when the broker is unreachable. The caller then uses the fallback. */
+  async connect(): Promise<void> {
     this.connection = connect([this.url]);
     this.channel = this.connection.createChannel({
       json: true,
@@ -51,6 +52,7 @@ export class RabbitMqEventBus
       await withTimeout(
         this.channel.waitForConnect(),
         `RabbitMQ is unreachable at ${redact(this.url)}`,
+        this.connectTimeoutMs,
       );
     } catch (err) {
       await this.connection.close().catch(() => undefined);
@@ -69,12 +71,18 @@ export class RabbitMqEventBus
     pattern: K,
     payload: EventMap[K],
   ): Promise<void> {
-    if (!this.channel) throw new Error('RabbitMQ publisher is not connected');
-    await this.channel.sendToQueue(
-      this.queue,
-      { pattern, data: payload },
-      { persistent: true },
-    );
+    // While the broker is away, the channel would hold the message until it returns, and a match could not end.
+    if (!this.channel || !this.connection?.isConnected()) return this.fallback.publish(pattern, payload);
+    try {
+      await withTimeout(
+        this.channel.sendToQueue(this.queue, { pattern, data: payload }, { persistent: true }),
+        'RabbitMQ did not take the event in time',
+        PUBLISH_TIMEOUT_MS,
+      );
+    } catch (err) {
+      this.logger.warn(`${pattern} went to the in-process bus instead: ${(err as Error).message}`);
+      await this.fallback.publish(pattern, payload);
+    }
   }
 }
 
@@ -87,39 +95,17 @@ function redact(url: string): string {
 async function withTimeout(
   work: Promise<unknown>,
   message: string,
+  ms = CONNECT_TIMEOUT_MS,
 ): Promise<void> {
   let timer: NodeJS.Timeout | undefined;
   try {
     await Promise.race([
       work,
       new Promise<never>((_, reject) => {
-        timer = setTimeout(
-          () => reject(new Error(message)),
-          CONNECT_TIMEOUT_MS,
-        );
+        timer = setTimeout(() => reject(new Error(message)), ms);
       }),
     ]);
   } finally {
     clearTimeout(timer);
-  }
-}
-
-/**
- * Opens and closes one connection to prove the broker answers. `main.ts` calls it
- * before it attaches the consumer, because Nest's RabbitMQ server retries for
- * ever and would leave the process half started.
- */
-export async function assertBrokerReachable(url: string): Promise<void> {
-  const connection = connect([url]);
-  connection.on('connectFailed', () => undefined); // a failed try is reported by the timeout below
-  try {
-    await withTimeout(
-      new Promise<void>((resolve) =>
-        connection.once('connect', () => resolve()),
-      ),
-      `RabbitMQ is unreachable at ${redact(url)}`,
-    );
-  } finally {
-    await connection.close().catch(() => undefined);
   }
 }

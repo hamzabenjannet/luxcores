@@ -10,6 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
   MessageBody,
+  type OnGatewayDisconnect,
   type OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
@@ -65,7 +66,7 @@ const wsValidation = new ValidationPipe({
 @UseGuards(WsJwtGuard)
 @UsePipes(wsValidation)
 @UseFilters(new WsErrorFilter())
-export class GameGateway implements OnGatewayInit {
+export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
   private readonly logger = new Logger(GameGateway.name);
 
   @WebSocketServer()
@@ -74,7 +75,7 @@ export class GameGateway implements OnGatewayInit {
   constructor(
     private readonly jwt: JwtService,
     private readonly actions: GameActions,
-    hub: RoomHub,
+    private readonly hub: RoomHub,
   ) {
     hub.addSink({
       emitToRoom: (matchId, event, data) =>
@@ -110,7 +111,11 @@ export class GameGateway implements OnGatewayInit {
     @MessageBody() dto: MatchRefDto,
   ): Promise<JoinAck> {
     const ack = await this.actions.join(this.playerOf(client), dto.matchId);
-    if (ack.ok) await client.join(matchRoom(dto.matchId));
+    if (ack.ok && !client.rooms.has(matchRoom(dto.matchId))) {
+      await client.join(matchRoom(dto.matchId));
+      ((client.data.watched as Set<string> | undefined) ?? (client.data.watched = new Set<string>())).add(dto.matchId);
+      this.hub.watch(dto.matchId); // tells the other servers that a client here wants this room
+    }
     return ack;
   }
 
@@ -119,15 +124,24 @@ export class GameGateway implements OnGatewayInit {
     @ConnectedSocket() client: Socket,
     @MessageBody() dto: MatchRefDto,
   ): Promise<{ ok: true }> {
-    await client.leave(matchRoom(dto.matchId));
+    if (client.rooms.has(matchRoom(dto.matchId))) {
+      await client.leave(matchRoom(dto.matchId));
+      (client.data.watched as Set<string> | undefined)?.delete(dto.matchId);
+      this.hub.unwatch(dto.matchId);
+    }
     return { ok: true };
+  }
+
+  /** Socket.IO has emptied the socket's rooms by now, so the rooms it held come from the ones it joined here. */
+  handleDisconnect(client: Socket): void {
+    for (const id of (client.data.watched as Set<string> | undefined) ?? []) this.hub.unwatch(id);
   }
 
   @SubscribeMessage('match:command')
   command(
     @ConnectedSocket() client: Socket,
     @MessageBody() dto: GameCommandDto,
-  ): CommandAck {
+  ): Promise<CommandAck> {
     return this.actions.command(this.playerOf(client), dto);
   }
 

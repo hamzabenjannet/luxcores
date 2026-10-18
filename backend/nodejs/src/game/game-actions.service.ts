@@ -1,12 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { ClusterService } from '../cluster/cluster.service.js';
 import type { AuthenticatedPlayer } from '../common/types.js';
 import { MatchesService } from '../matches/matches.service.js';
 import type { ChatMessageDto, GameCommandDto } from './dto/socket-dtos.js';
-import {
-  type CommandAck,
-  MatchRunnerService,
-  type MatchSnapshot,
-} from './match-runner.service.js';
+import type { CommandAck, MatchSnapshot } from './match-runner.service.js';
 import { RoomHub } from './room-hub.service.js';
 
 export type JoinAck =
@@ -31,7 +28,7 @@ export type JoinAck =
 export class GameActions {
   constructor(
     private readonly matches: MatchesService,
-    private readonly runner: MatchRunnerService,
+    private readonly cluster: ClusterService,
     private readonly hub: RoomHub,
   ) {}
 
@@ -43,19 +40,19 @@ export class GameActions {
     // Only a bot match is open to watchers. Once fog of war ships, watching a human match would leak hidden state.
     if (!member && !match.botVsBot)
       return { ok: false, error: 'You are not in this match' };
-    const snapshot = this.runner.snapshot(match.id);
+    const { snapshot, nextSeq } = await this.cluster.join(match.id, player.id);
     return {
       ok: true,
       role: member ? 'player' : 'spectator',
       status: match.status,
-      nextSeq: this.runner.nextSeq(match.id, player.id),
+      nextSeq,
       tick: snapshot?.tick ?? null,
       snapshot,
     };
   }
 
-  command(player: AuthenticatedPlayer, dto: GameCommandDto): CommandAck {
-    return this.runner.submitCommand(dto.matchId, player.id, dto.seq, dto.cmd);
+  command(player: AuthenticatedPlayer, dto: GameCommandDto): Promise<CommandAck> {
+    return this.cluster.command(dto.matchId, player.id, dto.seq, dto.cmd);
   }
 
   /** The transport has already checked that the sender joined the room. */

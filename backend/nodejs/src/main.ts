@@ -20,7 +20,7 @@ async function bootstrap(): Promise<void> {
   app.useBodyParser('json', { limit: '5mb' }); // replays carry the whole command log
 
   if (!(await startRabbitConsumer(app))) {
-    logger.log('RABBITMQ_URL is not set: domain events stay in this process');
+    logger.log('No RabbitMQ consumer: domain events stay in this process');
   }
 
   const port = config.get('port', { infer: true });

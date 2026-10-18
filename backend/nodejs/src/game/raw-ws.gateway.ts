@@ -82,7 +82,7 @@ export class RawWsGateway
     private readonly jwt: JwtService,
     private readonly actions: GameActions,
     private readonly config: ConfigService<AppConfig, true>,
-    hub: RoomHub,
+    private readonly hub: RoomHub,
   ) {
     hub.addSink({
       emitToRoom: (matchId, event, data) =>
@@ -259,6 +259,7 @@ export class RawWsGateway
     connection: Connection,
     matchId: string,
   ): void {
+    if (!connection.rooms.has(matchId)) this.hub.watch(matchId); // tells the other servers that a client here wants this room
     connection.rooms.add(matchId);
     let members = this.rooms.get(matchId);
     if (!members) this.rooms.set(matchId, (members = new Set()));
@@ -270,7 +271,7 @@ export class RawWsGateway
     connection: Connection,
     matchId: string,
   ): void {
-    connection.rooms.delete(matchId);
+    if (connection.rooms.delete(matchId)) this.hub.unwatch(matchId);
     const members = this.rooms.get(matchId);
     members?.delete(ws);
     if (members && members.size === 0) this.rooms.delete(matchId);

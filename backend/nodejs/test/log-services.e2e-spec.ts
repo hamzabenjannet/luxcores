@@ -2,7 +2,7 @@ import { readdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { MongoClient } from 'mongodb';
 import { createClient } from '@redis/client';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { MatchRunnerService } from '../src/game/match-runner.service.js';
 import {
   ack,
@@ -21,6 +21,8 @@ import {
 const REDIS = process.env.TEST_REDIS_URL as string;
 const MONGO = process.env.TEST_MONGODB_URL as string;
 const database = `luxcores_e2e_${Date.now()}`;
+/** A prefix of its own, so a test never drains or deletes the keys of another test file that shares the Redis. */
+const PREFIX = `t-${Date.now().toString(36)}`;
 
 interface Snapshot {
   tick: number;
@@ -31,6 +33,7 @@ const settings = (extra: Record<string, string> = {}) => ({
   MATCH_MAX_TICKS: '6000',
   CHECKPOINT_EVERY_TICKS: '20',
   REDIS_URL: REDIS,
+  REDIS_KEY_PREFIX: PREFIX,
   MONGODB_URL: MONGO,
   MONGODB_DB: database,
   DATABASE_DRIVER: 'auto',
@@ -58,17 +61,21 @@ const eventFiles = async (t: TestApp): Promise<string[]> =>
   readdir(join(dirname(t.dbPath), 'events')).catch(() => []);
 
 describe.skipIf(!REDIS || !MONGO)('match log on Redis and MongoDB', () => {
-  const mongo = new MongoClient(MONGO);
-  const redis = createClient({ url: REDIS });
+  let mongo: MongoClient;
+  let redis: ReturnType<typeof createClient>;
+  beforeAll(async () => {
+    mongo = new MongoClient(MONGO);
+    await mongo.connect();
+    redis = createClient({ url: REDIS });
+    await redis.connect();
+  });
   afterAll(async () => {
     await mongo.db(database).dropDatabase().catch(() => undefined);
     await mongo.close();
-    if (redis.isOpen) await redis.quit();
+    await redis.quit();
   });
 
   it('moves a running match into MongoDB, leaves no file or stream behind, and resumes from there', async () => {
-    await mongo.connect();
-    await redis.connect();
     const first = await createTestApp(settings());
     let second: TestApp | undefined;
     try {
@@ -90,7 +97,7 @@ describe.skipIf(!REDIS || !MONGO)('match log on Redis and MongoDB', () => {
       expect(await mongo.db(database).collection('match_checkpoints').findOne({ _id: matchId as never })).toMatchObject({
         checkpoints: expect.any(Array),
       });
-      expect(await redis.xLen(`lux:match:${matchId}:events`), 'the stream was emptied').toBe(0);
+      expect(await redis.xLen(`${PREFIX}:match:${matchId}:events`), 'the stream was emptied').toBe(0);
       expect(await eventFiles(first), 'no file was needed').not.toContain(`${matchId}.ndjson`);
 
       second = await createTestApp(settings({ JSON_DB_PATH: first.dbPath }));
@@ -114,7 +121,6 @@ describe.skipIf(!REDIS || !MONGO)('match log on Redis and MongoDB', () => {
   }, 120_000);
 
   it('keeps a running match in Redis when MongoDB is away, and resumes from the stream', async () => {
-    await redis.connect().catch(() => undefined);
     const away = { MONGODB_URL: 'mongodb://127.0.0.1:1', DATABASE_TIMEOUT_MS: '500' };
     const first = await createTestApp(settings(away));
     let second: TestApp | undefined;
@@ -122,7 +128,7 @@ describe.skipIf(!REDIS || !MONGO)('match log on Redis and MongoDB', () => {
       const { halo, matchId } = await play(first, 22, 110);
       expect((await api(first.url, '/api/health')).body.database).toMatchObject({ driver: 'mongodb', active: 'json', degraded: true });
       await first.shutdown();
-      expect(await redis.exists(`lux:match:${matchId}:events`), 'the stream holds the log').toBe(1);
+      expect(await redis.exists(`${PREFIX}:match:${matchId}:events`), 'the stream holds the log').toBe(1);
       expect(await eventFiles(first), 'with no store behind Redis, a file copy keeps the log safe').toContain(`${matchId}.ndjson`);
 
       second = await createTestApp(settings({ ...away, JSON_DB_PATH: first.dbPath }));
@@ -133,7 +139,7 @@ describe.skipIf(!REDIS || !MONGO)('match log on Redis and MongoDB', () => {
       expect(joined.snapshot.tick).toBeGreaterThan(80);
       await api(second.url, `/api/matches/${matchId}/stop`, { method: 'POST', token: halo.token });
       socket.close();
-      expect(await redis.exists(`lux:match:${matchId}:events`), 'the stream is deleted with the match').toBe(0);
+      expect(await redis.exists(`${PREFIX}:match:${matchId}:events`), 'the stream is deleted with the match').toBe(0);
     } finally {
       await second?.close();
       await first.close();
@@ -147,7 +153,7 @@ describe.skipIf(!REDIS || !MONGO)('match log on Redis and MongoDB', () => {
     try {
       const { halo, matchId } = await play(first, 24, 90);
       await first.shutdown();
-      await redis.del([`lux:match:${matchId}:events`, `lux:match:${matchId}:cp`]); // a cache that restarted without persistence
+      await redis.del([`${PREFIX}:match:${matchId}:events`, `${PREFIX}:match:${matchId}:cp`]); // a cache that restarted without persistence
       second = await createTestApp(settings({ ...away, JSON_DB_PATH: first.dbPath }));
       await second.app.get(MatchRunnerService).resumed;
       const socket = await connectSocket(second.url, halo.token);

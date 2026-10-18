@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AdminModule } from './admin/admin.module.js';
 import { AuthModule } from './auth/auth.module.js';
+import { ClusterModule } from './cluster/cluster.module.js';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
 import { HttpThrottlerGuard, throttlerOptions } from './common/rate-limit.js';
 import type { AppConfig } from './config/configuration.js';
@@ -35,6 +36,7 @@ import { StaticModule } from './static/static.module.js';
     }),
     DatabaseModule,
     RedisModule,
+    ClusterModule,
     MatchLogModule,
     SimulationModule,
     EventsModule,
