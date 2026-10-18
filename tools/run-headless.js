@@ -12,7 +12,7 @@ import { loadData } from '../test/helpers/load-data.js';
 import { createState, step, hashState, Recorder } from '../src/sim/index.js';
 
 const seed = Number(process.argv[2] ?? 1234567);
-const ticks = Number(process.argv[3] ?? 12000);
+const ticks = Number(process.argv[3] ?? 5000);
 
 const { config, dataHash } = loadData();
 const players = [

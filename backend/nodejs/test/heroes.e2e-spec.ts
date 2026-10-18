@@ -27,7 +27,7 @@ interface Snapshot {
 
 describe('heroes over the socket', () => {
   it('lets a human pick a hero at a barracks, cast a shield on it, and see both in the snapshots', async () => {
-    const t = await createTestApp({ MATCH_MAX_TICKS: '6000' });
+    const t = await createTestApp({ MATCH_MAX_TICKS: '5000' });
     try {
       const halo = await guest(t.url, 'Halo');
       const created = await api(t.url, '/api/matches', { token: halo.token, body: { name: 'Hero', vsBot: true, seed: 12 } });

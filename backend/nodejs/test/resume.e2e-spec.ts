@@ -67,7 +67,7 @@ async function playUntil(t: TestApp, seed: number, tick: number) {
 
 describe('resuming matches after a restart', () => {
   it('writes the seed, every command and a hash every 20 ticks to a log file', async () => {
-    const t = await createTestApp({ MATCH_MAX_TICKS: '6000' });
+    const t = await createTestApp({ MATCH_MAX_TICKS: '5000' });
     try {
       const { matchId } = await playUntil(t, 5, 70);
       await t.app.get(MatchRunnerService).resumed; // nothing to resume here
@@ -90,7 +90,7 @@ describe('resuming matches after a restart', () => {
   }, 60_000);
 
   it('rebuilds a running match at the next start, with every entity, the bot and the command counter', async () => {
-    const first = await createTestApp({ MATCH_MAX_TICKS: '6000' });
+    const first = await createTestApp({ MATCH_MAX_TICKS: '5000' });
     let second: TestApp | undefined;
     try {
       const { halo, matchId, reached } = await playUntil(first, 5, 90);
@@ -99,7 +99,7 @@ describe('resuming matches after a restart', () => {
       const lastTick = Math.max(...before.map((e) => e.tick));
 
       second = await createTestApp({
-        MATCH_MAX_TICKS: '6000',
+        MATCH_MAX_TICKS: '5000',
         JSON_DB_PATH: first.dbPath,
       });
       await second.app.get(MatchRunnerService).resumed;
@@ -143,13 +143,13 @@ describe('resuming matches after a restart', () => {
   }, 120_000);
 
   it('survives a torn last line, as a crash in the middle of a write leaves it', async () => {
-    const first = await createTestApp({ MATCH_MAX_TICKS: '6000' });
+    const first = await createTestApp({ MATCH_MAX_TICKS: '5000' });
     let second: TestApp | undefined;
     try {
       const { halo, matchId } = await playUntil(first, 6, 70);
       await first.shutdown();
       await appendFile(logPath(first, matchId), '{"matchId":"x","seq":9999,"tick":12,"type":"comm');
-      second = await createTestApp({ MATCH_MAX_TICKS: '6000', JSON_DB_PATH: first.dbPath });
+      second = await createTestApp({ MATCH_MAX_TICKS: '5000', JSON_DB_PATH: first.dbPath });
       await second.app.get(MatchRunnerService).resumed;
       const socket = await connectSocket(second.url, halo.token);
       const joined = await ack(socket, 'match:join', { matchId });
@@ -162,7 +162,7 @@ describe('resuming matches after a restart', () => {
   }, 90_000);
 
   it('gives up on a match whose log disagrees with the sim, and ends it as a draw', async () => {
-    const first = await createTestApp({ MATCH_MAX_TICKS: '6000' });
+    const first = await createTestApp({ MATCH_MAX_TICKS: '5000' });
     let second: TestApp | undefined;
     try {
       const { halo, matchId } = await playUntil(first, 7, 70);
@@ -173,7 +173,7 @@ describe('resuming matches after a restart', () => {
       const hashes = [...text.matchAll(/"hash":"[0-9a-f]{8}"/g)];
       const last = hashes[hashes.length - 1];
       await writeFile(path, `${text.slice(0, last.index)}"hash":"deadbeef"${text.slice((last.index ?? 0) + last[0].length)}`);
-      second = await createTestApp({ MATCH_MAX_TICKS: '6000', JSON_DB_PATH: first.dbPath });
+      second = await createTestApp({ MATCH_MAX_TICKS: '5000', JSON_DB_PATH: first.dbPath });
       await second.app.get(MatchRunnerService).resumed;
       const match = await api(second.url, `/api/matches/${matchId}`, { token: halo.token });
       expect(match.body).toMatchObject({ status: 'finished', result: { draw: true, reason: 'stopped' } });
@@ -185,13 +185,13 @@ describe('resuming matches after a restart', () => {
   }, 90_000);
 
   it('ends a running match that has no log at all, instead of leaving it running forever', async () => {
-    const first = await createTestApp({ MATCH_MAX_TICKS: '6000' });
+    const first = await createTestApp({ MATCH_MAX_TICKS: '5000' });
     let second: TestApp | undefined;
     try {
       const { halo, matchId } = await playUntil(first, 8, 50);
       await first.shutdown();
       await writeFile(logPath(first, matchId), '');
-      second = await createTestApp({ MATCH_MAX_TICKS: '6000', JSON_DB_PATH: first.dbPath });
+      second = await createTestApp({ MATCH_MAX_TICKS: '5000', JSON_DB_PATH: first.dbPath });
       await second.app.get(MatchRunnerService).resumed;
       const match = await api(second.url, `/api/matches/${matchId}`, { token: halo.token });
       expect(match.body).toMatchObject({ status: 'finished', result: { reason: 'stopped' } });

@@ -52,7 +52,7 @@ describe('the economy over the match server (M2)', () => {
   let socket: Socket | undefined;
 
   beforeAll(async () => {
-    t = await createTestApp({ MATCH_MAX_TICKS: '6000' });
+    t = await createTestApp({ MATCH_MAX_TICKS: '5000' });
     halo = await guest(t.url, 'Halo');
   });
 

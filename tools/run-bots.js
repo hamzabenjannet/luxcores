@@ -4,9 +4,9 @@
 // Usage: node tools/run-bots.js [seed] [ticks] [replay-out.json]
 //        node tools/run-bots.js --soak [seeds] [ticks]
 //
-// A match that nobody has won ends at `ticks`, which defaults to match.stalemateTicks in
-// data/balance.json (10000). Set the MATCH_MAX_TICKS environment variable, as for the server,
-// or pass the tick count to run longer.
+// A match that nobody has won ends at `ticks`, which defaults to 5000 here (250 seconds), so a soak
+// stays short. The game's own limit, match.stalemateTicks in data/balance.json, stays 10000. Set the
+// MATCH_MAX_TICKS environment variable, as for the server, or pass the tick count to run longer.
 //
 // With a third argument the match is saved as a replay (golden replays in
 // replays/golden/ only on purpose, see tools/run-headless.js). The soak mode
@@ -20,7 +20,9 @@ import { localWorldView } from '../src/shared/world-view.js';
 import { createBot } from '../src/bot/bot.js';
 
 const { config, dataHash } = loadData();
-const LIMIT = Number(process.env.MATCH_MAX_TICKS ?? config.balance.match.stalemateTicks);
+/** The tick limit of a tool run, shorter than the game's own limit so the soak and the bot tests stay quick. */
+const TEST_TICKS = 5000;
+const LIMIT = Number(process.env.MATCH_MAX_TICKS ?? Math.min(TEST_TICKS, config.balance.match.stalemateTicks));
 
 /**
  * @param {number} seed

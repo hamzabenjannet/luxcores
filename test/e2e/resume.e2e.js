@@ -14,7 +14,7 @@ import { PW_WS_ENDPOINT, SEED, freeSpot, skip, startBackend } from './helpers/ba
 const BROWSER_HOST = process.env.BACKEND_HOST_FOR_BROWSER ?? 'host.docker.internal';
 
 test('a page keeps playing across a crash and restart of the server', { timeout: 180_000, skip }, async () => {
-  const env = { MATCH_MAX_TICKS: '6000' };
+  const env = { MATCH_MAX_TICKS: '5000' };
   const first = await startBackend(env);
   let second;
   const browser = await chromium.connect(PW_WS_ENDPOINT);

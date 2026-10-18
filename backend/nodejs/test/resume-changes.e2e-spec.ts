@@ -67,7 +67,7 @@ async function playUntil(t: TestApp, seed: number, tick: number) {
   return { halo, matchId };
 }
 
-const EVERY_20 = { MATCH_MAX_TICKS: '6000', CHECKPOINT_EVERY_TICKS: '20' };
+const EVERY_20 = { MATCH_MAX_TICKS: '5000', CHECKPOINT_EVERY_TICKS: '20' };
 
 describe('resuming matches across a change of rules', () => {
   it('continues from the newest checkpoint when nothing changed', async () => {
@@ -156,7 +156,7 @@ describe('resuming matches across a change of rules', () => {
   }
 
   it('ends the match as a draw when the rules changed and it has no checkpoint', async () => {
-    const first = await createTestApp({ MATCH_MAX_TICKS: '6000', CHECKPOINT_EVERY_TICKS: '0' });
+    const first = await createTestApp({ MATCH_MAX_TICKS: '5000', CHECKPOINT_EVERY_TICKS: '0' });
     const root = await editedRules(async (r) => {
       const path = join(r, 'data', 'balance.json');
       await writeFile(path, (await readFile(path, 'utf8')).replace('"costLux": 5,', '"costLux": 6,'));
@@ -165,7 +165,7 @@ describe('resuming matches across a change of rules', () => {
     try {
       const { halo, matchId } = await playUntil(first, 13, 60);
       await first.shutdown();
-      second = await createTestApp({ MATCH_MAX_TICKS: '6000', CHECKPOINT_EVERY_TICKS: '0', JSON_DB_PATH: first.dbPath, LUXCORES_ROOT: root });
+      second = await createTestApp({ MATCH_MAX_TICKS: '5000', CHECKPOINT_EVERY_TICKS: '0', JSON_DB_PATH: first.dbPath, LUXCORES_ROOT: root });
       await second.app.get(MatchRunnerService).resumed;
       const match = await api(second.url, `/api/matches/${matchId}`, { token: halo.token });
       expect(match.body).toMatchObject({ status: 'finished', result: { draw: true, reason: 'stopped' } });

@@ -9,7 +9,7 @@ import { api, createTestApp, guest } from './helpers/create-app.js';
  */
 describe('graceful shutdown', () => {
   it('saves a live match, its replay and the stats before the database closes', async () => {
-    const t = await createTestApp({ MATCH_MAX_TICKS: '6000', MATCH_ON_SHUTDOWN: 'end' });
+    const t = await createTestApp({ MATCH_MAX_TICKS: '5000', MATCH_ON_SHUTDOWN: 'end' });
     try {
       const halo = await guest(t.url, 'Halo');
       const created = await api(t.url, '/api/matches', {

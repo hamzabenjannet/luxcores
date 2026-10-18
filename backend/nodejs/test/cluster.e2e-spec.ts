@@ -29,7 +29,7 @@ interface Snapshot {
 }
 
 const shared = (extra: Record<string, string> = {}): Record<string, string> => ({
-  MATCH_MAX_TICKS: '6000',
+  MATCH_MAX_TICKS: '5000',
   CHECKPOINT_EVERY_TICKS: '20',
   REDIS_URL: REDIS,
   REDIS_KEY_PREFIX: PREFIX,
