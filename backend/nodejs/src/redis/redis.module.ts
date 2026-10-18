@@ -16,7 +16,7 @@ import { REDIS_HANDLE, RedisHandle } from './redis.handle.js';
       inject: [ConfigService],
       useFactory: async (config: ConfigService<AppConfig, true>): Promise<RedisHandle | null> => {
         const { url, timeoutMs, prefix } = config.get('redis', { infer: true });
-        return url ? RedisHandle.tryConnect(url, timeoutMs, prefix) : null;
+        return url ? RedisHandle.tryConnect(url, timeoutMs, prefix, config.get('startupWaitMs', { infer: true })) : null;
       },
     },
   ],

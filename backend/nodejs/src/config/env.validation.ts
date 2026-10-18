@@ -41,6 +41,7 @@ class EnvironmentVariables {
   @IsOptional() @IsInt() @Min(1) @Max(65535) PORT?: number;
   @IsOptional() @IsString() HOST?: string;
   @IsOptional() @IsString() CORS_ORIGIN?: string;
+  @IsOptional() @IsInt() @Min(0) @Max(120000) STARTUP_WAIT_MS?: number;
 
   @ValidateIf(
     (o: EnvironmentVariables) =>

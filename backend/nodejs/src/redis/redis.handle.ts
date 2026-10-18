@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { createClient, type RedisClientType } from '@redis/client';
+import { withinWindow } from '../common/startup-wait.js';
 
 /** Injection token for the shared Redis connection. Its value is a `RedisHandle`, or null when Redis is not in use. */
 export const REDIS_HANDLE = 'REDIS_HANDLE';
@@ -58,9 +59,9 @@ export class RedisHandle {
   }
 
   /** Like `connect`, but answers null and logs a warning when Redis is unreachable. */
-  static async tryConnect(url: string, timeoutMs = 3000, prefix = 'lux'): Promise<RedisHandle | null> {
+  static async tryConnect(url: string, timeoutMs = 3000, prefix = 'lux', windowMs = 0): Promise<RedisHandle | null> {
     try {
-      return await RedisHandle.connect(url, timeoutMs, prefix);
+      return await withinWindow(() => RedisHandle.connect(url, timeoutMs, prefix), windowMs);
     } catch (err) {
       new Logger(RedisHandle.name).warn(`Redis is unreachable (${(err as Error).message || 'connection refused'})`);
       return null;

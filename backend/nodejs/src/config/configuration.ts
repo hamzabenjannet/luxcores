@@ -14,6 +14,8 @@ export interface AppConfig {
   port: number;
   host: string;
   corsOrigin: string;
+  /** Milliseconds a service (MongoDB, Redis, RabbitMQ, PostgreSQL) gets to answer at start-up before the server runs without it until the next restart. */
+  startupWaitMs: number;
   jwt: { secret: string; expiresIn: string };
   adminApiKey: string;
   database: {
@@ -68,6 +70,12 @@ export interface AppConfig {
   ws: { authTimeoutMs: number; maxPayloadBytes: number };
 }
 
+/**
+ * Replaces `{hostname}` in a path. Servers that share a volume then keep a JSON file each: one file
+ * cannot be shared by two processes, because each keeps its copy in memory.
+ */
+const expand = (path: string): string => path.replaceAll('{hostname}', hostname());
+
 const int = (value: string | undefined, fallback: number): number =>
   value === undefined || value === '' ? fallback : Number(value);
 
@@ -84,6 +92,7 @@ export default (): AppConfig => {
     port: int(env.PORT, 3000),
     host: env.HOST ?? '0.0.0.0',
     corsOrigin: env.CORS_ORIGIN ?? '*',
+    startupWaitMs: int(env.STARTUP_WAIT_MS, 6000),
     jwt: {
       secret: env.JWT_SECRET ?? (isProd ? '' : 'dev-only-secret-change-me'),
       expiresIn: env.JWT_EXPIRES_IN ?? '12h',
@@ -91,7 +100,7 @@ export default (): AppConfig => {
     adminApiKey: env.ADMIN_API_KEY ?? (isProd ? '' : 'dev-admin-key'),
     database: {
       driver: (env.DATABASE_DRIVER as DatabaseChoice | undefined) ?? 'auto',
-      jsonPath: resolve(env.JSON_DB_PATH ?? 'data/db.json'),
+      jsonPath: resolve(expand(env.JSON_DB_PATH ?? 'data/db.json')),
       timeoutMs: int(env.DATABASE_TIMEOUT_MS, 3000),
       mongoUrl: env.MONGODB_URL ?? '',
       mongoDb: env.MONGODB_DB ?? 'luxcores',
@@ -121,7 +130,7 @@ export default (): AppConfig => {
     },
     eventLog: {
       // Next to the JSON database by default, so one data folder holds all server state.
-      dir: resolve(env.EVENT_LOG_DIR ?? join(dirname(resolve(env.JSON_DB_PATH ?? 'data/db.json')), 'events')),
+      dir: resolve(env.EVENT_LOG_DIR ?? join(dirname(resolve(expand(env.JSON_DB_PATH ?? 'data/db.json'))), 'events')),
       flushMs: int(env.EVENT_LOG_FLUSH_MS, 100),
       keepFinished: env.EVENT_LOG_KEEP_FINISHED === 'true',
       retentionDays: int(env.EVENT_LOG_RETENTION_DAYS, 14),

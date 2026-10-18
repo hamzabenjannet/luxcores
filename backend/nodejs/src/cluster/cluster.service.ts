@@ -40,14 +40,14 @@ export class ClusterService {
     return this.ownership.nodeId;
   }
 
-  /** For the health route. */
-  status(): { nodeId: string; ownership: string; commands: string; transport: string; matches: string[] } {
+  /** For the health route, which is public: it counts matches and does not name them. */
+  status(): { nodeId: string; ownership: string; commands: string; transport: string; matches: number } {
     return {
       nodeId: this.ownership.nodeId,
       ownership: this.ownership.mode,
       commands: this.bus.mode,
       transport: this.transport,
-      matches: this.runner.runningMatchIds,
+      matches: this.runner.runningMatchIds.length,
     };
   }
 

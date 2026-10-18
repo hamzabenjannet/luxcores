@@ -66,8 +66,10 @@ describe.skipIf(!REDIS || !RABBIT || !MONGO)('two servers, one match', () => {
       const started = await api(a.url, `/api/matches/${matchId}/start`, { method: 'POST', token: halo.token });
       expect(started.status).toBe(200);
 
-      expect((await api(a.url, '/api/health')).body.cluster).toMatchObject({ nodeId: 'node-a', ownership: 'redis', commands: 'rabbitmq', matches: [matchId] });
-      expect((await api(b.url, '/api/health')).body.cluster).toMatchObject({ nodeId: 'node-b', matches: [] });
+      expect((await api(a.url, '/api/health')).body.cluster).toMatchObject({ nodeId: 'node-a', ownership: 'redis', commands: 'rabbitmq', matches: 1 });
+      expect((await api(b.url, '/api/health')).body.cluster).toMatchObject({ nodeId: 'node-b', matches: 0 });
+      expect(a.app.get(MatchRunnerService).isRunning(matchId)).toBe(true);
+      expect(b.app.get(MatchRunnerService).isRunning(matchId)).toBe(false);
 
       // The player's socket sits on node B. Node B runs nothing, and still answers the join with a live snapshot.
       const socket = await connectSocket(b.url, halo.token);
@@ -100,7 +102,7 @@ describe.skipIf(!REDIS || !RABBIT || !MONGO)('two servers, one match', () => {
       expect(stopped.status).toBe(200);
       expect(stopped.body.status).toBe('finished');
       await ended;
-      expect((await api(a.url, '/api/health')).body.cluster.matches).toEqual([]);
+      expect((await api(a.url, '/api/health')).body.cluster.matches).toBe(0);
       socket.close();
     } finally {
       await b.close();

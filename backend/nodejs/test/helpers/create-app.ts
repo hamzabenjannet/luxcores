@@ -40,6 +40,7 @@ export async function createTestApp(
     DATABASE_DRIVER: 'json',
     JSON_DB_PATH: dbPath,
     RABBITMQ_URL: '',
+    STARTUP_WAIT_MS: '0', // a test that points at a missing service must not wait for it
     MATCH_MAX_TICKS: '60',
     RATE_LIMIT_PER_MINUTE: '100000', // tests make many requests from one address
     RATE_LIMIT_AUTH_PER_MINUTE: '100000',

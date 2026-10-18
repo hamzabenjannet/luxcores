@@ -23,14 +23,13 @@ class HealthDto {
   @ApiProperty({
     example: { driver: 'mongodb', active: 'json', degraded: true, ok: true },
     description:
-      '`driver` is the configured database and `active` the one that answers. They differ while the server runs on the JSON file.',
+      '`driver` is the configured database and `active` the one that answers. They differ while the server runs on the JSON file. The reason is in the server log, not here, because this route is public.',
   })
   database!: {
     driver: string;
     active: string;
     degraded: boolean;
     ok: boolean;
-    reason?: string;
   };
   @ApiProperty({
     example: { writing: 'file', tiers: [{ name: 'file', up: true }] },
@@ -38,7 +37,7 @@ class HealthDto {
   })
   eventLog!: { writing: string; tiers: { name: string; up: boolean }[] };
   @ApiProperty({
-    example: { nodeId: 'host-123-ab12cd', ownership: 'local', commands: 'local', transport: 'auto', matches: [] },
+    example: { nodeId: 'host-123-ab12cd', ownership: 'local', commands: 'local', transport: 'auto', matches: 0 },
     description:
       'This server in a group of servers. `ownership` is `redis` when match leases are shared, `commands` is `rabbitmq` when each match has a command queue.',
   })
@@ -47,7 +46,7 @@ class HealthDto {
     ownership: string;
     commands: string;
     transport: string;
-    matches: string[];
+    matches: number;
   };
   @ApiProperty({
     example: { configured: false, reachable: false },
@@ -96,7 +95,6 @@ export class HealthController {
         active: status.active,
         degraded: status.degraded,
         ok,
-        ...(status.reason ? { reason: status.reason } : {}),
       },
       eventLog: this.log.status(),
       cluster: this.cluster.status(),

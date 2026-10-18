@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import { withinWindow } from '../common/startup-wait.js';
 import {
   type DatabaseDriver,
   type Doc,
@@ -61,6 +62,8 @@ export class ResilientStore extends DataStore {
       /** Why there is no main adapter, when the caller could not connect one. */
       unavailableReason?: string;
       mirror?: readonly string[];
+      /** Milliseconds the main adapter gets to start at start-up. */
+      startupWaitMs?: number;
     },
   ) {
     super();
@@ -90,7 +93,7 @@ export class ResilientStore extends DataStore {
       return;
     }
     try {
-      await this.primary.init();
+      await withinWindow(() => this.primary?.init() ?? Promise.resolve(), this.options.startupWaitMs ?? 0);
       await this.reconcile(this.primary);
     } catch (err) {
       // Whatever went wrong (an unreachable server, a refused login, a missing right), the server must still start.
@@ -99,7 +102,10 @@ export class ResilientStore extends DataStore {
   }
 
   find<T extends Doc>(collection: string, where?: Partial<T>, options?: FindOptions): Promise<T[]> {
-    return this.exec((s) => s.find<T>(collection, where, options));
+    return this.exec(
+      (s) => s.find<T>(collection, where, options),
+      (docs) => this.mirrorAll(collection, docs),
+    );
   }
 
   count<T extends Doc>(collection: string, where?: Partial<T>): Promise<number> {
@@ -107,7 +113,10 @@ export class ResilientStore extends DataStore {
   }
 
   get<T extends Doc>(collection: string, id: string): Promise<T | null> {
-    return this.exec((s) => s.get<T>(collection, id));
+    return this.exec(
+      (s) => s.get<T>(collection, id),
+      (doc) => (doc ? this.mirrorAll(collection, [doc]) : Promise.resolve()),
+    );
   }
 
   insert<T extends Doc>(collection: string, doc: T): Promise<T> {
@@ -172,6 +181,19 @@ export class ResilientStore extends DataStore {
 
   private async mirror(collection: string, doc: Doc): Promise<void> {
     if (this.mirrored(collection)) await this.fallback.upsert(collection, doc);
+  }
+
+  /**
+   * Keeps the file's copy of what this server reads current too: a match that another server created, or
+   * a player who signed in there, is in the file by the time this server needs it as a fallback. A
+   * document is written only when it differs from the file's copy.
+   */
+  private async mirrorAll(collection: string, docs: Doc[]): Promise<void> {
+    if (!this.mirrored(collection)) return;
+    for (const doc of docs) {
+      const copy = await this.fallback.get<Doc>(collection, doc.id);
+      if (!copy || canonical(copy) !== canonical(doc)) await this.fallback.upsert(collection, doc);
+    }
   }
 
   private degrade(err: unknown): void {
@@ -242,4 +264,13 @@ export class ResilientStore extends DataStore {
     }
     return true;
   }
+}
+
+/** JSON with sorted keys, to compare two documents whatever order their fields came in. */
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : 1)))
+      : v,
+  );
 }

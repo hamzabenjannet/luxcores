@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { type Db, MongoClient } from 'mongodb';
+import { withinWindow } from '../common/startup-wait.js';
 
 /** Injection token for the shared MongoDB connection. Its value is a `MongoHandle`, or null when MongoDB is not in use. */
 export const MONGO_HANDLE = 'MONGO_HANDLE';
@@ -33,9 +34,9 @@ export class MongoHandle {
   }
 
   /** Like `connect`, but answers null and logs a warning when MongoDB is unreachable. */
-  static async tryConnect(url: string, dbName: string, timeoutMs = 3000): Promise<MongoHandle | null> {
+  static async tryConnect(url: string, dbName: string, timeoutMs = 3000, windowMs = 0): Promise<MongoHandle | null> {
     try {
-      return await MongoHandle.connect(url, dbName, timeoutMs);
+      return await withinWindow(() => MongoHandle.connect(url, dbName, timeoutMs), windowMs);
     } catch (err) {
       new Logger(MongoHandle.name).warn(`MongoDB is unreachable (${(err as Error).message})`);
       return null;

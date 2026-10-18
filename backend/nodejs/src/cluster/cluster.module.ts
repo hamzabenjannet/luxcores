@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '../config/configuration.js';
+import { withinWindow } from '../common/startup-wait.js';
 import { REDIS_HANDLE, type RedisHandle } from '../redis/redis.handle.js';
 import { CommandBus, LocalCommandBus } from './command-bus.js';
 import { LocalOwnership, MatchOwnership } from './match-ownership.js';
@@ -38,7 +39,7 @@ import { RedisOwnership } from './redis-ownership.js';
         if (!url) return new LocalCommandBus();
         const bus = new RabbitCommandBus(url);
         try {
-          await bus.connect(timeoutMs);
+          await withinWindow(() => bus.connect(timeoutMs), config.get('startupWaitMs', { infer: true }));
           logger.log('Commands travel over one RabbitMQ queue per match');
           return bus;
         } catch (err) {

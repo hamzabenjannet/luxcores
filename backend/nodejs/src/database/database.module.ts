@@ -34,7 +34,7 @@ import { ResilientStore } from './resilient.store.js';
         // MongoDB also holds the match events, so it connects even when PostgreSQL is the main database.
         // An explicit `json` choice leaves MongoDB alone.
         if (!db.mongoUrl || db.driver === 'json') return null;
-        return MongoHandle.tryConnect(db.mongoUrl, db.mongoDb, db.timeoutMs);
+        return MongoHandle.tryConnect(db.mongoUrl, db.mongoDb, db.timeoutMs, config.get('startupWaitMs', { infer: true }));
       },
     },
     {
@@ -43,7 +43,7 @@ import { ResilientStore } from './resilient.store.js';
       useFactory: async (config: ConfigService<AppConfig, true>) => {
         const db = config.get('database', { infer: true });
         // When PostgreSQL is the main database, the store itself reports. Otherwise only note whether it is there.
-        const probe = db.driver === 'postgres' ? { configured: false, reachable: false } : await probePostgres(db.postgresUrl, db.timeoutMs);
+        const probe = db.driver === 'postgres' ? { configured: false, reachable: false } : await probePostgres(db.postgresUrl, db.timeoutMs, config.get('startupWaitMs', { infer: true }));
         if (probe.configured) new Logger('Database').log(`PostgreSQL ${probe.reachable ? 'is reachable (not used yet)' : 'is not reachable; the server runs without it'}`);
         return probe;
       },
@@ -70,7 +70,10 @@ import { ResilientStore } from './resilient.store.js';
           });
         } else {
           const { PostgresStore } = await import('./postgres.store.js');
-          store = new ResilientStore(new PostgresStore(db.postgresUrl, db.timeoutMs), file, { configured: 'postgres' });
+          store = new ResilientStore(new PostgresStore(db.postgresUrl, db.timeoutMs), file, {
+            configured: 'postgres',
+            startupWaitMs: config.get('startupWaitMs', { infer: true }),
+          });
         }
         await store.init();
         const status = store.status();

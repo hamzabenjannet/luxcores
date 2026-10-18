@@ -1,4 +1,5 @@
 import pg from 'pg';
+import { TcpProxy } from './helpers/tcp-proxy.js';
 import { describe, expect, it } from 'vitest';
 import { api, createTestApp, guest } from './helpers/create-app.js';
 
@@ -162,4 +163,27 @@ describe('app with a database that is not there', () => {
       await t.close();
     }
   });
+});
+
+describe.skipIf(!process.env.TEST_MONGODB_URL)('a database that is still starting', () => {
+  it('waits for MongoDB during the start-up window instead of giving up at once', async () => {
+    const url = new URL(process.env.TEST_MONGODB_URL as string);
+    const proxy = new TcpProxy(url.hostname, Number(url.port || 27017));
+    const port = await proxy.start();
+    await proxy.cut(); // closed now, open again in 1.5 seconds, as a container that boots
+    setTimeout(() => void proxy.start(port), 1500);
+    const t = await createTestApp({
+      DATABASE_DRIVER: 'auto',
+      MONGODB_URL: `mongodb://127.0.0.1:${port}/?directConnection=true`,
+      MONGODB_DB: `luxcores_wait_${Date.now()}`,
+      DATABASE_TIMEOUT_MS: '600',
+      STARTUP_WAIT_MS: '8000',
+    });
+    try {
+      expect((await api(t.url, '/api/health')).body.database).toMatchObject({ driver: 'mongodb', active: 'mongodb', degraded: false });
+    } finally {
+      await t.close();
+      await proxy.stop();
+    }
+  }, 30_000);
 });

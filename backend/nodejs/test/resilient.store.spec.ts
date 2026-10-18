@@ -123,6 +123,21 @@ describe('ResilientStore', () => {
     await store.close();
   });
 
+  it('also copies what it reads, so a match that another server created is in the file when it is needed', async () => {
+    const other = new ResilientStore(main, new JsonFileStore(join(dir, 'other.json')), { configured: 'mongodb' });
+    await other.init();
+    await other.insert('matches', { id: 'theirs', label: 'made on the other server' } as Item);
+    await other.insert('players', { id: 'they', label: 'signed in there' } as Item);
+    const store = await open();
+    expect(await store.get<Item>('matches', 'theirs')).toMatchObject({ label: 'made on the other server' });
+    expect((await store.find<Item>('players')).map((p) => p.id)).toContain('they');
+    main.down = true;
+    expect(await store.get<Item>('matches', 'theirs')).toMatchObject({ label: 'made on the other server' });
+    expect(await store.get<Item>('players', 'they')).toMatchObject({ label: 'signed in there' });
+    await store.close();
+    await other.close();
+  });
+
   it('switches to the file when the main database fails during the run, finishes the call there and stays', async () => {
     const store = await open();
     await store.insert('matches', { id: 'm', label: 'before' } as Item);

@@ -1,6 +1,7 @@
 import { Global, Logger, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '../config/configuration.js';
+import { withinWindow } from '../common/startup-wait.js';
 import { PlayerStatsService } from '../players/player-stats.service.js';
 import { PlayersModule } from '../players/players.module.js';
 import { EventBus } from './event-bus.js';
@@ -25,7 +26,7 @@ import { RabbitMqEventBus } from './rabbitmq-event-bus.js';
         if (!url) return local;
         const bus = new RabbitMqEventBus(url, queue, local, timeoutMs);
         try {
-          await bus.connect();
+          await withinWindow(() => bus.connect(), config.get('startupWaitMs', { infer: true }));
           return bus;
         } catch (err) {
           // The server must work alone: without the broker, events stay in this process until the next restart.
