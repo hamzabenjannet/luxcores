@@ -1,0 +1,7 @@
+# Prompt: Decide the Loose Points, Then M7, With Five Test and Interface Changes
+
+Date: 2026-10-19. Author: Hamza BEN JANNET. Sent after M6 was committed. The questions I asked and his answers are recorded in GDD 8.4 (item rules), in GDD 3.7 (entropy rate) and in the M7 section of `docs/HANDOVER.md`.
+
+> lets decice on every lose point or something still needs my aprooval now, propose the best option and ask me a question about the subject for each point that you deam that it is not clear or undescided. then we move to the M7, and lower the test ticks to only 5000 to shorten the test runs. add an input at the start to define the entropy rate, make the resollution at maximum and responsive by thhe resizing of the window, ask a question when not sure or for more info.
+
+His answers, as I read them: the inventory stays a count per item, a second Haste or Sluggish replaces the first, the enemy must not see an inventory, creep deaths from any cause roll a drop, Energy Grab ends with its hero, Energy Boost raises the maximum HP, and a stun blocks item use. The test limit covers the soak, the bot tools and the tests. The entropy rate is set by the host and shown to the other player. Resolution applies to both clients, at the full pixel ratio on a desktop and capped at 2 on a phone. M7 covers interpolation and instancing (web), camera follow, the end-of-match stats and calmer creep labels.

@@ -57,7 +57,7 @@ To play against the server from a browser, open `http://localhost:3000/?server=&
 | `EVENT_LOG_DIR`, `EVENT_LOG_FLUSH_MS`, `EVENT_LOG_KEEP_FINISHED` | `events` next to the JSON database, `100`, `false` | Where the file copy of the match logs lives, how often logs are written, and whether a finished match keeps its log everywhere (see Match Log and Resume) |
 | `EVENT_LOG_RETENTION_DAYS` | `14` | Days a finished match keeps its events in MongoDB. `0` deletes them when the match ends |
 | `CHECKPOINT_EVERY_TICKS` | `400` | Ticks between two checkpoints of a running match, a multiple of 20. `0` turns them off |
-| `MATCH_MAX_TICKS` | `match.stalemateTicks` in `data/balance.json` (10000) | An undecided match ends as a draw after this many ticks (about 8 minutes at 20 Hz). Set it higher for long test runs |
+| `MATCH_MAX_TICKS` | `match.stalemateTicks` in `data/balance.json` (10000) | An undecided match ends as a draw after this many ticks (about 8 minutes at 20 Hz). Set it higher for long test runs. The repo's own tests and tools stop at 5000 ticks |
 | `SNAPSHOT_EVERY_TICKS` | `2` | Ticks between snapshots (10 per second) |
 
 ## Architecture
@@ -126,7 +126,7 @@ All routes live under `/api`. A route needs `Authorization: Bearer <token>` unle
 | `POST /auth/recover` | public | Exchange a recovery code for a token, a new device secret and a new code |
 | `GET /players`, `GET /players/leaderboard` | token | List profiles, top players by wins |
 | `GET /players/me`, `PATCH /players/me`, `GET /players/:id` | token | Profiles |
-| `POST /matches`, `GET /matches`, `GET /matches/:id` | token | Open and browse lobbies |
+| `POST /matches`, `GET /matches`, `GET /matches/:id` | token | Open and browse lobbies. The body of `POST /matches` may set `entropyPctPerMinute` (0 to 100, percent of max HP per minute; the default of `data/balance.json` when absent), which the match record, the lobby, the log and the replay keep |
 | `POST /matches/:id/join`, `POST /matches/:id/leave` | token | Lobby membership |
 | `POST /matches/:id/start`, `POST /matches/:id/stop` | token, host | Start or stop the simulation |
 | `GET /game/spec` | public | Spec version, data hash, tick rate and the socket reference |
@@ -164,7 +164,8 @@ const ack = await socket.emitWithAck('match:command', {
 | `match:updated` | server to room | The `MatchDto` after a lobby or status change |
 | `match:started` | server to room | `{ matchId, tickHz, players, map, snapshot }` |
 | `match:snapshot` | server to room | `{ matchId, tick, hash?, teams, entities, groups, orders, players }` (see Snapshot Entities) |
-| `match:ended` | server to room | `{ matchId, endedTick, result, replayId }` |
+| `match:private` | server to one team | `{ matchId, tick, team, players: [{ id, items, funnelLux }] }`: the inventories and the Energy Grab budget of the team's own players (GDD 8.4). The join ack carries the same under `private`, with the joiner's `team`. The room snapshot never holds them |
+| `match:ended` | server to room | `{ matchId, endedTick, result, replayId }`. `result.stats` holds the six end-of-match counters of each team in milli-lux (GDD 13.2) |
 
 An accepted ack means that the server queued the command for the next tick. The sim can still refuse it for a reason the ack cannot know, such as too little lux, a locked hero or a cooldown, and the next snapshot shows what happened. The hero commands are `pickHero` (`heroId`, `lux`, `barracksId`), `heroMove`, `heroAttack` and `castAbility` (`slot` 0 to 3, with `targetId` or `x` and `z`); GDD 7.7 describes each.
 

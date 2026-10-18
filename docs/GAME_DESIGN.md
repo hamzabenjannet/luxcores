@@ -2,11 +2,23 @@
 
 Working title. A strategy game mixing hero control (Dota 2), creep waypoint paths (Age of Empires) and base building with tower defense (Generals Zero Hour, Clash Royale). Everything in the world is made of light energy, measured in **lux**. Destroyed things dissolve into light; there is no blood or gore.
 
-Status: draft v0.9.9. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
+Status: draft v0.9.10. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
 
 ---
 
 ## 0. Changelog
+
+### v0.9.9 → v0.9.10
+
+Details that the client milestone (M7) and Hamza's requests of 2026-10-19 needed.
+
+| Area | Change |
+|---|---|
+| Entropy | A match may set its own rate, 0 to 100 percent of max HP per minute. The host picks it at the start, the other player sees it in the lobby, and 1 stays the default (section 3.7) |
+| Hidden information | The inventory and the Energy Grab budget of a player reach only that player's team (section 8.4) |
+| Creep labels | One label per creep group replaces one label per creep (section 13.1) |
+| End screen | Section 13.2 is built: duration, winner and the six counters of both teams, shown at the end of a match |
+| Item rules | Hamza confirmed section 8.4, and a stun now blocks item use |
 
 ### v0.9.8 → v0.9.9
 
@@ -247,6 +259,8 @@ Buildings only. Refund `60% × current lux value`, 3 s channel, cancel by tappin
 ### 3.7 Entropy
 
 Buildings, creeps and heroes lose 1% of max HP per minute *(default)*. The Core is exempt. HP is removed once per second, and 60 seconds remove exactly 1% of max HP.
+
+A match may set its own rate from 0 (no entropy) to 100 percent of max HP per minute. The host picks it when it creates the match, and the lobby shows it to the other player. A match that sets no rate uses the default of `data/balance.json`. The rate is part of the match: its replay, its log and a resume after a restart all keep it.
 
 ### 3.8 Number logic
 
@@ -607,6 +621,7 @@ XP and levels, DMZ reduced-HP building, "+0.5 per 100 lux", account levels, netw
 - Readability on a phone screen matters more than detail: silhouettes must tell hero, creep, tower and collector apart at the default zoom.
 - **No HP bars and no glow-as-health.** A small number beside each unit and building shows its lux count (section 3.2); the Core shows its HP, which is its lux. Glow is decoration and carries no information.
 - Destruction: entities dissolve into particles of their team color.
+- **Creep groups.** A group of creeps shows one label at its center, with the number of creeps and their lux together (`Creeps x5 50`), because thirty single labels crowd a phone screen. Heroes, buildings, items and loot keep their own labels.
 
 ## 13.2 End-of-match screen
 
@@ -622,6 +637,8 @@ Per team, and per player in team modes:
 | Lux lost to entropy | Passive decay |
 
 Plus match duration and winner.
+
+Each counter is a whole number of lux, kept in milli-lux in the sim. Lux collected counts the output of the collectors before the pending pool settles it. Lux drained counts the lux value of the HP that an enemy lost to damage of the team, abilities included, after any shield. Lux funneled counts what Energy Grab moved, and that lux also counts as drained. Entropy and the meltdown are no damage of a team, so they add nothing to drained. Lux lost to entropy counts the entropy of the team's own units and buildings. The screen shows both sides in a 1v1 match, the player's own side first. The counters travel only in the result of the match, so nobody sees the enemy's totals while it runs.
 
 ## 14. Open questions
 

@@ -42,3 +42,5 @@ The live status of the repo stays in `docs/HANDOVER.md`. This folder keeps the h
 | `handover-2026-10-18-m5.md` | Handover | State after M5: heroes in the sim, bot, server and both clients |
 | `2026-10-18-m6-items.md` | Prompt | The deselect-after-placing change, the request to resolve GDD 7.7, and the go-ahead for M6 |
 | `handover-2026-10-18-m6.md` | Handover | State after M6: items in the sim, server and both clients |
+| `2026-10-19-decisions-and-m7.md` | Prompt | The request to decide the loose points, then M7, the 5 000 tick limit, an entropy input and a resizing window |
+| `handover-2026-10-19-m7.md` | Handover | State after the decisions, the entropy option, the resolution change and M7 |

@@ -17,11 +17,11 @@ Milestones M1 (map generation), M2 (economy), M3 (combat and physics) and M4 (cr
 | Economy and tower upgrades (M2/M3) | Done: collectors, day/night, income buffer, spending, placement, recycling, entropy, meltdown, victory and tower upgrades |
 | Tick pipeline (`step.js`) | Economy, production (barracks queues), behavior (towers, creep targeting and steering, routes), movement and collisions, combat (towers, heroes, creeps) and stun timers, recycle, entropy, meltdown, cleanup, victory and visibility run, with the hero lifecycle (picks, rotation lock, death cooldown) and the effects system (shields, ability cooldowns); the item systems remain for M6 |
 | Commands (`commands.js`) | Build, upgrade, recycle, cancelRecycle, orderCreeps, cancelQueue, setBarracksPath, setGroupPath, mergeGroups, splitGroup, heroAttack, heroMove, pickHero and castAbility use authoritative handlers; the item commands (`orderItem`, `useItem`, `pickUp`) remain for M6 |
-| Hash (`hash.js`) | Canonical layout documented in the file header; all gameplay state, including projectiles, upgrades, entropy remainder, creep groups, barracks queues and waypoints, hero types, shields, ability cooldowns, item fields, loot bag contents and each player's rotation lock, pick cooldown, Energy Grab budget and inventory, is hashed; `state.map` stays derived and excluded by owner decision |
+| Hash (`hash.js`) | Canonical layout documented in the file header; all gameplay state, including projectiles, upgrades, entropy remainder, creep groups, barracks queues and waypoints, hero types, shields, ability cooldowns, item fields, loot bag contents, each player's rotation lock, pick cooldown, Energy Grab budget and inventory, and each team's end-of-match counters, is hashed; `state.map` stays derived and excluded by owner decision |
 | Replay (`replay.js`) | Record and playback done, mismatch detection tested; the golden replay `replays/golden/seed-1234567.json` (2 400 ticks) plays back in `test/golden.test.js` |
 | Headless runner | `npm run headless`: 12 000 ticks in about 15 ms with empty systems; a third argument saves the run as a replay |
 | Purity guard | `test/sim-boundary.test.js` blocks bare imports, Math.random, wall clock, approximated Math, `**`, DOM, timers, key iteration |
-| Web client | Plays only through the server: a start menu (bot, bots to watch, two humans), a lobby card, a build palette (a placement frees the selection), a selection panel (tower upgrades, recycle), hero picks, an item shop and an item bar, a hero bar with the four abilities and a result banner. It draws the map, every entity with its name and lux count, tower attack types, aim lines and projectiles, picks tiles by ray-casting, and pans by drag. It never steps the sim |
+| Web client | Plays only through the server: a start menu (bot, bots to watch, two humans), a lobby card, a build palette (a placement frees the selection), a selection panel (tower upgrades, recycle), hero picks, an item shop and an item bar, a hero bar with the four abilities and a Follow button, an end-of-match table and a result banner. The canvas fills the window at the full pixel ratio on a desktop. Creeps, shots and blockers are instanced and positions are interpolated. It draws the map, every entity with its name and lux count, tower attack types, aim lines and projectiles, picks tiles by ray-casting, and pans by drag. It never steps the sim |
 | Backend (`backend/nodejs/`) | NestJS 12 multiplayer server: guest auth with JWT guards, players, lobbies, a server-authoritative match runner at 20 Hz, Socket.IO `/game` namespace, replays with server-side verify, static routes for the game files, Swagger at `/api/docs`, JSON file database with MongoDB and PostgreSQL adapters, RabbitMQ events with an in-process fallback. See `backend/nodejs/README.md` |
 | Bots | `src/bot/bot.js` follows the GDD 12.1 rotation (collector, barracks, tower, creep group of 5) and upgrades towers; the server runs it for a `vsBot` or `botVsBot` lobby, and its commands go into the replay. It also fields heroes (GDD 12.1): the roster in order, half of the Core's lux, walking the lane and attacking what it meets, with no abilities. `node tools/run-bots.js --soak 100` plays 100 seeds twice and compares the hashes. Golden replays `bots-seed-777` (1 200 ticks), `bots-seed-3-victory` (tick 3201, team 1 wins) and `bots-seed-4-stalemate` (no winner, ends at the 10 000-tick limit) pin bot matches, and `heroes-seed-515151` pins a scripted match of two human heroes (`node tools/record-hero-golden.js`). A match nobody has won ends as a draw at `match.stalemateTicks` (10 000); `MATCH_MAX_TICKS` raises it for the server and the tools |
 | Match log and resume | Every running match has a write-ahead log (`backend/nodejs/src/matchlog`): seed, every command, a hash every 20 ticks and a checkpoint every 400. The log goes to a Redis Stream, MongoDB or files, whichever works. The server rebuilds running matches from it at start-up, after a crash, a graceful stop (`MATCH_ON_SHUTDOWN`) or a change of the rules. Clients rejoin by themselves and continue their command count (`nextSeq`). See `backend/nodejs/README.md`, Match Log and Resume |
@@ -30,9 +30,9 @@ Milestones M1 (map generation), M2 (economy), M3 (combat and physics) and M4 (cr
 | Entity labels | Every entity and map marker shows its name and, for entities, its lux count under it (`render/labels.js`) |
 | Project memory (`docs/prompts/`) | Tracked in git: prompt history, handovers, progress and knowledge notes; see its README |
 | Prose gate | `tools/check_style.py` labels hits `deny` or `ask`, supports `--register informal`, reads `.js` files through their comments and checks the whole repo with `npm run lint:prose:all`; `test/prose.test.js` fails `npm test` on any `deny` hit |
-| Godot project (`vone/`) | Godot 4.6, GL Compatibility renderer, a thin client at M6 (see Client Alignment below): spec check, server data, build, upgrade, recycle, creep orders, queue, groups, merge, split, paths, hero picks and abilities, hero orders, items, combat visuals, bot and spectator modes |
+| Godot project (`vone/`) | Godot 4.6, GL Compatibility renderer, a thin client at M7 (see Client Alignment below): spec check, server data, build, upgrade, recycle, creep orders, queue, groups, merge, split, paths, hero picks and abilities, hero orders, items, combat visuals, bot and spectator modes |
 | Cross-runtime check | `determinism.html` plays the sim inside Chromium. The idle hash at tick 120 (`be35e5ef`, seed 1234567) and the bot hash at tick 1 200 (`d480339c`, seed 777, with creeps, heroes, A* and collisions) equal the Node values |
-| Latest validation (2026-10-18, M6) | `npm test`: 217 passed; `node tools/run-bots.js --soak 100`: 100 seeds of 10 000 ticks, twice each, identical hashes, no crash (648 s); backend `npm test`: 93 passed and 42 skipped without services; backend `npm run test:e2e`: 77 passed and 13 skipped without services (the MongoDB, Redis, RabbitMQ and PostgreSQL tests were not rerun, because M6 touched none of them); root `npm run test:e2e`: 12 of 13 passed in the full run, with Godot parity 135 checks, Godot live 81 checks and the item browser test. The creeps browser test failed once while the soak and the backend tests loaded the machine, and passed alone on rerun |
+| Latest validation (2026-10-19, M7) | `npm test`: 239 passed; `node tools/run-bots.js --soak 100`: 100 seeds of 5 000 ticks, twice each, identical hashes, no crash (356 s); backend `npm test`: 93 passed and 42 skipped without services; backend `npm run test:e2e`: 81 passed and 13 skipped without services, including a restart of a match with a 60 percent entropy rate (the MongoDB, Redis, RabbitMQ and PostgreSQL tests were not rerun, so the Redis relay change for team-only events is tested by reading, not by a run `[UNVERIFIED]`); root `npm run test:e2e`: 15 of 15 passed, with Godot parity 141 checks, Godot live 90 checks, and Chromium equal to Node (idle `4cfd40ef` at tick 120, bots `5c36e7a1` at tick 1 200). The creeps browser test was flaky and now sends its orders in one call, which passed six runs in a row |
 
 ### Browser and Godot Tests
 
@@ -87,7 +87,7 @@ Done on 2026-10-18. `src/sim/creeps.js` holds the commands, the lane route and t
 Open for the owners:
 
 - **Bots win fast.** With the spacing and collision fixes, seeds 1 to 10 of `tools/run-bots.js` end between tick 1 644 and 9 493, and seeds 1, 4 and 10 hit the 10 000-tick stalemate limit. Most wins are creep rushes. The bot builds no defense against groups. I read this as a balance question for the creep and tower numbers in `data/`, not a bug. `[UNVERIFIED]` as a design judgment.
-- **Creep labels.** Each creep shows its own name and lux count, which crowds the screen at 30 creeps. M7 plans instancing and a calmer layout.
+- **Creep labels.** Done in M7: one label per creep group (GDD 13.1).
 
 ## M5 (Heroes)
 
@@ -107,7 +107,7 @@ Open for the owners:
 - **Hama's review of GDD 7.7.** Hamza confirmed the rotation lock at spawn, instant abilities, the Area ability hitting buildings and the Lumen Core, and no casting while stunned. Hama has not yet judged how the abilities feel.
 - **Bots and balance.** Of seeds 1 to 6 of `tools/run-bots.js`, five now end in a victory between ticks 1 034 and 5 413, and seed 4 reaches the 10 000-tick limit. The bot spends half of its Core on a hero as soon as it has a barracks, so its first tower comes at tick 248 in seed 11 and later than before `[UNVERIFIED]`: I did not measure the older timing. Whether that is the balance the owners want is their judgment.
 - **Hero roster.** Names and kits are still the placeholders in `data/heroes.json` until Hama designs them.
-- **No camera follow, no portrait, no hold-to-aim.** M7 and M8 own those, as the milestone table says.
+- **No portrait lock and no hold-to-aim.** M8 owns those, as the milestone table says. Camera follow came in M7.
 
 ## M6 (Items)
 
@@ -128,13 +128,37 @@ Open for the owners:
 - **Hama's review of the item interface.** The item bar sits under the ability buttons and the shop row sits in the barracks panel. The ground items are small gems with a name label; Hama may want models and a different place for the quick slots.
 - **No bot items.** GDD 12.1 gives the bot no items. A bot hero picks up what it walks over, which changes the balance a little `[UNVERIFIED]`.
 
-## Next Milestone: M7
+## M7 (Client Rendering and the Owners' Requests of 2026-10-19)
+
+Done on 2026-10-19. Hamza asked for four things before M7, and all of them are built:
+
+- **Decisions.** Every loose point of GDD 8.4 went to Hamza as a question and is recorded there. A stun blocks item use. The inventory and the Energy Grab budget reach only a player's own team: the room snapshot no longer carries them, and a `match:private` event goes to the team's own sockets (Socket.IO room per team, plain WebSocket by connection, and the Redis relay carries the team).
+- **Test ticks.** `tools/run-bots.js`, `run-headless.js` and the tests stop at 5 000 ticks. The game's own limit stays 10 000. The stalemate golden replay plays 5 000 ticks.
+- **Entropy rate.** `normalizeData(raw, options)` takes a per-match rate, the replay header, the `started` log event and the match record keep it, and the server applies it to the sim, the bots, a resume and the replay verify. The host types it in the start menu (web and Godot, URL parameter `entropy`), and the lobby shows it to the guest.
+- **Resolution.** The web canvas fills the window and follows every resize, at the full device pixel ratio on a desktop and at most 2 on a touch device (`render/pixel-ratio.js`). The Godot window opens maximized and stretches with the window, and the width and height inputs are gone.
+
+M7 itself, with the four parts that Hamza chose:
+
+- **End-of-match stats.** Six counters per team in the sim (GDD 13.2), hashed, in the result of the match (`result.stats`). Both clients show a table with the duration and both sides (`matchSummary` and `match_summary`, parity cases).
+- **Group labels.** One label per creep group in both clients (`creepGroupLabels`, `creep_group_labels`).
+- **Instancing and interpolation (web).** Creeps (one mesh per team), shots and blockers are instanced meshes, so a destroyed blocker now leaves the screen. Positions are blended two ticks behind the newest snapshot (`render/interpolation.js`, six unit tests).
+- **Camera follow.** A Follow button in the hero bar of both clients eases the camera toward the hero, and dragging the map turns it off.
+
+Checks: `test/stats.test.js` (7), `test/options.test.js` (3), `test/interpolation.test.js` (6), `test/pixel-ratio.test.js` (3), the socket tests for private state and entropy, and browser tests for the canvas size, the instances and the follow button.
+
+Open for the owners:
+
+- **Hama's review of the new interface:** the Follow button, the group label text (`Creeps x5 50`), the end-of-match table and the entropy field in the menu.
+- **60 creeps at 60 fps on a mid-range Android phone is not measured** `[UNVERIFIED]`. The browser test counts instances and checks the blend, but the container renders in software, so it says nothing about frame rate.
+- **Godot has no interpolation or instancing.** Hamza chose the web client for those, so the Godot arenas still rebuild their nodes on every snapshot.
+- **A stalemate at 5 000 ticks is a test setting.** A real match still ends at 10 000.
+
+## Next Milestone: M8
 
 From `docs/TECH_ARCHITECTURE.md` section 14. Each milestone ends with tests green and a short demo on a phone. Both clients grow together: put every UI decision in `src/client/ui/controls.js` and `vone/scripts/game_logic.gd`, and add parity cases.
 
 | # | Scope | Done when |
 |---|---|---|
-| M7 | Client: instanced rendering, interpolation, camera follow on the selected hero, a small lux count beside every unit and building (no glow-as-health, GDD 13.1), end-of-match stats | 60 creeps on screen at 60 fps on a mid-range Android phone |
 | M8 | Touch controls per GDD 11: tap select, hero move and attack, ability targeting, path mode with Undo/Go/Cancel and Reuse last path, build ghost, quick slots, pinch zoom | A full match playable by touch |
 | M9 | Bot per GDD 12.1, hot-seat toggle, bot-vs-bot soak over 1 000 seeds in Node | Soak finishes with no crash and no non-integer values |
 | M10 | Cross-browser determinism page (Chrome Android, iOS Safari vs Node), performance pass | Identical final hashes on all three |
@@ -190,7 +214,7 @@ A nuclear plant earns 5 lux/s. It earns 600 lux in the 120 s before it melts dow
 - The backend sends full snapshots with every entity and uses guest sign-in only. A running match lives in the memory of one process, and the match log lets another start rebuild it. `backend/nodejs/README.md` lists these limits with the planned fixes.
 - The web controls are the M8 minimum: tap to build, select and order, with no build ghost, path mode, quick slots or pinch zoom. Buildings and units draw as placeholder boxes. A tap on the map takes effect at once, so a stray tap builds.
 - The camera stays north-up for team 1, so its base appears at the top.
-- Projectiles live one tick and snapshots arrive every second tick, so clients draw an aim line from `targetId` to show each shot. Delta snapshots and interpolation belong to M7.
+- Projectiles live one tick and snapshots arrive every second tick, so clients draw an aim line from `targetId` to show each shot. Interpolation came in M7. Delta snapshots stay deferred (Hamza).
 - The client compares the sim spec version with the server but not the data hash, because `crypto.subtle` needs a secure context and a LAN address is not one.
 
 ## Server Architecture

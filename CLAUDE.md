@@ -20,7 +20,7 @@ When code disagrees with the GDD, the GDD wins. To change a rule, edit the GDD i
 npm test                             # node --test, nothing to install; includes the prose gate
 npm run test:e2e                     # Chromium tests against the Playwright container and a throwaway backend (needs the backend built)
 npm run headless -- <seed> <ticks>   # headless sim run, prints the final hash
-node tools/run-bots.js [seed] [ticks]  # two bots play headless; `--soak <seeds>` runs the bot soak
+node tools/run-bots.js [seed] [ticks]  # two bots play headless (5000 ticks by default); `--soak <seeds>` runs the bot soak
 npm run lint:prose -- <file>         # writing-rules checker on one file (see Writing Rules)
 npm run lint:prose:all               # every Markdown file and every JavaScript comment
 npm run gen:sin                      # regenerate src/sim/sin-table.js (rarely)

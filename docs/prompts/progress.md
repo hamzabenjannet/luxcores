@@ -2,6 +2,12 @@
 
 Newest first. One entry per milestone or notable change. Add the commit hash and the verification, not just the intent.
 
+## 2026-10-19: Decisions, Entropy Option, Resolution and M7
+
+- `f8e4f9a` item decisions and a stun blocking item use. `4921edc` inventories in a team-only event. `74c69b7` the 5 000 tick limit. `3a21775` and `fd48154` the entropy option. `96c1217` resolution. `0b1d111`, `ea05cd4` and `2dd0e33` the end-of-match counters and screen. `c884eda` group labels, instancing, interpolation and web camera follow. The Godot follow button and the docs follow.
+- Verified: see `docs/HANDOVER.md`, validation row. The soak at 5 000 ticks passes in 356 s.
+- Next: Hama reviews the interface, and the owners choose M8 or the deferred snapshot work. See `handover-2026-10-19-m7.md`.
+
 ## 2026-10-18: M6 (Items) and the Placement Deselect
 
 - `d259013` a placed building frees the palette. `cdb715d` GDD 7.7 confirmed. `035d8a0` the item sim and the golden replays. `c12bddb` the snapshot fields. `618979e` the web and Godot clients, with GDD 8.4.
