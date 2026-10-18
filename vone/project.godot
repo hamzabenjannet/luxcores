@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="vone"
-run/main_scene="res://scenes/main.tscn"
+run/main_scene="uid://b0rkikfaqj55p"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
 
@@ -22,6 +22,10 @@ window/size/viewport_height=1200
 window/size/window_width_override=600
 window/size/window_height_override=1200
 window/stretch/mode="canvas_items"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/poibuilder/plugin.cfg")
 
 [physics]
 

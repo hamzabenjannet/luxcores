@@ -4,7 +4,7 @@ The Godot client renders match maps and server snapshots. Match simulation, comm
 
 ## Run
 
-Open `vone/project.godot` in Godot 4.6 and run the project. The window defaults to 600 × 1200. Set its width and height on the connection screen, then select Apply Size. Godot scales the interface uniformly as the window changes size and keeps its portrait proportions. Start the backend from the repo root with `npm run serve:install` (once) and `npm run serve`, then enter its HTTP address on the connection screen. Use `http://127.0.0.1:3000` when both processes run on one computer. A phone must use the computer's LAN address.
+Open `vone/project.godot` in Godot 4.6 and run the project. It starts in `scenes/main3d.tscn`, with the configure/connect menu over the 3D arena. The window defaults to 600 × 1200. Set its width and height on the connection screen, then select Apply Size. Godot scales the interface uniformly as the window changes size and keeps its portrait proportions. Start the backend from the repo root with `npm run serve:install` (once) and `npm run serve`, then enter its HTTP address on the connection screen. Use `http://127.0.0.1:3000` when both processes run on one computer. A phone must use the computer's LAN address.
 
 Choose a player name and a mode:
 
@@ -18,8 +18,10 @@ A Match ID in the field joins that match instead. An ID of a bot match joins as 
 
 - Checks the server's spec version against `GameLogic.SPEC_VERSION` and refuses a server on another spec.
 - Loads `data/buildings.json`, `data/balance.json` and `data/mapgen.json` from the server, so costs, upgrades and the build zone never live in two places.
-- Draws the map, lanes, vents, item spawns and every entity with its name and lux count (GDD 13.1), like the web client.
-- Shows tower attack types (a colored cap), upgrade levels (`P2 S1`), stuns, recycle progress, aim lines from towers and heroes to their targets, and projectiles.
+- Draws the arena on the `Terrain` mesh, with colored team zones, lanes, vents, item spawns and every entity kind in 3D.
+- Shows every entity's name and lux count (GDD 13.1), tower attack types, upgrade levels (`P2 S1`), stuns, recycle progress, aim lines and projectiles.
+- Keeps server-driven game rules and controls. A tap on the 3D terrain uses `scripts/game_logic.gd` to build, select or send an order.
+- Pans the view by dragging and adds `+` and `−` zoom buttons to the arena overlay.
 - Builds all six buildings with a tower attack type, upgrades towers (power and shell), recycles and cancels a recycle.
 - Picks a hero at a barracks (M5): the panel lists the roster, greys out locked heroes and says why no pick is possible (a hero on the field, in production or the 5 second wait after a death), and offers 25%, 50%, 75% or the most the Core can spare as the lux to allocate. A hero bar then shows M R A S with each cost or cooldown: melee and shield cast at once, ranged and area wait for a tap. A shield draws as a cyan ring and a SHIELD tag.
 - Orders creeps from a barracks: 1 to 5 creeps, melee, ranged, area or mixed, with the queue listed and a cancel button per order (by order id).
@@ -39,6 +41,9 @@ Run these from the repo root. Each needs Godot 4.6 (`GODOT_BIN`, `godot` on the 
 ```bash
 # Pure game logic against the shared fixtures: 63 checks, no server needed.
 Godot --headless --path vone --script res://tests/run_tests.gd
+
+# Main 3D scene, entity rendering and camera controls, no server needed.
+Godot --headless --path vone --script res://tests/main3d_scene.gd
 
 # The real main scene against a running backend: 41 checks.
 Godot --headless --path vone --script res://tests/live_match.gd -- --server=http://127.0.0.1:3000
