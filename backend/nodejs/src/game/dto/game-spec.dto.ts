@@ -58,7 +58,12 @@ export class GameSpecDto {
   @ApiProperty({ example: 20 }) tickHz!: number;
   @ApiProperty({ example: 2, description: 'Ticks between snapshots' })
   snapshotEveryTicks!: number;
-  @ApiProperty({ example: 12000 }) matchMaxTicks!: number;
+  @ApiProperty({
+    example: 10000,
+    description:
+      'An undecided match ends as a draw at this tick (data/balance.json match.stalemateTicks, or MATCH_MAX_TICKS)',
+  })
+  matchMaxTicks!: number;
   @ApiProperty({
     type: 'object',
     additionalProperties: { type: 'number' },

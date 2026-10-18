@@ -4,6 +4,10 @@
 // Usage: node tools/run-bots.js [seed] [ticks] [replay-out.json]
 //        node tools/run-bots.js --soak [seeds] [ticks]
 //
+// A match that nobody has won ends at `ticks`, which defaults to match.stalemateTicks in
+// data/balance.json (10000). Set the MATCH_MAX_TICKS environment variable, as for the server,
+// or pass the tick count to run longer.
+//
 // With a third argument the match is saved as a replay (golden replays in
 // replays/golden/ only on purpose, see tools/run-headless.js). The soak mode
 // plays seeds 1 to N twice each. It fails on a crash, a non-integer value or
@@ -16,6 +20,7 @@ import { localWorldView } from '../src/shared/world-view.js';
 import { createBot } from '../src/bot/bot.js';
 
 const { config, dataHash } = loadData();
+const LIMIT = Number(process.env.MATCH_MAX_TICKS ?? config.balance.match.stalemateTicks);
 
 /**
  * @param {number} seed
@@ -50,7 +55,7 @@ function owned(state, team) {
 
 if (process.argv[2] === '--soak') {
   const seeds = Number(process.argv[3] ?? 100);
-  const ticks = Number(process.argv[4] ?? 6000);
+  const ticks = Number(process.argv[4] ?? LIMIT);
   const t0 = performance.now();
   for (let seed = 1; seed <= seeds; seed++) {
     const a = play(seed, ticks);
@@ -60,7 +65,7 @@ if (process.argv[2] === '--soak') {
   console.log(`soak ok: ${seeds} seeds x ${ticks} ticks, twice each, ${((performance.now() - t0) / 1000).toFixed(1)}s`);
 } else {
   const seed = Number(process.argv[2] ?? 1234567);
-  const ticks = Number(process.argv[3] ?? 6000);
+  const ticks = Number(process.argv[3] ?? LIMIT);
   const out = process.argv[4];
   const { state, hash, replay } = play(seed, ticks, Boolean(out));
   console.log(`seed=${seed} ticks=${state.tick} hash=${hash} outcome=${JSON.stringify(state.outcome)}`);

@@ -7,7 +7,7 @@ import { dist2, idiv, isqrt } from '../fixed.js';
 
 const CELL_SIZE = 2000;
 const HALF_TILE = 500;
-const OVERLAP_PASSES = 4;
+const OVERLAP_PASSES = 8;
 
 /**
  * @typedef {Object} Body
@@ -59,7 +59,10 @@ export function createGrid2DPhysics() {
         body.x += body.vx + body.ix;
         body.z += body.vz + body.iz;
       }
-      for (let pass = 0; pass < OVERLAP_PASSES; pass++) resolveOverlaps(bodies);
+      for (let pass = 0; pass < OVERLAP_PASSES; pass++) resolveOverlaps(bodies, false);
+      // Buildings and blockers win over units: a last pass pushes any unit that a neighbour shoved into a wall back out.
+      resolveOverlaps(bodies, true);
+      resolveOverlaps(bodies, true);
     },
     getPosition(id) {
       const body = getBody(bodies, id);
@@ -76,8 +79,11 @@ export function createGrid2DPhysics() {
   };
 }
 
-/** @param {Body[]} bodies */
-function resolveOverlaps(bodies) {
+/**
+ * @param {Body[]} bodies
+ * @param {boolean} staticsOnly resolve only circle against square pairs
+ */
+function resolveOverlaps(bodies, staticsOnly) {
   if (bodies.length === 0) return;
   let minX = bodies[0].x;
   let minZ = bodies[0].z;
@@ -110,7 +116,11 @@ function resolveOverlaps(bodies) {
     for (let z = Math.max(0, cz - 1); z <= Math.min(cellsHigh - 1, cz + 1); z++) {
       for (let x = Math.max(0, cx - 1); x <= Math.min(cellsWide - 1, cx + 1); x++) {
         for (const j of cells[z * cellsWide + x]) {
-          if (j <= i) continue;
+          if (j === i) continue;
+          // Two moving bodies meet once, from the lower index. A static body can have any index, and
+          // the moving one must always yield to it, so a unit never walks through an older building.
+          if (!bodies[j].isStatic && j < i) continue;
+          if (staticsOnly && bodies[j].shape !== 'square') continue;
           resolvePair(body, bodies[j]);
         }
       }
@@ -147,7 +157,7 @@ function resolvePair(a, b) {
   }
   const distance = coincident ? 0 : isqrt(distance2);
   const divisor = coincident ? 1 : distance;
-  const overlap = combinedRadius - distance;
+  const overlap = combinedRadius - distance + 1; // one extra unit, so integer rounding never leaves a sliver of overlap
   const moveA = a.isStatic ? 0 : b.isStatic ? overlap : idiv(overlap * b.mass, a.mass + b.mass);
   const moveB = b.isStatic ? 0 : overlap - moveA;
   if (moveA > 0) {

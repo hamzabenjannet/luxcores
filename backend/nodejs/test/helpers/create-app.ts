@@ -29,11 +29,11 @@ export interface TestApp {
  * overrides the defaults below; they apply before the config module reads them.
  */
 export async function createTestApp(
-  env: Record<string, string> = {},
+  env: Record<string, string | null> = {},
 ): Promise<TestApp> {
   const dir = await mkdtemp(join(tmpdir(), 'luxcores-backend-'));
   const dbPath = join(dir, 'db.json');
-  const settings: Record<string, string> = {
+  const settings: Record<string, string | null> = {
     NODE_ENV: 'test',
     JWT_SECRET: 'test-secret-with-enough-length',
     ADMIN_API_KEY: 'test-admin-key-with-enough-length',
@@ -46,7 +46,10 @@ export async function createTestApp(
     ...env,
   };
   const saved = new Map(Object.keys(settings).map((k) => [k, process.env[k]]));
-  Object.assign(process.env, settings);
+  for (const [key, value] of Object.entries(settings)) {
+    if (value === null) delete process.env[key]; // null leaves the variable unset, so the built-in default applies
+    else process.env[key] = value;
+  }
 
   // NestFactory, not Test.createTestingModule: ServeStaticModule needs the HTTP adapter
   // to exist while the providers are built, and the testing module creates it too late.

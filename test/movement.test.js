@@ -130,7 +130,7 @@ test('grid physics resolves circle collisions against units and static square bu
   const first = unitPhysics.getPosition(1);
   const second = unitPhysics.getPosition(2);
   assert.ok(Math.abs(first.x - second.x) >= 500);
-  assert.deepEqual(unitPhysics.queryRadius(1000, 1000, 0), [1, 2]);
+  assert.deepEqual(unitPhysics.queryRadius(1000, 1000, 10), [1, 2], 'a query with a little reach finds both bodies; the separation keeps one extra unit of slack');
 
   const buildingPhysics = createGrid2DPhysics();
   buildingPhysics.addBody(2, 1000, 1000, 250, 1, false);

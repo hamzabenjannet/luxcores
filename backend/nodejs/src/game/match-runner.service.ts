@@ -120,7 +120,8 @@ export class MatchRunnerService implements OnModuleDestroy {
     config: ConfigService<AppConfig, true>,
   ) {
     const game = config.get('game', { infer: true });
-    this.maxTicks = game.matchMaxTicks;
+    // MATCH_MAX_TICKS wins; without it the data file decides, so one number serves the server and the tools.
+    this.maxTicks = game.matchMaxTicks > 0 ? game.matchMaxTicks : this.sim.stalemateTicks;
     this.snapshotEvery = game.snapshotEveryTicks;
     this.tickMs = 1000 / this.sim.tickHz;
   }
@@ -135,6 +136,11 @@ export class MatchRunnerService implements OnModuleDestroy {
 
   onEnded(listener: (info: EndedInfo) => void): void {
     this.emitter.on('ended', listener);
+  }
+
+  /** The tick at which an undecided match ends as a draw. */
+  get matchMaxTicks(): number {
+    return this.maxTicks;
   }
 
   get runningMatchIds(): string[] {

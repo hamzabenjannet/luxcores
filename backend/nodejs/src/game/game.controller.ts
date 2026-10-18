@@ -13,6 +13,7 @@ import { Public } from '../common/decorators/public.decorator.js';
 import { ErrorResponseDto } from '../common/dto/error-response.dto.js';
 import { MAX_SEED, ParseSeedPipe } from '../common/pipes/parse-seed.pipe.js';
 import { SimService } from '../simulation/sim.service.js';
+import { MatchRunnerService } from './match-runner.service.js';
 import {
   GameSpecDto,
   type SocketDocDto,
@@ -111,6 +112,7 @@ const WEBSOCKET_DOC: WebSocketDocDto = {
 export class GameController {
   constructor(
     private readonly sim: SimService,
+    private readonly runner: MatchRunnerService,
     private readonly config: ConfigService<AppConfig, true>,
   ) {}
 
@@ -130,7 +132,7 @@ export class GameController {
       mapgenVersion: this.sim.mapgenVersion,
       tickHz: this.sim.tickHz,
       snapshotEveryTicks: game.snapshotEveryTicks,
-      matchMaxTicks: game.matchMaxTicks,
+      matchMaxTicks: this.runner.matchMaxTicks,
       kinds: this.sim.kinds,
       socket: SOCKET_DOC,
       webSocket: WEBSOCKET_DOC,

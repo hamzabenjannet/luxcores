@@ -2,15 +2,25 @@
 
 Working title. A strategy game mixing hero control (Dota 2), creep waypoint paths (Age of Empires) and base building with tower defense (Generals Zero Hour, Clash Royale). Everything in the world is made of light energy, measured in **lux**. Destroyed things dissolve into light; there is no blood or gore.
 
-Status: draft v0.9.6. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
+Status: draft v0.9.7. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
 
 ---
 
 ## 0. Changelog
 
+### v0.9.6 → v0.9.7
+
+| Area | Change |
+|---|---|
+| M4 rules | The owners approved section 9.3 on 2026-10-18 |
+| Unit spacing | Group members walk spread out: `unitSpacingMilliTiles` (500, a half tile) between neighbours' edges (section 7.3) |
+| Melee gap | A melee attacker stops `meleeGapMilliTiles` (250, a quarter tile) short of contact, which leaves room for weapons and animation (section 7.4) |
+| Collision | Units never overlap each other or a building, whatever the build order; an earlier version let units walk through older buildings (section 7.3) |
+| Stalemate | A match that nobody has won ends as a draw at `match.stalemateTicks` (10000), adjustable for long test runs (section 2) |
+
 ### v0.9.5 → v0.9.6
 
-Clarifications that the creep milestone (M4) needed. They are pending owner approval; section 9.3 states each one.
+Clarifications that the creep milestone (M4) needed. The owners approved them on 2026-10-18; section 9.3 states each one.
 
 | Area | Change |
 |---|---|
@@ -162,6 +172,8 @@ Single hero with a 5-hero rotation, funnel unit replaced by the Energy Grab item
 | Unlimited | A Lumen Core reaches 0 lux | The team whose Core survives |
 | Timed (10 min) | Core at 0, or timer reaches 10:00 | Core survivor; at the buzzer, the team with the higher **total lux value** |
 
+A match that nobody has won ends as a draw after 10000 ticks (about 8 minutes), so a stalemate cannot run forever. Tests and test servers raise the limit with the `MATCH_MAX_TICKS` setting.
+
 **Total lux value** = Core lux + lux value of every building, creep and hero the team owns. Items are not counted.
 
 Main mode: **1v1** (mobile). PC scope: up to **5v5**, one hero per player.
@@ -310,14 +322,17 @@ Shell HP equals upgrade cost × 10, consistent with the HP factor. Lux spent on 
 | Move speed | 3 tiles/s | 2 tiles/s |
 | Sight | 7 tiles | 6 tiles |
 | Circle collider radius | 0.25 tiles | 0.25 tiles |
+| Walking spacing in a group | 0.5 tile between edges (1 tile between centers) | same |
 
 Attack speed: `hits per second = attackSpeed / 100`. Minimum 20.
+
+Units never overlap each other or a building. A group walks in a grid whose neighbours keep the spacing above, and corners squeeze it to about three quarters of a tile. The numbers are `unitSpacingMilliTiles` and `meleeGapMilliTiles` in `data/balance.json`.
 
 ### 7.4 Attack types
 
 | Type | Damage multiplier per target | Reach | Proc |
 |---|---|---|---|
-| Melee | 100% | Contact | 15% chance to stun 0.5 s (units and buildings; a stunned tower stops attacking) |
+| Melee | 100% | Contact: a quarter tile of air between the bodies | 15% chance to stun 0.5 s (units and buildings; a stunned tower stops attacking) |
 | Ranged | 60% | 4 tiles | Projectile hits after 1 tick; 15% chance to knock back 0.5 tiles |
 | Area | 35% | 3 tiles, splash radius 1.2 tiles | none |
 
@@ -415,7 +430,7 @@ Haste turns 1 hit/s into 4 hits/s. If playtests show it's dominant, +100 (2 hits
 - Auto-engage enemy creeps, heroes and buildings within sight.
 - After the target dies, resume toward the current waypoint.
 
-### 9.3 Rules as Implemented (M4, pending owner approval)
+### 9.3 Rules as Implemented (M4, approved 2026-10-18)
 
 The sections above left these details open. `src/sim/creeps.js` and the behavior system follow them.
 

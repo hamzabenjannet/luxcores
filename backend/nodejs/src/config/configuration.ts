@@ -68,7 +68,8 @@ export default (): AppConfig => {
     },
     game: {
       repoRoot: resolve(env.LUXCORES_ROOT ?? '../..'),
-      matchMaxTicks: int(env.MATCH_MAX_TICKS, 12000),
+      // 0 means the default in data/balance.json (match.stalemateTicks); MATCH_MAX_TICKS overrides it.
+      matchMaxTicks: int(env.MATCH_MAX_TICKS, 0),
       snapshotEveryTicks: int(env.SNAPSHOT_EVERY_TICKS, 2),
     },
     static: { publicDir: resolve(env.PUBLIC_DIR ?? 'public') },

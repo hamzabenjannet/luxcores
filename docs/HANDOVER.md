@@ -4,7 +4,7 @@ Status as of 2026-10-18, after M4 (creeps) in the sim, the bot and both clients.
 
 ## Where things stand
 
-Design is settled for M1 to M3: `docs/GAME_DESIGN.md` v0.9.5 records the owner-approved tower attack-type rule, unit collider radius and one-tick ranged projectile delay. v0.9.6 adds the M4 rules (section 9.3) that still await owner approval. Every number marked *(default)* lives in `data/`.
+Design is settled for M1 to M3: `docs/GAME_DESIGN.md` v0.9.5 records the owner-approved tower attack-type rule, unit collider radius and one-tick ranged projectile delay. v0.9.7 records the M4 rules (section 9.3, approved on 2026-10-18), unit spacing, the melee gap and the stalemate limit. Every number marked *(default)* lives in `data/`.
 
 Milestones M1 (map generation), M2 (economy), M3 (combat and physics) and M4 (creeps) are done:
 
@@ -23,14 +23,14 @@ Milestones M1 (map generation), M2 (economy), M3 (combat and physics) and M4 (cr
 | Purity guard | `test/sim-boundary.test.js` blocks bare imports, Math.random, wall clock, approximated Math, `**`, DOM, timers, key iteration |
 | Web client | Plays only through the server: a start menu (bot, bots to watch, two humans), a lobby card, a build palette, a selection panel (tower upgrades, recycle), hero orders and a result banner. It draws the map, every entity with its name and lux count, tower attack types, aim lines and projectiles, picks tiles by ray-casting, and pans by drag. It never steps the sim |
 | Backend (`backend/nodejs/`) | NestJS 12 multiplayer server: guest auth with JWT guards, players, lobbies, a server-authoritative match runner at 20 Hz, Socket.IO `/game` namespace, replays with server-side verify, static routes for the game files, Swagger at `/api/docs`, JSON file database with MongoDB and PostgreSQL adapters, RabbitMQ events with an in-process fallback. See `backend/nodejs/README.md` |
-| Bots | `src/bot/bot.js` follows the GDD 12.1 rotation (collector, barracks, tower, creep group of 5) and upgrades towers; the server runs it for a `vsBot` or `botVsBot` lobby, and its commands go into the replay. Heroes arrive with M5. `node tools/run-bots.js --soak 100` plays 100 seeds twice and compares the hashes. Golden replays `bots-seed-777` (5 000 ticks) and `bots-seed-3-victory` (a creep rush that ends the match at tick 2142) pin bot matches |
+| Bots | `src/bot/bot.js` follows the GDD 12.1 rotation (collector, barracks, tower, creep group of 5) and upgrades towers; the server runs it for a `vsBot` or `botVsBot` lobby, and its commands go into the replay. Heroes arrive with M5. `node tools/run-bots.js --soak 100` plays 100 seeds twice and compares the hashes. Golden replays `bots-seed-777` (5 000 ticks), `bots-seed-3-victory` (a creep rush, tick 3699) and `bots-seed-4-stalemate` (no winner, ends at the 10 000-tick limit) pin bot matches. A match nobody has won ends as a draw at `match.stalemateTicks` (10 000); `MATCH_MAX_TICKS` raises it for the server and the tools |
 | Spectators | Any signed-in player may join the room of a `botVsBot` match and receives every event, with no commands. A human match stays closed to strangers |
 | Entity labels | Every entity and map marker shows its name and, for entities, its lux count under it (`render/labels.js`) |
 | Project memory (`docs/prompts/`) | Tracked in git: prompt history, handovers, progress and knowledge notes; see its README |
 | Prose gate | `tools/check_style.py` labels hits `deny` or `ask`, supports `--register informal`, reads `.js` files through their comments and checks the whole repo with `npm run lint:prose:all`; `test/prose.test.js` fails `npm test` on any `deny` hit |
 | Godot project (`vone/`) | Godot 4.6, GL Compatibility renderer, a thin client at M4 (see Client Alignment below): spec check, server data, build, upgrade, recycle, creep orders, queue, groups, merge, split, paths, hero orders, combat visuals, bot and spectator modes |
-| Cross-runtime check | `determinism.html` plays the sim inside Chromium. The idle hash at tick 120 (`173b2eec`, seed 1234567) and the bot hash at tick 5000 (`8c7b7b76`, seed 777, with creeps, A* and collisions) equal the Node values |
-| M4 validation (2026-10-18) | `npm test`: 153 passed; `npm run headless`: 12 000 ticks, hash `d548a8fa`; backend `npm test`: 38 passed and 12 skipped without services; backend `npm run test:e2e`: 59 passed and 4 skipped; root `npm run test:e2e`: 10 passed (Chromium, Godot parity 63 checks, Godot live 41 checks); `node tools/run-bots.js --soak 30 6000`: ok |
+| Cross-runtime check | `determinism.html` plays the sim inside Chromium. The idle hash at tick 120 (`173b2eec`, seed 1234567) and the bot hash at tick 5000 (`72bb2207`, seed 777, with creeps, A* and collisions) equal the Node values |
+| Latest validation (2026-10-18) | `npm test`: 159 passed; `npm run headless`: 12 000 ticks, hash `d548a8fa`; backend `npm test`: 38 passed and 12 skipped without services; backend `npm run test:e2e`: 61 passed and 4 skipped; root `npm run test:e2e`: 10 passed (Chromium, Godot parity 63 checks, Godot live 41 checks); Chromium and Node agree on the bot hash at tick 5000 (`72bb2207`) |
 
 ### Browser and Godot Tests
 
@@ -74,7 +74,7 @@ Creep production, groups and pathing were M4 and are done (see M4 below). Hero p
 
 ## M4 (Creeps)
 
-Done on 2026-10-18. `src/sim/creeps.js` holds the commands, the lane route and the spawn rule, `systems/production.js` the queues, and `systems/behavior.js` the creep targeting and steering. GDD 9.3 states the rules that the GDD left open, and they await owner approval. The acceptance checks are tests in `test/creeps.test.js`:
+Done on 2026-10-18. `src/sim/creeps.js` holds the commands, the lane route and the spawn rule, `systems/production.js` the queues, and `systems/behavior.js` the creep targeting and steering. GDD 9.3 states the rules that the GDD left open, and the owners approved them on 2026-10-18. The acceptance checks are tests in `test/creeps.test.js`:
 
 - Queue skip-ahead: with 26 creeps alive, a group of 5 is held, a later group of 3 spawns first, and the held group spawns the tick after four creeps die.
 - A split of 7 gives 4 and 3, the odd creep stays, and a group of 1 does not split.
@@ -84,8 +84,7 @@ Done on 2026-10-18. `src/sim/creeps.js` holds the commands, the lane route and t
 
 Open for the owners:
 
-- **Bots win fast.** Two bots end most matches by creep rush, between about 1 500 and 3 300 ticks (seeds 1 to 10 of `tools/run-bots.js`; seeds 4 and 10 reach 8 000 without a winner). The bot spends on towers and creeps together and builds no defense against groups. I read this as a balance question for the creep and tower numbers in `data/`, not a bug. `[UNVERIFIED]` as a design judgment.
-- **Held groups after a recycle.** Recycling a barracks refunds its queued orders and loses its held groups. The GDD says only that a destroyed barracks loses them.
+- **Bots win fast.** With the spacing and collision fixes, seeds 1 to 10 of `tools/run-bots.js` end between tick 1 644 and 9 493, and seeds 1, 4 and 10 hit the 10 000-tick stalemate limit. Most wins are creep rushes. The bot builds no defense against groups. I read this as a balance question for the creep and tower numbers in `data/`, not a bug. `[UNVERIFIED]` as a design judgment.
 - **Creep labels.** Each creep shows its own name and lux count, which crowds the screen at 30 creeps. M7 plans instancing and a calmer layout.
 
 ## Next Milestone: M5

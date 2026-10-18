@@ -71,9 +71,12 @@
     "targetOverrideTicks": 60
   },
   "physics": {
-    "unitRadiusMilliTiles": 250
+    "unitRadiusMilliTiles": 250,
+    "unitSpacingMilliTiles": 500,
+    "meleeGapMilliTiles": 250
   },
   "match": {
-    "timedModeTicks": 12000
+    "timedModeTicks": 12000,
+    "stalemateTicks": 10000
   }
 }

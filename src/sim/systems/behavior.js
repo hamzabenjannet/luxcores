@@ -9,14 +9,13 @@
 import { dist2, idiv, UNITS_PER_TILE } from '../fixed.js';
 import { findEntity, KIND } from '../state.js';
 import { findById, membersOf } from '../creeps.js';
+import { formationOffset, meleeReach } from '../reach.js';
 import { buildBlockedGrid, findPath } from '../physics/pathfinding.js';
 
 /** Routes computed per tick, shared by heroes and creeps. The rest wait a tick, in id order. */
 const REPATH_BUDGET = 8;
 /** A group moves on to its next waypoint when its leader is this close, in units. */
 const WAYPOINT_REACH = 1500;
-/** A melee attack reaches this far between centers (CONTACT_RANGE in combat.js). */
-const CONTACT_RANGE = UNITS_PER_TILE;
 const TYPE_NAMES = ['', 'melee', 'ranged', 'area'];
 
 /**
@@ -116,7 +115,7 @@ function steerCreeps(state, getBlocked) {
     // Inside reach: stand still and let the combat system swing.
     const rules = attackTypes[TYPE_NAMES[creep.attack] || 'melee'];
     if (target) {
-      const reach = rules.reachTiles > 0 ? rules.reachTiles : CONTACT_RANGE;
+      const reach = rules.reachTiles > 0 ? rules.reachTiles : meleeReach(state, target);
       if (dist2(creep.x, creep.z, target.x, target.z) <= reach * reach) {
         creep.movePath = [];
         creep.movePathIndex = 0;
@@ -137,7 +136,19 @@ function steerCreeps(state, getBlocked) {
     } else {
       const group = findById(state.groups, creep.groupId);
       if (group && group.wpIndex < group.waypoints.length) {
-        goalUnits = { x: group.waypoints[group.wpIndex][0], z: group.waypoints[group.wpIndex][1] };
+        // Each member aims at its own slot around the waypoint, so a group walks spread out and not in a clump.
+        let slot = 0;
+        let count = 0;
+        for (const other of state.entities) {
+          if (other.kind !== KIND.CREEP || other.groupId !== creep.groupId) continue;
+          if (other.id < creep.id) slot++;
+          count++;
+        }
+        const offset = formationOffset(state, slot, count);
+        goalUnits = {
+          x: group.waypoints[group.wpIndex][0] + offset.dx,
+          z: group.waypoints[group.wpIndex][1] + (creep.team === 0 ? offset.dz : -offset.dz),
+        };
       } else {
         const core = state.entities.find((e) => e.kind === KIND.CORE && e.team !== creep.team);
         if (core) {

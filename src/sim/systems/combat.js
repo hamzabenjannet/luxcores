@@ -9,10 +9,10 @@ import { chancePct } from '../rng.js';
 import { dist2, idiv, isqrt, MILLI, TICK_HZ, UNITS_PER_TILE } from '../fixed.js';
 import { damageCore } from '../lux.js';
 import { KIND, findEntity, spawnEntity } from '../state.js';
+import { meleeReach } from '../reach.js';
 import { towerCanTarget } from './behavior.js';
 
 const TYPE_NAMES = ['', 'melee', 'ranged', 'area'];
-const CONTACT_RANGE = UNITS_PER_TILE;
 const PROC_CODE = Object.freeze({ none: 0, stun: 1, knockback: 2 });
 
 /**
@@ -96,7 +96,7 @@ export function run(state) {
     if (!target || !type || !(isHero ? isHeroTarget(attacker, target) : isEnemy(attacker, target))) continue;
     const stats = isHero ? balance.hero : balance.creep;
     const rules = balance.attackTypes[type];
-    const range = rules.reachTiles > 0 ? rules.reachTiles : CONTACT_RANGE;
+    const range = rules.reachTiles > 0 ? rules.reachTiles : meleeReach(state, target);
     if (dist2(attacker.x, attacker.z, target.x, target.z) > range * range) continue;
     attacker.attackCooldown = attackInterval(stats.attackSpeed) - 1;
     const damage = idiv(stats.damagePerHit * MILLI * rules.damagePct, 100);

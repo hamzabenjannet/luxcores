@@ -87,6 +87,11 @@ export class SimService {
     return this.api.TICK_HZ;
   }
 
+  /** Ticks after which an undecided match ends as a draw (`match.stalemateTicks` in data/balance.json). */
+  get stalemateTicks(): number {
+    return (this.config.balance as { match: { stalemateTicks: number } }).match.stalemateTicks;
+  }
+
   /** Entity kind codes by name (`CORE`, `SOLAR`, `TOWER`, `HERO` ...), so clients need not hard-code them. */
   get kinds(): Record<string, number> {
     return { ...this.api.KIND };

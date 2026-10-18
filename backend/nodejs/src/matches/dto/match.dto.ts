@@ -65,7 +65,7 @@ export class MatchDto {
   @ApiPropertyOptional({ format: 'date-time' }) startedAt?: string;
   @ApiPropertyOptional({ format: 'date-time' }) finishedAt?: string;
   @ApiPropertyOptional({
-    example: 12000,
+    example: 2142,
     description: 'Tick at which the match ended',
   })
   endedTick?: number;
