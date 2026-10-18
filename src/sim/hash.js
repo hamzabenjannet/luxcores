@@ -11,7 +11,8 @@
  *      the pending pool: its entry count, then per entry, in settle order,
  *      settleTick and amount, each i64 LE
  *   5. entity count              i64 LE
- *      per entity, in ascending id order: ENTITY_HASH_FIELDS, each i64 LE
+ *      per entity, in ascending id order: ENTITY_HASH_FIELDS, each i64 LE,
+ *      then the path length and each path tile index as i64 LE
  *
  * Every hashed value must be a safe integer; anything else throws, which
  * catches floats leaking into sim state.
@@ -78,6 +79,8 @@ export function hashState(state) {
     if (e.id <= prevId) throw new Error(`entities not sorted by id at ${e.id}`);
     prevId = e.id;
     for (const f of ENTITY_HASH_FIELDS) put(/** @type {any} */ (e)[f], `entity ${e.id}.${f}`);
+    put(e.movePath.length, `entity ${e.id}.movePath.length`);
+    for (let i = 0; i < e.movePath.length; i++) put(e.movePath[i], `entity ${e.id}.movePath[${i}]`);
   }
 
   return h.digest();

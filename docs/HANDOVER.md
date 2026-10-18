@@ -1,12 +1,12 @@
 # Handover
 
-Status as of 2026-10-16. Read `CLAUDE.md` first for the working rules.
+Status as of 2026-10-18. Read `CLAUDE.md` first for the working rules.
 
 ## Where things stand
 
-Design is settled for the MVP: `docs/GAME_DESIGN.md` v0.9.1 has no blocking open questions. Every number marked *(default)* is a playtest tuning point and already lives in `data/`.
+Design is settled for M1 to M3: `docs/GAME_DESIGN.md` v0.9.5 records the owner-approved tower attack-type rule, unit collider radius and one-tick ranged projectile delay. Every number marked *(default)* lives in `data/`.
 
-Milestones M1 (map generation) and M2 (economy) are done. The scaffold, M1 and M2 are green:
+Milestones M1 (map generation), M2 (economy) and M3 (combat and physics) are done:
 
 | Area | State |
 |---|---|
@@ -14,10 +14,10 @@ Milestones M1 (map generation) and M2 (economy) are done. The scaffold, M1 and M
 | RNG (`rng.js`) | Done, tested against the reference Mulberry32 |
 | State, config normalization | Done (`state.js`, `config.js`); `createState` spawns the 2 Cores and 12 blockers; teams are minimal |
 | Map generation (`mapgen.js`) | Done (M1): 3 lanes, 2 vents, 6 blockers and 2 item spawns per team from the seed, point-mirrored, flood-fill checked; stored on `state.map` |
-| Economy (M2) | Done: collectors (solar, wind, geothermal, nuclear), day/night, the 2 s income buffer, the spend rule, placement, recycle channel, entropy, meltdown and victory, through the `build`, `recycle` and `cancelRecycle` commands. Two golden replays cover it |
-| Tick pipeline (`step.js`) | Economy, recycle, entropy, meltdown, cleanup and victory run; behavior, movement, combat, effects, production, hero and items are stubs |
-| Commands (`commands.js`) | Schema, ordering and dispatch done; `HANDLERS` is empty, so every command is dropped |
-| Hash (`hash.js`) | Done; canonical layout documented in the file header; `state.map` is not hashed |
+| Economy and tower upgrades (M2/M3) | Done: collectors, day/night, income buffer, spending, placement, recycling, entropy, meltdown, victory and tower upgrades |
+| Tick pipeline (`step.js`) | Economy, behavior, hero movement and collisions, combat and stun timers, entropy, meltdown, cleanup, victory and visibility run; production, hero lifecycle and item systems remain for later milestones |
+| Commands (`commands.js`) | Build, upgrade, recycle, cancelRecycle, heroAttack and heroMove use authoritative handlers; production, ability and item commands remain for later milestones |
+| Hash (`hash.js`) | Canonical layout documented in the file header; all gameplay state, including projectiles, upgrades and entropy remainder, is hashed; `state.map` stays derived and excluded by owner decision |
 | Replay (`replay.js`) | Record and playback done, mismatch detection tested; the golden replay `replays/golden/seed-1234567.json` (2 400 ticks) plays back in `test/golden.test.js` |
 | Headless runner | `npm run headless`: 12 000 ticks in about 15 ms with empty systems; a third argument saves the run as a replay |
 | Purity guard | `test/sim-boundary.test.js` blocks bare imports, Math.random, wall clock, approximated Math, `**`, DOM, timers, key iteration |
@@ -27,33 +27,34 @@ Milestones M1 (map generation) and M2 (economy) are done. The scaffold, M1 and M
 | Entity labels | Every entity and map marker shows its name and, for entities, its lux count under it (`render/labels.js`) |
 | Project memory (`docs/prompts/`) | Tracked in git: prompt history, handovers, progress and knowledge notes; see its README |
 | Prose gate | `tools/check_style.py` labels hits `deny` or `ask`, supports `--register informal`, reads `.js` files through their comments and checks the whole repo with `npm run lint:prose:all`; `test/prose.test.js` fails `npm test` on any `deny` hit |
-| Godot project (`vone/`) | Created by the owners (Godot 4.6, GL Compatibility renderer, for web, mobile and PC); other agents build the game there from this MVP's logic and playtest feedback |
-| Cross-runtime check | `npm run test:e2e` loads the page in Chromium inside the Playwright container and compares its tick-120 hash with Node's; seed 1234567 gives `a3dbf89c` in both |
-
-`npm test`: 72 pass, 0 todo. `npm run headless` prints hash `1790fc9a` for seed 1234567 at 12 000 ticks.
+| Godot project (`vone/`) | Godot 4.6, GL Compatibility renderer; the map supports zoom and drag panning for touch selection |
+| Cross-runtime check | `npm run test:e2e` loads the page in Chromium inside the Playwright container and compares its tick-120 hash with Node's; seed 1234567 gives `4cefa32c` in both |
+| M1 to M3 closure validation | `npm test`: 95 passed; `npm run headless`: 12 000 ticks, hash `16bfd4ba`; `npm run test:e2e`: 3 passed |
 
 ### Browser Smoke Test
 
 Start `npm run serve`, then run `npm run test:e2e`. The test reads `PW_WS_ENDPOINT` (default `ws://localhost:42944/`) and `APP_URL` (default `http://host.docker.internal:5173/`, the host as the container sees it). It skips with exit code 0 when nothing listens on the endpoint, fails on any console or page error, and saves `test/e2e/__screenshots__/smoke.png`. The script uses the glob `test/e2e/*.e2e.js` because Node 22.15.1 reads `node --test test/e2e/` as a module path and fails.
 
-## Next Task: M3 (Combat and Physics)
+## M1 to M3 Closure
 
-Implement combat per `docs/GAME_DESIGN.md` sections 5.0, 7.4 and 3.5. Add the physics and pathfinding of `docs/TECH_ARCHITECTURE.md` section 6: `grid2d.js`, and A* with a fixed neighbor order, throttled to 8 repaths per tick. The scope also holds towers with the targeting override, attack types and procs, simultaneous damage, and the visibility bitsets. Systems to fill in: `behavior.js`, `movement.js`, `combat.js`, `effects.js` and `visibility.js`. The grid code goes in `physics/`.
+M1 map generation and M2 economy had no remaining implementation work. The owner confirmed that the existing nuclear meltdown balance stays unchanged. `state.map` stays outside the hash by owner decision; the map generator has seeded count, spacing, symmetry, connectivity and retry tests.
 
-M2 leaves these starting points:
+M3 now includes tower targeting and upgrades, hero basic attacks, one-tick ranged projectiles, attack procs, simultaneous damage, deterministic A*, hero movement, collision physics, knockback and visibility. Tower Power bonuses use the upgrade data, shell upgrades raise current and maximum HP, and future entropy uses the upgraded maximum. Stun timers expire on units and buildings.
 
-- `tower` entities exist (built through the `build` command) with `attack` set to 1 (melee), 2 (ranged) or 3 (area) from `ATTACK_CODE` in `buildings.js`. They do nothing yet.
-- Damage resolution (pipeline step 10) is a stub. The meltdown already deals damage directly (`systems/meltdown.js`) and the cleanup system removes entities at 0 HP, so combat can reuse both. A Core takes damage through `damageCore` in `lux.js`, which keeps its `hp` equal to its lux.
-- Nothing can empty a Core yet. A nuclear plant earns about 600 lux before a meltdown and deals 400, so combat is the first rule that can end a match by a Core's death. The victory system is ready for it.
-- Creeps and heroes do not exist yet, but entropy and the meltdown already treat their kinds (`KIND.CREEP`, `KIND.HERO`) like buildings.
+M3 acceptance checks:
 
-Acceptance:
+- Two units die when they land lethal attacks on the same tick.
+- Towers switch to a hero that attacks a friendly hero and hold that target for 3 s after its last attack.
+- Ranged attacks damage their target one tick after launch; projectiles fizzle if the target dies in flight.
+- Tower upgrades enforce owner, cost and level limits; Power adds 25% per level, and Power spending contributes to recycling refunds.
+- A shell upgrade changes future entropy without charging the increased maximum HP for time before the upgrade.
+- Hero movement rejects blocked or out-of-map destinations and follows deterministic routes around blockers.
+- Physics resolves unit-to-unit and unit-to-building collisions; a 0.5-tile knockback lands exactly over five linearly weighted ticks.
+- Visibility updates every five ticks. Gameplay rules run through commands and `step()`.
 
-- Two units that kill each other on one tick both die.
-- A tower switches to an enemy hero that attacks a friendly hero, for 3 s after the last such attack.
-- Unit tests drive each rule through commands and `step()`. Golden replays are re-recorded in the same commit (`SPEC_VERSION` stays at 0.10.0, `CLAUDE.md` rule 8).
+The remaining production, group movement and pathing work belongs to M4. Hero production and abilities belong to M5; item effects belong to M6.
 
-## Milestones After M3
+## Next Milestone: M4
 
 From `docs/TECH_ARCHITECTURE.md` section 14. Each milestone ends with tests green and a short demo on a phone.
 
@@ -92,7 +93,7 @@ Two came from the owners during the session; the rest fill gaps in the docs.
 - **Core `maxHp` (owners):** starts at the starting lux and rises with the Core's HP (GDD 3.1). `createState` sets only the start; the M2 economy applies the rise. The glow-as-health formula is gone, so nothing divides by `maxHp` for display.
 - **Entity ids:** Cores are 1 and 2, then team 0's 6 blockers (3 to 8) in placement order, then team 1's mirrored 6 (9 to 14). Cores and blockers have `owner` -1.
 - **Replay metadata:** `mapgen.version` stays 1, because no earlier generator existed. Bump it when a data or code change alters layouts for the same seed.
-- **Spec and GDD (owners):** `SPEC_VERSION` is 0.10.0 and stays there while the MVP is built, so a rule change re-records the golden replay instead of bumping the version. The GDD is v0.9.1, with a changelog row for the black hole removal, lane width, connectivity and spacing rules.
+- **Spec and GDD (owners):** `SPEC_VERSION` is 0.10.0 and stays there while the MVP is built, so a rule change re-records the golden replay instead of bumping the version. The GDD is v0.9.3, with changelog rows for the black hole removal, lane width, connectivity, spacing, and tower attack types.
 
 ## Interpretations Made in M2
 
@@ -109,9 +110,9 @@ The GDD was silent or ambiguous on these. Its v0.9.2 changelog records the ones 
 - **Hash layout:** entities carry four more fields (`born`, `roll`, `recycle`, `attack`) and the pending pool is hashed entry by entry. `SPEC_VERSION` stays at 0.10.0, so both golden replays were re-recorded.
 - **Not in M2:** the timed-mode buzzer needs a mode setting in `createState` and in the replay format. The server still ends a match at `MATCH_MAX_TICKS` as a draw.
 
-## Open Design Question
+## Accepted M2 Balance Decision
 
-A nuclear plant earns 5 lux/s. It earns 600 lux in the 120 s before it melts down and deals only 400 damage. A meltdown therefore cannot kill a Core by itself, even next to it. If the meltdown should be a real risk to the owner, the damage or the timer needs tuning (`data/balance.json`, `meltdown`).
+A nuclear plant earns 5 lux/s. It earns 600 lux in the 120 s before it melts down and deals 400 damage. The owner chose to preserve these values; changing the Core threat requires a later balance decision.
 
 ## Known Gaps
 
@@ -127,7 +128,7 @@ Decided on 2026-10-16 (`docs/prompts/2026-10-16-backend-decisions.md`). Do them 
 1. Done: a plain WebSocket gateway at `/ws` (`backend/nodejs/README.md`, Plain WebSocket Protocol).
 2. Done: a device guest with a recovery code, plus rate limits on the sign-in routes.
 3. A Dockerfile and a compose service with Postgres and RabbitMQ, plus a reverse proxy with TLS, for one VPS.
-4. Done: M2 (economy). The next game task is M3 above.
+4. Done: M2 (economy). The next game task is M4 above.
 
 ## More Gaps
 - Backend adapter and event tests for MongoDB, PostgreSQL and RabbitMQ pass on real containers (Postgres 16, MongoDB 7.0, RabbitMQ 3.13 on a local Docker Desktop) but skip in a plain `npm test`. No CI runs them yet.

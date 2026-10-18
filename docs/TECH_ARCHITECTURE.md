@@ -164,7 +164,7 @@ Interface unchanged from v0.1:
  */
 ```
 
-`grid2d.js`: ground-plane simulation, circle colliders for heroes and creeps, tile squares for buildings and blockers, spatial hash with 2-tile cells, 4 overlap-resolution iterations, impulses with linear decay. Projectiles are sim entities with an arrival tick; arcs exist only in rendering.
+`grid2d.js`: ground-plane simulation, 0.25-tile circle colliders for heroes and creeps, 1-tile squares for buildings and blockers, spatial hash with 2-tile cells, 4 overlap-resolution iterations, and knockback impulses that decay linearly over 5 ticks. Ranged basic attacks create projectile entities with a one-tick arrival delay; arcs exist only in rendering.
 
 ### 6.1 Pathfinding
 
@@ -326,7 +326,7 @@ Server sim language: phase 2 uses the Rust core; Node loads it as WASM or as a n
 |---|---|
 | M1 | Sim skeleton: state, fixed-point, RNG, tick loop, hash, replay, Node runner |
 | M2 | Economy: Core, collectors, buffer, day/night, entropy, meltdown, placement, blockers, recycling |
-| M3 | Combat and physics: attack types, procs, projectiles, A*, towers |
+| M3 | Combat and physics: attack types, procs, one-tick projectiles, A*, towers and tower upgrades |
 | M4 | Creeps: barracks queues, groups, default and custom paths |
 | M5 | Hero: roster, rotation lock, HP allocation, respawn, 4 abilities from data |
 | M6 | Items: inventory, barracks shop, drops, map spawns, the 4 starter items |

@@ -172,6 +172,55 @@ test('placement: barracks and the other buildings follow the same rules', () => 
   assert.equal(build(s, 0, undefined, freeTile(s, 0, 1)).length, 0);
 });
 
+test('tower upgrades spend lux, add damage or HP, and enforce ownership and level caps', () => {
+  const s = newMatch();
+  const [tower] = build(s, 0, 'tower', freeTile(s, 0), { attack: 'melee' });
+  const command = (playerId, track) => send(s, playerId, { t: 'upgrade', towerId: tower.id, track });
+  const startingLux = luxOf(s, 0);
+
+  command(1, 'power');
+  command(0, 'invalid');
+  assert.equal(tower.powerLevel, 0);
+  assert.equal(luxOf(s, 0), startingLux);
+
+  command(0, 'power');
+  assert.equal(tower.powerLevel, 1);
+  assert.equal(tower.powerLux, 10 * MILLI);
+  assert.equal(luxOf(s, 0), startingLux - 10 * MILLI);
+  for (const expectedLevel of [2, 3]) {
+    command(0, 'power');
+    assert.equal(tower.powerLevel, expectedLevel);
+  }
+  const afterMaxLevel = luxOf(s, 0);
+  command(0, 'power');
+  assert.equal(tower.powerLevel, 3);
+  assert.equal(luxOf(s, 0), afterMaxLevel);
+  command(0, 'shell');
+  assert.equal(tower.shellLevel, 0, 'the Core must keep at least 1 lux after an upgrade');
+  assert.equal(luxOf(s, 0), afterMaxLevel);
+
+  const shellState = newMatch();
+  const [shellTower] = build(shellState, 0, 'tower', freeTile(shellState, 0), { attack: 'melee' });
+  const hp = shellTower.hp;
+  send(shellState, 0, { t: 'upgrade', towerId: shellTower.id, track: 'shell' });
+  assert.equal(shellTower.shellLevel, 1);
+  assert.equal(shellTower.hp, hp + 100 * MILLI);
+  assert.equal(shellTower.maxHp, hp + 100 * MILLI);
+});
+
+test('tower power upgrades count toward recycle refund', () => {
+  const s = newMatch();
+  const [tower] = build(s, 0, 'tower', freeTile(s, 0), { attack: 'melee' });
+  send(s, 0, { t: 'upgrade', towerId: tower.id, track: 'power' });
+  const bankBeforeRecycle = luxOf(s, 0);
+  send(s, 0, { t: 'recycle', buildingId: tower.id });
+  run(s, 60);
+  assert.equal(s.entities.some((entity) => entity.id === tower.id), false);
+  const hpAtCompletion = 200 * MILLI - 100;
+  const refund = Math.trunc((Math.trunc(hpAtCompletion / 10) + tower.powerLux) * 60 / 100);
+  assert.equal(luxOf(s, 0), bankBeforeRecycle + refund);
+});
+
 test('day and night: solar earns 2 lux per second by day and nothing at night', () => {
   const s = newMatch();
   build(s, 0, 'solar', freeTile(s, 0)); // tick 0, dawn
@@ -289,6 +338,16 @@ test('entropy: it scales with max HP', () => {
   const [nuclear] = build(s, 0, 'nuclear', freeTile(s, 0));
   while (s.tick < 1201) step(s, []);
   assert.equal(nuclear.hp, 800 * MILLI - 8000, '1% of 800 HP is 8 HP per minute');
+});
+
+test('entropy after a shell upgrade uses the new maximum HP only for later seconds', () => {
+  const s = newMatch();
+  const [tower] = build(s, 0, 'tower', freeTile(s, 0), { attack: 'melee' });
+  run(s, 600);
+  send(s, 0, { t: 'upgrade', towerId: tower.id, track: 'shell' });
+  run(s, 600);
+  assert.equal(tower.maxHp, 300 * MILLI);
+  assert.equal(tower.hp, 300 * MILLI - 2500);
 });
 
 test('entropy: a building with no HP left dissolves', () => {

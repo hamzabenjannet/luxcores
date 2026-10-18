@@ -4,6 +4,18 @@ const BackendClientScript = preload("res://scripts/backend_client.gd")
 const ArenaScript = preload("res://scripts/arena.gd")
 const TEAM_BLUE := Color("#3d8bff")
 const TEAM_RED := Color("#ff4d4d")
+const TOWER_ATTACK_TYPES := ["melee", "ranged", "area"]
+const BUILDING_COSTS_LUX := {
+	"solar": 20,
+	"wind": 20,
+	"geothermal": 40,
+	"nuclear": 80,
+	"barracks": 40,
+	"tower": 20,
+}
+const DEFAULT_WINDOW_WIDTH := 600
+const DEFAULT_WINDOW_HEIGHT := 1200
+const PREVIOUS_DEFAULT_WINDOW_HEIGHT := 800
 const MIN_WINDOW_WIDTH := 320
 const MIN_WINDOW_HEIGHT := 480
 const MAX_WINDOW_WIDTH := 3840
@@ -21,9 +33,14 @@ var _seed_input: SpinBox
 var _bot_toggle: CheckButton
 var _status_label: Label
 var _match_label: Label
+var _match_id_input: LineEdit
+var _phase_label: Label
 var _world_label: Label
+var _build_description: Label
 var _start_button: Button
 var _recycle_button: Button
+var _tower_attack_row: HBoxContainer
+var _tower_attack_selector: OptionButton
 var _arena: Control
 var _building := ""
 var _selected_entity := -1
@@ -61,16 +78,16 @@ func _build_interface() -> void:
 	pages.add_theme_constant_override("separation", 16)
 	margin.add_child(pages)
 
-	var title := Label.new()
-	title.text = "LUXCORES"
-	title.add_theme_font_size_override("font_size", 44)
-	title.add_theme_color_override("font_color", Color("#eaf4ff"))
-	pages.add_child(title)
-	var tagline := Label.new()
-	tagline.text = "A light-powered strategy game"
-	tagline.add_theme_font_size_override("font_size", 20)
-	tagline.add_theme_color_override("font_color", Color("#9eafc4"))
-	pages.add_child(tagline)
+	#var title := Label.new()
+	#title.text = "LUXCORES"
+	#title.add_theme_font_size_override("font_size", 44)
+	#title.add_theme_color_override("font_color", Color("#eaf4ff"))
+	#pages.add_child(title)
+	#var tagline := Label.new()
+	#tagline.text = "A light-powered strategy game"
+	#tagline.add_theme_font_size_override("font_size", 20)
+	#tagline.add_theme_color_override("font_color", Color("#9eafc4"))
+	#pages.add_child(tagline)
 
 	_home = VBoxContainer.new()
 	_home.add_theme_constant_override("separation", 14)
@@ -80,9 +97,9 @@ func _build_interface() -> void:
 	_add_field(_home, "Match ID (blank to host)", "", "_match_input")
 	var resolution_row := HBoxContainer.new()
 	resolution_row.add_theme_constant_override("separation", 10)
-	_resolution_width = _make_resolution_input("W ", 600, MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH)
+	_resolution_width = _make_resolution_input("W ", DEFAULT_WINDOW_WIDTH, MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH)
 	resolution_row.add_child(_resolution_width)
-	_resolution_height = _make_resolution_input("H ", 800, MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT)
+	_resolution_height = _make_resolution_input("H ", DEFAULT_WINDOW_HEIGHT, MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT)
 	resolution_row.add_child(_resolution_height)
 	var apply_resolution_button := _make_button("APPLY SIZE", Color("#34577a"))
 	apply_resolution_button.custom_minimum_size.x = 120
@@ -119,16 +136,45 @@ func _build_interface() -> void:
 	_game.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_game.add_theme_constant_override("separation", 10)
 	pages.add_child(_game)
+	var match_id_row := HBoxContainer.new()
+	match_id_row.add_theme_constant_override("separation", 10)
+	var match_id_label := Label.new()
+	match_id_label.text = "Match ID"
+	match_id_label.add_theme_font_size_override("font_size", 18)
+	match_id_row.add_child(match_id_label)
+	_match_id_input = LineEdit.new()
+	_match_id_input.editable = false
+	_match_id_input.select_all_on_focus = true
+	_match_id_input.custom_minimum_size.y = 48
+	_match_id_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	match_id_row.add_child(_match_id_input)
+	var copy_match_id_button := _make_button("COPY", Color("#34577a"))
+	copy_match_id_button.custom_minimum_size = Vector2(100, 48)
+	copy_match_id_button.pressed.connect(_copy_match_id)
+	match_id_row.add_child(copy_match_id_button)
+	_game.add_child(match_id_row)
 	_match_label = Label.new()
 	_match_label.text = ""
 	_match_label.add_theme_font_size_override("font_size", 18)
 	_match_label.add_theme_color_override("font_color", Color("#d5e5fa"))
 	_game.add_child(_match_label)
+	_phase_label = Label.new()
+	_phase_label.text = "LOBBY"
+	_phase_label.add_theme_font_size_override("font_size", 22)
+	_phase_label.add_theme_color_override("font_color", Color("#f0bd68"))
+	_game.add_child(_phase_label)
 	_world_label = Label.new()
 	_world_label.text = "Waiting for match snapshot"
 	_world_label.add_theme_font_size_override("font_size", 20)
 	_world_label.add_theme_color_override("font_color", Color("#b7c7da"))
 	_game.add_child(_world_label)
+
+	_build_description = Label.new()
+	_build_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_build_description.add_theme_font_size_override("font_size", 17)
+	_build_description.add_theme_color_override("font_color", Color("#d5e5fa"))
+	_build_description.visible = false
+	_game.add_child(_build_description)
 
 	_arena = ArenaScript.new()
 	_arena.custom_minimum_size = Vector2.ZERO
@@ -150,6 +196,21 @@ func _build_interface() -> void:
 		var build_button := _make_button(item[0], Color("#24364a"))
 		build_button.pressed.connect(_select_building.bind(item[1]))
 		action_grid.add_child(build_button)
+
+	_tower_attack_row = HBoxContainer.new()
+	_tower_attack_row.add_theme_constant_override("separation", 10)
+	var tower_attack_label := Label.new()
+	tower_attack_label.text = "Tower attack"
+	tower_attack_label.add_theme_font_size_override("font_size", 18)
+	_tower_attack_row.add_child(tower_attack_label)
+	_tower_attack_selector = OptionButton.new()
+	for attack_type in TOWER_ATTACK_TYPES:
+		_tower_attack_selector.add_item(attack_type.capitalize())
+	_tower_attack_selector.select(0)
+	_tower_attack_selector.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_tower_attack_row.add_child(_tower_attack_selector)
+	_tower_attack_row.visible = false
+	_game.add_child(_tower_attack_row)
 
 	var game_controls := HBoxContainer.new()
 	_start_button = _make_button("START MATCH", Color("#287557"))
@@ -230,12 +291,14 @@ func _restore_window_size() -> void:
 		_set_status("Could not load saved window size (error %d)." % error)
 		return
 	var screen_size := DisplayServer.screen_get_size()
-	var width := int(settings.get_value("display", "width", mini(600, screen_size.x)))
-	var height := int(settings.get_value("display", "height", mini(800, screen_size.y)))
+	var width := int(settings.get_value("display", "width", mini(DEFAULT_WINDOW_WIDTH, screen_size.x)))
+	var height := int(settings.get_value("display", "height", mini(DEFAULT_WINDOW_HEIGHT, screen_size.y)))
+	if width == DEFAULT_WINDOW_WIDTH and height == PREVIOUS_DEFAULT_WINDOW_HEIGHT:
+		height = mini(DEFAULT_WINDOW_HEIGHT, screen_size.y)
 	if not _is_valid_window_size(width, height):
-		_set_status("Saved window size is outside the supported range. Using 600 × 800.")
-		width = mini(600, screen_size.x)
-		height = mini(800, screen_size.y)
+		_set_status("Saved window size is outside the supported range. Using 600 × 1200.")
+		width = mini(DEFAULT_WINDOW_WIDTH, screen_size.x)
+		height = mini(DEFAULT_WINDOW_HEIGHT, screen_size.y)
 	_resolution_width.value = width
 	_resolution_height.value = height
 	get_window().size = Vector2i(width, height)
@@ -303,9 +366,14 @@ func _connect_match() -> void:
 	_current_map = result.map
 	_viewer_team = int(result.viewer_team)
 	_is_host = bool(result.get("is_host", false))
+	_match_id_input.text = _backend.get_match_id()
 	_home.visible = false
 	_game.visible = true
-	_match_label.text = "Match " + _backend.get_match_id() + "  •  Team " + str(_viewer_team)
+	_match_label.text = "Team %d  •  %s" % [
+		_viewer_team,
+		"HOST" if _is_host else "PLAYER",
+	]
+	_set_match_phase(str(_current_match.get("status", "lobby")))
 	_update_start_button()
 	_recycle_button.disabled = true
 	if _is_host:
@@ -317,22 +385,52 @@ func _connect_match() -> void:
 
 func _start_match() -> void:
 	_start_button.disabled = true
+	_current_match["status"] = "starting"
+	_set_match_phase("starting")
 	_set_status("Starting the authoritative server match...")
 	var result: Dictionary = await _backend.start_match()
 	if not result.ok:
-		_start_button.disabled = false
+		_restore_match_after_start_failure()
 		_set_status(str(result.get("message", "The match could not start.")))
 		return
-	_current_match = result.data
-	_start_button.visible = false
-	_set_status("Match started. Waiting for the first snapshot...")
+	var match_data: Variant = result.get("data", {})
+	if not match_data is Dictionary or str(match_data.get("status", "")) != "running":
+		_restore_match_after_start_failure()
+		_set_status("The backend did not confirm that the match started.")
+		return
+	_current_match = match_data
+	_set_match_phase("running")
+	_update_start_button()
+	_set_status("Match running. Waiting for the first server snapshot...")
 
 func _select_building(building: String) -> void:
 	_building = building
 	_selected_entity = -1
 	_recycle_button.disabled = true
+	_tower_attack_row.visible = building == "tower"
+	_build_description.text = _building_selection_description(building)
+	_build_description.visible = true
 	_arena.set_selection(_building, _selected_entity)
-	_set_status("Selected " + building.capitalize() + ". Tap a free tile in your blue build zone.")
+	_set_status("Selected " + building.capitalize() + ".")
+
+func _building_selection_description(building: String) -> String:
+	var name := building.capitalize()
+	match building:
+		"solar":
+			name = "Solar collector"
+		"wind":
+			name = "Wind collector"
+		"geothermal":
+			name = "Geothermal collector"
+	var description := "%s costs %d lux. Tap a free tile in your build zone." % [
+		name,
+		int(BUILDING_COSTS_LUX.get(building, 0)),
+	]
+	if building == "geothermal":
+		description += " It must be placed on a labeled vent."
+	elif building == "tower":
+		description += " Choose its attack type above."
+	return description
 
 func _on_tile_pressed(tile_x: int, tile_z: int) -> void:
 	if _building.is_empty():
@@ -344,15 +442,19 @@ func _on_tile_pressed(tile_x: int, tile_z: int) -> void:
 		"tileZ": tile_z,
 	}
 	if _building == "tower":
-		command["attack"] = "melee"
+		command["attack"] = TOWER_ATTACK_TYPES[_tower_attack_selector.selected]
 	_backend.send_command(command)
 	_set_status("Build order sent. The server will validate placement and cost.")
 	_building = ""
+	_build_description.visible = false
+	_tower_attack_row.visible = false
 	_arena.set_selection(_building, _selected_entity)
 
 func _on_entity_pressed(entity_id: int) -> void:
 	_selected_entity = entity_id
 	_building = ""
+	_build_description.visible = false
+	_tower_attack_row.visible = false
 	_arena.set_selection(_building, _selected_entity)
 	_refresh_recycle_control()
 	_set_status("Selected entity " + str(entity_id) + ".")
@@ -382,30 +484,38 @@ func _recycle_selected() -> void:
 
 func _on_snapshot(world_snapshot: Dictionary) -> void:
 	_current_snapshot = world_snapshot
+	if _match_phase_is_active():
+		_current_match["status"] = "running"
+		_set_match_phase("running")
+		_update_start_button()
 	if is_instance_valid(_arena) and _game.visible:
 		_arena.set_world(_current_map, _current_snapshot, _viewer_team)
 		_refresh_recycle_control()
 	_update_world_label()
-	if str(_current_match.get("status", "")) == "running":
-		_update_start_button()
 
 func _on_match_status(status: String, details: Dictionary) -> void:
-	if details.has("players"):
+	if details.has("id"):
 		_current_match = details
+	_current_match["status"] = status
 	if status == "running":
-		_start_button.visible = false
+		_set_match_phase("running")
+		_update_start_button()
 		_set_status("Match running. Commands resolve on the server.")
 	elif status == "lobby":
+		_set_match_phase("lobby")
 		_update_start_button()
 
 func _update_start_button() -> void:
 	if not is_instance_valid(_start_button):
 		return
 	var is_lobby := str(_current_match.get("status", "lobby")) == "lobby"
-	_start_button.visible = is_lobby
+	_start_button.visible = is_lobby and _is_host
 	_start_button.disabled = false
 
 func _on_match_ended(result: Dictionary) -> void:
+	_current_match["status"] = "finished"
+	_set_match_phase("finished")
+	_update_start_button()
 	var winner: Variant = result.get("winnerTeam", null)
 	if bool(result.get("draw", false)) or winner == null:
 		_set_status("Match ended in a draw.")
@@ -421,21 +531,59 @@ func _update_world_label() -> void:
 	var lux := 0.0
 	if _viewer_team < teams.size():
 		lux = float(teams[_viewer_team].get("coreLux", 0)) / 1000.0
-	_world_label.text = "Tick %d  ·  Core %.1f lux" % [tick, lux]
+	_world_label.text = "RUNNING · Tick %d  ·  Core %.1f lux" % [tick, lux]
 	_world_label.add_theme_color_override("font_color", TEAM_BLUE if _viewer_team == 0 else TEAM_RED)
 
 func _leave_match() -> void:
 	_backend.disconnect_match()
+	_match_id_input.clear()
 	_current_snapshot = {}
 	_current_match = {}
 	_current_map = {}
-	_selected_entity = -1
 	_is_host = false
+	_phase_label.text = "DISCONNECTED"
+	_selected_entity = -1
 	_building = ""
+	_build_description.visible = false
+	_tower_attack_row.visible = false
 	_game.visible = false
 	_home.visible = true
 	_set_status("Disconnected.")
 
+func _copy_match_id() -> void:
+	if _match_id_input.text.is_empty():
+		_set_status("There is no match ID to copy.")
+		return
+	DisplayServer.clipboard_set(_match_id_input.text)
+	_set_status("Match ID copied. Share it with the other player.")
+
 func _set_status(text: String) -> void:
 	if is_instance_valid(_status_label):
 		_status_label.text = text
+
+func _set_match_phase(phase: String) -> void:
+	if not is_instance_valid(_phase_label):
+		return
+	_phase_label.text = phase.to_upper().replace("_", " ")
+	match phase:
+		"lobby":
+			_phase_label.add_theme_color_override("font_color", Color("#f0bd68"))
+		"starting":
+			_phase_label.add_theme_color_override("font_color", Color("#83c6ff"))
+		"running":
+			_phase_label.add_theme_color_override("font_color", Color("#78e0aa"))
+		"finished":
+			_phase_label.add_theme_color_override("font_color", Color("#c6a4ed"))
+		_:
+			_phase_label.add_theme_color_override("font_color", Color("#aabbd0"))
+
+func _match_phase_is_active() -> bool:
+	return _current_match.get("status", "lobby") in ["starting", "running"]
+
+func _restore_match_after_start_failure() -> void:
+	var phase := str(_current_match.get("status", "lobby"))
+	if phase != "running":
+		phase = "lobby"
+		_current_match["status"] = phase
+	_set_match_phase(phase)
+	_update_start_button()

@@ -37,7 +37,13 @@ export const NEUTRAL = -1;
  */
 export const ENTITY_HASH_FIELDS = Object.freeze([
   'id', 'kind', 'team', 'owner', 'x', 'z', 'hp', 'maxHp',
-  'born', 'roll', 'recycle', 'attack',
+  'born', 'roll', 'recycle', 'attack', 'targetId', 'attackCooldown',
+  'overrideTargetId', 'overrideTicks', 'stunTicks',
+  'moveTargetX', 'moveTargetZ', 'movePathIndex', 'pathDirty',
+  'impulseX', 'impulseZ', 'impulseTicks',
+  'powerLevel', 'powerDamagePct', 'shellLevel', 'powerLux', 'entropyRemainder',
+  'arrivalTick', 'projectileDamage', 'projectileProc',
+  'projectileProcChance', 'projectileProcValue',
 ]);
 
 /** Team fields included in the hash, in this exact order. */
@@ -58,7 +64,31 @@ export const TEAM_HASH_FIELDS = Object.freeze([
  * @property {number} born     tick of creation; collectors and entropy count from it
  * @property {number} roll     wind plants: current output in milli-lux per second; 0 for other kinds
  * @property {number} recycle  buildings: ticks left in the recycle channel, 0 when idle
- * @property {number} attack   towers: attack type code (ATTACK_CODE in buildings.js), 0 for other kinds
+ * @property {number} attack   attack type code (ATTACK_CODE in buildings.js), 0 for untyped entities
+ * @property {number} targetId current attack target, or 0
+ * @property {number} attackCooldown ticks before the next basic attack
+ * @property {number} overrideTargetId tower's hero-aggression target, or 0
+ * @property {number} overrideTicks ticks left on the tower target override
+ * @property {number} stunTicks ticks left on a stun effect
+ * @property {number} moveTargetX hero movement destination, in world units
+ * @property {number} moveTargetZ
+ * @property {number[]} movePath A* tile indices from start to goal
+ * @property {number} movePathIndex next tile in the cached route
+ * @property {number} pathDirty 1 when the cached route needs recomputing
+ * @property {number} impulseX knockback velocity, x component
+ * @property {number} impulseZ knockback velocity, z component
+ * @property {number} impulseTicks ticks left in the linear impulse decay
+ * @property {number} powerLevel tower power upgrades
+ * @property {number} powerDamagePct cumulative tower damage bonus
+ * @property {number} shellLevel tower shell upgrades
+ * @property {number} powerLux lux spent on tower power upgrades
+ * @property {number} entropyRemainder fractional entropy carried between seconds
+ * @property {number} arrivalTick projectile impact tick
+ * @property {number} projectileDamage projectile damage in milli-HP
+ * @property {number} projectileProc projectile proc code
+ * @property {number} projectileProcChance projectile proc chance in percent
+ * @property {number} projectileProcValue projectile stun ticks or knockback distance
+ * @property {boolean[]} [visibleTo] derived per-team visibility, excluded from the hash
  */
 
 /**
@@ -87,6 +117,7 @@ export const TEAM_HASH_FIELDS = Object.freeze([
  * @property {import('./config.js').SimConfig} config  normalized data, read-only
  * @property {null | { winnerTeam: number } | { draw: true }} outcome  set by the victory system
  * @property {StaticMap} map  generated layout, never changes after createState
+ * @property {Uint8Array[]} visibility derived per-team tile bitsets, excluded from the hash
  */
 
 /**
@@ -133,6 +164,7 @@ export function createState({ seed, players, config }) {
     entities: [],
     config,
     outcome: null,
+    visibility: teams.map(() => new Uint8Array(Math.ceil(layout.width * layout.height / 8))),
     map: {
       width: layout.width,
       height: layout.height,
@@ -171,11 +203,20 @@ export function createState({ seed, players, config }) {
  * Create an entity with the next id and append it (keeps id order).
  * `born` defaults to the current tick, the other extra fields to 0.
  * @param {SimState} state
- * @param {Omit<Entity, 'id' | 'born' | 'roll' | 'recycle' | 'attack'> & Partial<Pick<Entity, 'born' | 'roll' | 'recycle' | 'attack'>>} fields
+ * @param {Omit<Entity, 'id' | 'born' | 'roll' | 'recycle' | 'attack' | 'targetId' | 'attackCooldown' | 'overrideTargetId' | 'overrideTicks' | 'stunTicks' | 'moveTargetX' | 'moveTargetZ' | 'movePath' | 'movePathIndex' | 'pathDirty' | 'impulseX' | 'impulseZ' | 'impulseTicks' | 'powerLevel' | 'powerDamagePct' | 'shellLevel' | 'powerLux' | 'entropyRemainder' | 'arrivalTick' | 'projectileDamage' | 'projectileProc' | 'projectileProcChance' | 'projectileProcValue'> & Partial<Pick<Entity, 'born' | 'roll' | 'recycle' | 'attack' | 'targetId' | 'attackCooldown' | 'overrideTargetId' | 'overrideTicks' | 'stunTicks' | 'moveTargetX' | 'moveTargetZ' | 'movePath' | 'movePathIndex' | 'pathDirty' | 'impulseX' | 'impulseZ' | 'impulseTicks' | 'powerLevel' | 'powerDamagePct' | 'shellLevel' | 'powerLux' | 'entropyRemainder' | 'arrivalTick' | 'projectileDamage' | 'projectileProc' | 'projectileProcChance' | 'projectileProcValue'>>} fields
  * @returns {Entity}
  */
 export function spawnEntity(state, fields) {
-  const e = { id: state.nextId++, born: state.tick, roll: 0, recycle: 0, attack: 0, ...fields };
+  const e = {
+    id: state.nextId++, born: state.tick, roll: 0, recycle: 0, attack: 0,
+    targetId: 0, attackCooldown: 0, overrideTargetId: 0, overrideTicks: 0, stunTicks: 0,
+    moveTargetX: 0, moveTargetZ: 0, movePath: [], movePathIndex: 0, pathDirty: 0,
+    impulseX: 0, impulseZ: 0, impulseTicks: 0,
+    powerLevel: 0, powerDamagePct: 0, shellLevel: 0, powerLux: 0, entropyRemainder: 0,
+    arrivalTick: 0, projectileDamage: 0, projectileProc: 0,
+    projectileProcChance: 0, projectileProcValue: 0,
+    ...fields,
+  };
   state.entities.push(e);
   return e;
 }

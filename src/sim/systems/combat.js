@@ -1,11 +1,275 @@
 // @ts-check
 /**
  * System: combat
- * Scope: attacks, projectiles, simultaneous damage resolution, shields, stun/knockback procs, Energy Grab funnel credit. GDD 3.5, 7.4, 7.5
- * Milestone: M3 (see docs/HANDOVER.md)
+ * Scope: tower and hero basic attacks, simultaneous damage, and attack procs. GDD 3.5, 5.0, 7.4
+ * Milestone: M3
  */
 
-/** @param {import('../state.js').SimState} _state */
-export function run(_state) {
-  // TODO(M3): implement.
+import { chancePct } from '../rng.js';
+import { dist2, idiv, isqrt, MILLI, TICK_HZ, UNITS_PER_TILE } from '../fixed.js';
+import { damageCore } from '../lux.js';
+import { KIND, findEntity, spawnEntity } from '../state.js';
+import { towerCanTarget } from './behavior.js';
+
+const TYPE_NAMES = ['', 'melee', 'ranged', 'area'];
+const CONTACT_RANGE = UNITS_PER_TILE;
+const PROC_CODE = Object.freeze({ none: 0, stun: 1, knockback: 2 });
+
+/**
+ * `heroAttack` command. Heroes can attack enemy units/buildings and neutral blockers.
+ * @param {import('../state.js').SimState} state
+ * @param {number} playerId
+ * @param {{ targetId?: unknown }} cmd
+ */
+export function tryHeroAttack(state, playerId, cmd) {
+  if (!Number.isSafeInteger(cmd.targetId)) return false;
+  const hero = state.entities.find((e) => e.kind === KIND.HERO && e.owner === playerId);
+  const target = findEntity(state, /** @type {number} */ (cmd.targetId));
+  if (!hero || !target || target.id === hero.id || target.hp <= 0) return false;
+  if (target.kind !== KIND.BLOCKER && (
+    target.team < 0 || target.team === hero.team || !isAttackable(target.kind)
+  )) return false;
+  hero.movePath = [];
+  hero.movePathIndex = 0;
+  hero.pathDirty = 0;
+  if (target.kind === KIND.BLOCKER) {
+    hero.targetId = target.id;
+    return true;
+  }
+  hero.targetId = target.id;
+  return true;
+}
+
+/** @param {number} kind */
+function isAttackable(kind) {
+  return kind === KIND.CORE || (kind >= KIND.SOLAR && kind <= KIND.HERO);
+}
+
+/** @param {import('../sim/state.js').Entity} entity */
+function attackType(entity) {
+  return TYPE_NAMES[entity.attack] ?? '';
+}
+
+/** @param {import('../state.js').SimState} state */
+export function run(state) {
+  const { balance } = state.config;
+  /** @type {{ source: import('../state.js').Entity, target: import('../state.js').Entity, damage: number, proc: string, procChance: number, procValue: number }[]} */
+  const hits = [];
+  const readyHeroes = [];
+
+  for (const entity of state.entities) {
+    if (entity.stunTicks > 0 && entity.kind !== KIND.HERO && entity.kind !== KIND.TOWER) entity.stunTicks--;
+  }
+
+  for (const projectile of state.entities) {
+    if (projectile.kind !== KIND.PROJECTILE || projectile.arrivalTick > state.tick) continue;
+    const target = findEntity(state, projectile.targetId);
+    if (target && target.hp > 0 && isProjectileTarget(projectile, target)) {
+      appendHit(
+        hits,
+        projectile,
+        target,
+        projectile.projectileDamage,
+        projectile.projectileProc === PROC_CODE.stun ? 'stun' : projectile.projectileProc === PROC_CODE.knockback ? 'knockback' : 'none',
+        projectile.projectileProcChance,
+        projectile.projectileProcValue,
+      );
+    }
+    projectile.hp = 0;
+  }
+
+  for (const attacker of state.entities) {
+    if (attacker.kind !== KIND.HERO) continue;
+    if (attacker.stunTicks > 0) {
+      attacker.stunTicks--;
+      continue;
+    }
+    if (attacker.attackCooldown > 0) {
+      attacker.attackCooldown--;
+      continue;
+    }
+    const target = findEntity(state, attacker.targetId);
+    const type = attackType(attacker);
+    if (!target || !type || !isHeroTarget(attacker, target)) continue;
+    const rules = balance.attackTypes[type];
+    const range = rules.reachTiles > 0 ? rules.reachTiles : CONTACT_RANGE;
+    if (dist2(attacker.x, attacker.z, target.x, target.z) > range * range) continue;
+    attacker.attackCooldown = attackInterval(balance.hero.attackSpeed) - 1;
+    const damage = idiv(balance.hero.damagePerHit * MILLI * rules.damagePct, 100);
+    dispatchAttack(state, hits, attacker, target, damage, rules);
+    readyHeroes.push({ attacker, target });
+    if (type === 'area') addSplashHits(state, hits, attacker, target, damage, rules.splashMilliTiles);
+  }
+
+  // A tower reacts when it can reach the attacking hero.
+  for (const { attacker, target } of readyHeroes) {
+    if (target.kind !== KIND.HERO) continue;
+    const overrideTicks = state.config.balance.tower.targetOverrideTicks;
+    for (const tower of state.entities) {
+      if (tower.kind !== KIND.TOWER || tower.team !== target.team) continue;
+      const range = state.config.buildings.tower.rangeTiles;
+      if (dist2(tower.x, tower.z, attacker.x, attacker.z) > range * range) continue;
+      tower.overrideTargetId = attacker.id;
+      tower.overrideTicks = overrideTicks;
+      tower.targetId = attacker.id;
+    }
+  }
+
+  for (const tower of state.entities) {
+    if (tower.kind !== KIND.TOWER || tower.stunTicks > 0) {
+      if (tower.stunTicks > 0) tower.stunTicks--;
+      continue;
+    }
+    if (tower.attackCooldown > 0) {
+      tower.attackCooldown--;
+      continue;
+    }
+    const target = findEntity(state, tower.targetId);
+    if (!target || !towerCanTarget(tower, target, state.config.buildings.tower.rangeTiles)) continue;
+    const type = attackType(tower);
+    if (!type) continue;
+    const rules = balance.attackTypes[type];
+    tower.attackCooldown = attackInterval(state.config.buildings.tower.attackSpeed) - 1;
+    const baseDamage = idiv(state.config.buildings.tower.damagePerHit * MILLI * rules.damagePct, 100);
+    const damage = idiv(baseDamage * (100 + tower.powerDamagePct), 100);
+    dispatchAttack(state, hits, tower, target, damage, rules);
+    if (type === 'area') addSplashHits(state, hits, tower, target, damage, rules.splashMilliTiles);
+  }
+
+  /** @type {number[]} */
+  const damageById = [];
+  for (const hit of hits) {
+    damageById[hit.target.id] = (damageById[hit.target.id] ?? 0) + hit.damage;
+    if (hit.procChance > 0 && chancePct(state.rng, hit.procChance)) {
+      if (hit.proc === 'stun') hit.target.stunTicks = Math.max(hit.target.stunTicks, hit.procValue);
+      else if (hit.proc === 'knockback') applyKnockback(hit.source, hit.target, hit.procValue);
+    }
+  }
+  for (const target of state.entities) {
+    const damage = damageById[target.id] ?? 0;
+    if (damage === 0) continue;
+    if (target.kind === KIND.CORE) damageCore(state, target.team, damage);
+    else target.hp = Math.max(0, target.hp - damage);
+  }
+}
+
+/**
+ * @param {import('../state.js').Entity} hero
+ * @param {import('../state.js').Entity} target
+ */
+function isHeroTarget(hero, target) {
+  return target.id !== hero.id && target.hp > 0 && (
+    target.kind === KIND.BLOCKER
+    || (target.team >= 0 && target.team !== hero.team && isAttackable(target.kind))
+  );
+}
+
+/**
+ * @param {import('../state.js').Entity} projectile
+ * @param {import('../state.js').Entity} target
+ */
+function isProjectileTarget(projectile, target) {
+  return target.kind === KIND.BLOCKER || (
+    target.team >= 0 && target.team !== projectile.team && isAttackable(target.kind)
+  );
+}
+
+/**
+ * @param {import('../state.js').SimState} state
+ * @param {{ source: import('../state.js').Entity, target: import('../state.js').Entity, damage: number, proc: string, procChance: number, procValue: number }[]} hits
+ * @param {import('../state.js').Entity} source
+ * @param {import('../state.js').Entity} target
+ * @param {number} damage
+ * @param {{ projectileFlightTicks?: number, proc: string, procPct: number, stunTicks?: number, knockbackMilliTiles?: number }} rules
+ */
+function dispatchAttack(state, hits, source, target, damage, rules) {
+  const procValue = rules.stunTicks ?? rules.knockbackMilliTiles ?? 0;
+  if (!rules.projectileFlightTicks) {
+    appendHit(hits, source, target, damage, rules.proc, rules.procPct, procValue);
+    return;
+  }
+  spawnProjectile(state, source, target, damage, rules);
+}
+
+/**
+ * @param {import('../state.js').SimState} state
+ * @param {import('../state.js').Entity} source
+ * @param {import('../state.js').Entity} target
+ * @param {number} damage
+ * @param {{ projectileFlightTicks: number, proc: string, procPct: number, stunTicks?: number, knockbackMilliTiles?: number }} rules
+ */
+function spawnProjectile(state, source, target, damage, rules) {
+  spawnEntity(state, {
+    kind: KIND.PROJECTILE,
+    team: source.team,
+    owner: source.owner,
+    x: source.x,
+    z: source.z,
+    hp: 1,
+    maxHp: 1,
+    targetId: target.id,
+    arrivalTick: state.tick + rules.projectileFlightTicks,
+    projectileDamage: damage,
+    projectileProc: PROC_CODE[/** @type {keyof typeof PROC_CODE} */ (rules.proc)] ?? PROC_CODE.none,
+    projectileProcChance: rules.procPct,
+    projectileProcValue: rules.stunTicks ?? rules.knockbackMilliTiles ?? 0,
+  });
+}
+
+/** @param {number} attackSpeed */
+function attackInterval(attackSpeed) {
+  return Math.max(1, idiv(TICK_HZ * 100, Math.max(attackSpeed, 20)));
+}
+
+/**
+ * @param {{ source: import('../state.js').Entity, target: import('../state.js').Entity, damage: number, proc: string, procChance: number, procValue: number }[]} hits
+ * @param {import('../state.js').Entity} source
+ * @param {import('../state.js').Entity} target
+ * @param {number} damage
+ * @param {string} proc
+ * @param {number} procChance
+ * @param {number} procValue
+ */
+function appendHit(hits, source, target, damage, proc, procChance, procValue) {
+  hits.push({ source, target, damage, proc, procChance, procValue });
+}
+
+/**
+ * @param {import('../state.js').SimState} state
+ * @param {{ source: import('../state.js').Entity, target: import('../state.js').Entity, damage: number, proc: string, procChance: number, procValue: number }[]} hits
+ * @param {import('../state.js').Entity} attacker
+ * @param {import('../state.js').Entity} primary
+ * @param {number} damage
+ * @param {number} radius
+ */
+function addSplashHits(state, hits, attacker, primary, damage, radius) {
+  const radius2 = radius * radius;
+  for (const target of state.entities) {
+    if (target.id === primary.id || !isEnemy(attacker, target)) continue;
+    if (dist2(primary.x, primary.z, target.x, target.z) <= radius2) {
+      appendHit(hits, attacker, target, damage, 'none', 0, 0);
+    }
+  }
+}
+
+/**
+ * @param {import('../state.js').Entity} source
+ * @param {import('../state.js').Entity} target
+ */
+function isEnemy(source, target) {
+  return target.hp > 0 && target.team >= 0 && target.team !== source.team && isAttackable(target.kind);
+}
+
+/**
+ * @param {import('../state.js').Entity} source
+ * @param {import('../state.js').Entity} target
+ * @param {number} strength
+ */
+function applyKnockback(source, target, strength) {
+  const dx = target.x - source.x;
+  const dz = target.z - source.z;
+  const length = Math.max(1, isqrt(dx * dx + dz * dz));
+  target.impulseX = idiv(dx * strength, length);
+  target.impulseZ = idiv(dz * strength, length);
+  target.impulseTicks = 5;
 }

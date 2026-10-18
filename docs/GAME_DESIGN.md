@@ -2,11 +2,29 @@
 
 Working title. A strategy game mixing hero control (Dota 2), creep waypoint paths (Age of Empires) and base building with tower defense (Generals Zero Hour, Clash Royale). Everything in the world is made of light energy, measured in **lux**. Destroyed things dissolve into light; there is no blood or gore.
 
-Status: draft v0.9.2. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
+Status: draft v0.9.5. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
 
 ---
 
 ## 0. Changelog
+
+### v0.9.4 → v0.9.5
+
+| Area | Change |
+|---|---|
+| Ranged attacks | Basic ranged attacks create projectiles that hit one tick after launch |
+
+### v0.9.3 → v0.9.4
+
+| Area | Change |
+|---|---|
+| Unit colliders | Heroes and creeps use a 0.25-tile circle radius for movement and collision (section 7.3) |
+
+### v0.9.2 → v0.9.3
+
+| Area | Change |
+|---|---|
+| Tower attack type | Towers use the selected type's damage multiplier and proc from section 7.4, while keeping their 5-tile range (sections 5 and 7.4) |
 
 ### v0.9.1 → v0.9.2
 
@@ -280,6 +298,7 @@ Shell HP equals upgrade cost × 10, consistent with the HP factor. Lux spent on 
 | Attack speed | 100 (= 1 hit/s) | 100 |
 | Move speed | 3 tiles/s | 2 tiles/s |
 | Sight | 7 tiles | 6 tiles |
+| Circle collider radius | 0.25 tiles | 0.25 tiles |
 
 Attack speed: `hits per second = attackSpeed / 100`. Minimum 20.
 
@@ -288,10 +307,10 @@ Attack speed: `hits per second = attackSpeed / 100`. Minimum 20.
 | Type | Damage multiplier per target | Reach | Proc |
 |---|---|---|---|
 | Melee | 100% | Contact | 15% chance to stun 0.5 s (units and buildings; a stunned tower stops attacking) |
-| Ranged | 60% | 4 tiles | 15% chance to knock back 0.5 tiles |
+| Ranged | 60% | 4 tiles | Projectile hits after 1 tick; 15% chance to knock back 0.5 tiles |
 | Area | 35% | 3 tiles, splash radius 1.2 tiles | none |
 
-Each hero has a primary type for basic attacks.
+Each hero has a primary type for basic attacks. Towers apply the selected type's damage multiplier and proc, but keep their 5-tile range.
 
 ### 7.5 Abilities
 

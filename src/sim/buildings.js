@@ -120,6 +120,37 @@ export function tryBuild(state, playerId, cmd) {
 }
 
 /**
+ * `upgrade` command. Power increases tower damage; shell increases current and maximum HP.
+ * @param {import('./state.js').SimState} state
+ * @param {number} playerId
+ * @param {{ towerId?: unknown, track?: unknown }} cmd
+ */
+export function tryUpgradeTower(state, playerId, cmd) {
+  if (!state.players.some((player) => player.id === playerId) || !Number.isSafeInteger(cmd.towerId)) return false;
+  if (cmd.track !== 'power' && cmd.track !== 'shell') return false;
+  const tower = findEntity(state, /** @type {number} */ (cmd.towerId));
+  if (!tower || tower.kind !== KIND.TOWER || tower.owner !== playerId || tower.recycle > 0) return false;
+
+  const track = cmd.track;
+  const level = track === 'power' ? tower.powerLevel : tower.shellLevel;
+  const upgrades = state.config.buildings.tower.upgrades[track];
+  const upgrade = upgrades[level];
+  if (!upgrade || !spend(state, tower.team, upgrade.costLux)) return false;
+
+  if (track === 'power') {
+    tower.powerLevel++;
+    tower.powerDamagePct += upgrade.damagePct;
+    tower.powerLux += upgrade.costLux;
+  } else {
+    const addedHp = upgrade.hp * MILLI;
+    tower.shellLevel++;
+    tower.hp += addedHp;
+    tower.maxHp += addedHp;
+  }
+  return true;
+}
+
+/**
  * The building a command names, if the player owns it. Only the owner recycles
  * a building (GDD 2.1: buildings belong to the player who built them).
  * @param {import('./state.js').SimState} state
@@ -166,6 +197,6 @@ export function tryCancelRecycle(state, playerId, cmd) {
  * @param {import('./state.js').Entity} e
  */
 export function recycleRefund(state, e) {
-  const luxValue = idiv(e.hp, state.config.balance.hpFactor.default);
+  const luxValue = idiv(e.hp, state.config.balance.hpFactor.default) + e.powerLux;
   return idiv(luxValue * state.config.balance.economy.recycleRefundPct, 100);
 }

@@ -14,6 +14,7 @@ var _token := ""
 var _player_id := ""
 var _player_name := ""
 var _match_id := ""
+var _match_status := ""
 var _viewer_team := 0
 var _sequence := 0
 var _next_frame_id := 1
@@ -38,6 +39,7 @@ func _process(_delta: float) -> void:
 		_handle_frame(parsed)
 
 func connect_match(options: Dictionary) -> Dictionary:
+	_match_status = ""
 	_server = str(options.get("server", "")).strip_edges().trim_suffix("/")
 	if _server.is_empty():
 		return _failure("Enter the backend address.")
@@ -107,7 +109,14 @@ func connect_match(options: Dictionary) -> Dictionary:
 	if join_ack.get("snapshot") is Dictionary:
 		snapshot_received.emit(join_ack.snapshot)
 
-	match_status_changed.emit("lobby", match_data)
+	var joined_status := str(join_ack.get("status", match_data.get("status", "")))
+	if joined_status not in ["lobby", "running", "finished", "cancelled"]:
+		_socket.close()
+		return _failure("The backend returned an invalid match status.")
+	if _match_status.is_empty():
+		_match_status = joined_status
+	match_data["status"] = _match_status
+	match_status_changed.emit(_match_status, match_data)
 	return {
 		"ok": true,
 		"match": match_data,
@@ -154,6 +163,7 @@ func disconnect_match() -> void:
 		_socket.close()
 	_token = ""
 	_match_id = ""
+	_match_status = ""
 	_acknowledgements.clear()
 
 func _sign_in(display_name: String) -> Dictionary:
@@ -247,12 +257,15 @@ func _handle_frame(frame: Dictionary) -> void:
 	elif event_name == "match:snapshot" and data is Dictionary:
 		snapshot_received.emit(data)
 	elif event_name == "match:started" and data is Dictionary:
+		_match_status = "running"
 		if data.get("snapshot") is Dictionary:
 			snapshot_received.emit(data.snapshot)
 		match_status_changed.emit("running", data)
 	elif event_name == "match:updated" and data is Dictionary:
-		match_status_changed.emit(str(data.get("status", "lobby")), data)
+		_match_status = str(data.get("status", _match_status))
+		match_status_changed.emit(_match_status, data)
 	elif event_name == "match:ended" and data is Dictionary:
+		_match_status = "finished"
 		match_ended.emit(data.get("result", {}))
 	elif event_name == "exception" and data is Dictionary:
 		message_received.emit("Backend error: " + str(data.get("error", "unknown error")))

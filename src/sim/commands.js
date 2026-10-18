@@ -8,7 +8,9 @@
  * sim result is the authority.
  */
 
-import { tryBuild, tryCancelRecycle, tryRecycle } from './buildings.js';
+import { tryBuild, tryCancelRecycle, tryRecycle, tryUpgradeTower } from './buildings.js';
+import { tryHeroAttack } from './systems/combat.js';
+import { tryHeroMove } from './systems/movement.js';
 
 /**
  * @typedef {Object} CommandEnvelope
@@ -49,8 +51,11 @@ import { tryBuild, tryCancelRecycle, tryRecycle } from './buildings.js';
  */
 export const HANDLERS = {
   build: tryBuild,
+  upgrade: tryUpgradeTower,
   recycle: tryRecycle,
   cancelRecycle: tryCancelRecycle,
+  heroAttack: tryHeroAttack,
+  heroMove: tryHeroMove,
 };
 
 /**

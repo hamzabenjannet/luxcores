@@ -1,5 +1,5 @@
 {
-  "_doc": "Every number is an integer. Suffixes: *Lux = whole lux (x1000 in sim), *Tiles = whole tiles (x1000 in sim), *Ticks = sim ticks at 20 Hz, *Pct = integer percent. Keys containing MilliTiles or MilliLux are already in sim units and used as is. Source: docs/GAME_DESIGN.md v0.9.",
+  "_doc": "Every number is an integer. Suffixes: *Lux = whole lux (x1000 in sim), *Tiles = whole tiles (x1000 in sim), *Ticks = sim ticks at 20 Hz, *Pct = integer percent. Keys containing MilliTiles or MilliLux are already in sim units and used as is. Source: docs/GAME_DESIGN.md v0.9.5.",
   "core": {
     "startPerPlayerLux": 100,
     "minLeftAfterSpendLux": 1
@@ -27,7 +27,7 @@
   },
   "attackTypes": {
     "melee":  { "damagePct": 100, "reachTiles": 0, "procPct": 15, "proc": "stun", "stunTicks": 10 },
-    "ranged": { "damagePct": 60,  "reachTiles": 4, "procPct": 15, "proc": "knockback", "knockbackMilliTiles": 500 },
+    "ranged": { "damagePct": 60,  "reachTiles": 4, "projectileFlightTicks": 1, "procPct": 15, "proc": "knockback", "knockbackMilliTiles": 500 },
     "area":   { "damagePct": 35,  "reachTiles": 3, "splashMilliTiles": 1200, "procPct": 0, "proc": "none" }
   },
   "hero": {
@@ -69,6 +69,9 @@
   },
   "tower": {
     "targetOverrideTicks": 60
+  },
+  "physics": {
+    "unitRadiusMilliTiles": 250
   },
   "match": {
     "timedModeTicks": 12000

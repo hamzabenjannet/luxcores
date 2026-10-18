@@ -12,7 +12,7 @@
  * is a derived cache and can be rebuilt from state.
  *
  * @typedef {Object} PhysicsWorld
- * @property {(id:number, x:number, z:number, radius:number, mass:number, isStatic:boolean) => void} addBody
+ * @property {(id:number, x:number, z:number, radius:number, mass:number, isStatic:boolean, shape?:'circle'|'square') => void} addBody
  * @property {(id:number) => void} removeBody
  * @property {(id:number, vx:number, vz:number) => void} setDesiredVelocity  units per tick
  * @property {(id:number, ix:number, iz:number) => void} applyImpulse         knockback

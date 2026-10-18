@@ -48,7 +48,8 @@ function convert(value, path) {
       const p = `${path}.${k}`;
       if (typeof v === 'number') {
         if (!Number.isSafeInteger(v)) throw new TypeError(`data value must be an integer: ${p} = ${v}`);
-        if (k.endsWith('Lux')) out[k] = v * MILLI;
+        if (k.includes('MilliLux') || k.includes('MilliTiles')) out[k] = v;
+        else if (k.endsWith('Lux')) out[k] = v * MILLI;
         else if (k.endsWith('Tiles')) out[k] = v * UNITS_PER_TILE;
         else out[k] = v;
       } else {

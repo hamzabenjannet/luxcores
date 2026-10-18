@@ -4,10 +4,8 @@
  * Buildings, creeps and heroes lose `entropyPctPerMinute` percent of max HP per
  * minute. The Core is exempt. GDD 3.7.
  *
- * HP is removed once per second. The loss after k seconds is
- * `maxHp * pct * k / 6000` (rounded down), and each second removes the
- * difference from the second before, so 60 seconds remove exactly `pct`
- * percent of max HP, with no rounding drift.
+ * HP is removed once per second. Fractional loss carries between ticks, so
+ * changes to maximum HP affect only future entropy and rounding does not drift.
  */
 
 import { TICK_HZ, idiv } from '../fixed.js';
@@ -23,8 +21,9 @@ export function run(state) {
     if (!isBuildingKind(e.kind) && e.kind !== KIND.CREEP && e.kind !== KIND.HERO) continue;
     const age = state.tick - e.born;
     if (age <= 0 || age % TICK_HZ !== 0) continue;
-    const k = idiv(age, TICK_HZ);
-    const loss = idiv(e.maxHp * pct * k, SECONDS_PER_MINUTE_X_PERCENT) - idiv(e.maxHp * pct * (k - 1), SECONDS_PER_MINUTE_X_PERCENT);
+    const numerator = e.maxHp * pct + e.entropyRemainder;
+    const loss = idiv(numerator, SECONDS_PER_MINUTE_X_PERCENT);
+    e.entropyRemainder = numerator - loss * SECONDS_PER_MINUTE_X_PERCENT;
     e.hp = Math.max(0, e.hp - loss);
   }
 }

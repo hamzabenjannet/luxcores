@@ -18,12 +18,10 @@ config/icon="res://icon.svg"
 [display]
 
 window/size/viewport_width=600
-window/size/viewport_height=800
+window/size/viewport_height=1200
 window/size/window_width_override=600
-window/size/window_height_override=800
-window/size/resizable=true
+window/size/window_height_override=1200
 window/stretch/mode="canvas_items"
-window/stretch/aspect="keep"
 
 [physics]
 
