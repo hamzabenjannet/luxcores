@@ -16,6 +16,7 @@ import { GameModule } from './game/game.module.js';
 import { HealthModule } from './health/health.module.js';
 import { MatchesModule } from './matches/matches.module.js';
 import { PlayersModule } from './players/players.module.js';
+import { RedisModule } from './redis/redis.module.js';
 import { ReplaysModule } from './replays/replays.module.js';
 import { SimulationModule } from './simulation/simulation.module.js';
 import { StaticModule } from './static/static.module.js';
@@ -33,6 +34,7 @@ import { StaticModule } from './static/static.module.js';
         throttlerOptions(config),
     }),
     DatabaseModule,
+    RedisModule,
     MatchLogModule,
     SimulationModule,
     EventsModule,

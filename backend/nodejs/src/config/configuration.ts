@@ -23,6 +23,8 @@ export interface AppConfig {
     mongoDb: string;
     postgresUrl: string;
   };
+  /** An empty `url` turns Redis off. It buffers the match log and carries match ownership and cross-node fan-out. */
+  redis: { url: string; timeoutMs: number };
   /** An empty `url` turns RabbitMQ off and the app uses an in-process event bus. */
   rabbitmq: { url: string; queue: string; prefetch: number };
   game: {
@@ -36,7 +38,13 @@ export interface AppConfig {
     onShutdown: 'resume' | 'end';
   };
   /** The write-ahead log of every running match (see `src/matchlog`). */
-  eventLog: { dir: string; flushMs: number; keepFinished: boolean };
+  eventLog: {
+    dir: string;
+    flushMs: number;
+    keepFinished: boolean;
+    /** Days a finished match keeps its events in MongoDB. 0 deletes them when the match ends. */
+    retentionDays: number;
+  };
   static: { publicDir: string };
   rateLimit: { perMinute: number; authPerMinute: number };
   /** Reverse proxies in front of the app. The client address then comes from X-Forwarded-For. */
@@ -74,6 +82,7 @@ export default (): AppConfig => {
       mongoDb: env.MONGODB_DB ?? 'luxcores',
       postgresUrl: env.POSTGRES_URL ?? '',
     },
+    redis: { url: env.REDIS_URL ?? '', timeoutMs: int(env.REDIS_TIMEOUT_MS, 3000) },
     rabbitmq: {
       url: env.RABBITMQ_URL ?? '',
       queue: env.RABBITMQ_QUEUE ?? 'luxcores.events',
@@ -92,6 +101,7 @@ export default (): AppConfig => {
       dir: resolve(env.EVENT_LOG_DIR ?? join(dirname(resolve(env.JSON_DB_PATH ?? 'data/db.json')), 'events')),
       flushMs: int(env.EVENT_LOG_FLUSH_MS, 100),
       keepFinished: env.EVENT_LOG_KEEP_FINISHED === 'true',
+      retentionDays: int(env.EVENT_LOG_RETENTION_DAYS, 14),
     },
     static: { publicDir: resolve(env.PUBLIC_DIR ?? 'public') },
     rateLimit: {

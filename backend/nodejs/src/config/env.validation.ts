@@ -75,6 +75,8 @@ class EnvironmentVariables {
   @MinLength(1)
   POSTGRES_URL?: string;
 
+  @IsOptional() @IsString() REDIS_URL?: string;
+  @IsOptional() @IsInt() @Min(200) @Max(60000) REDIS_TIMEOUT_MS?: number;
   @IsOptional() @IsString() RABBITMQ_URL?: string;
   @IsOptional() @IsString() RABBITMQ_QUEUE?: string;
   @IsOptional() @IsInt() @Min(1) RABBITMQ_PREFETCH?: number;
@@ -86,6 +88,7 @@ class EnvironmentVariables {
   @IsOptional() @IsString() EVENT_LOG_DIR?: string;
   @IsOptional() @IsInt() @Min(10) @Max(5000) EVENT_LOG_FLUSH_MS?: number;
   @IsOptional() @IsIn(['true', 'false']) EVENT_LOG_KEEP_FINISHED?: string;
+  @IsOptional() @IsInt() @Min(0) @Max(3650) EVENT_LOG_RETENTION_DAYS?: number;
   @IsOptional() @IsInt() @Min(1) @Max(20) SNAPSHOT_EVERY_TICKS?: number;
   @IsOptional() @IsInt() @Min(0) @Max(100000) @IsMultipleOf(20) CHECKPOINT_EVERY_TICKS?: number;
   @IsOptional() @IsInt() @Min(1) RATE_LIMIT_PER_MINUTE?: number;

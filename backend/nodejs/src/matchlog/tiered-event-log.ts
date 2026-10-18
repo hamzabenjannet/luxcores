@@ -29,6 +29,9 @@ export interface TieredLogOptions {
   drainBatch?: number;
 }
 
+/** Longest the shutdown waits for the buffer to empty into the store. */
+const CLOSE_DRAIN_MS = 5000;
+
 interface Tier<S extends LogSink = LogSink> {
   sink: S;
   downUntil: number;
@@ -55,6 +58,8 @@ export class TieredEventLog extends EventLog {
   private readonly maxPending: number;
   private readonly drainBatch: number;
   private closed = false;
+  /** The place that took the last write. */
+  private lastWrote: string | undefined;
 
   constructor(private readonly options: TieredLogOptions) {
     super();
@@ -74,7 +79,7 @@ export class TieredEventLog extends EventLog {
     const tiers = [this.buffer, this.store, this.file]
       .filter((t): t is Tier => t !== undefined)
       .map((t) => ({ name: t.sink.name, up: this.up(t) }));
-    return { writing: tiers.find((t) => t.up)?.name ?? this.file.sink.name, tiers };
+    return { writing: this.lastWrote ?? tiers.find((t) => t.up)?.name ?? this.file.sink.name, tiers };
   }
 
   append(matchId: string, event: NewMatchEvent): MatchEvent {
@@ -137,7 +142,8 @@ export class TieredEventLog extends EventLog {
     this.closed = true;
     clearInterval(this.drainTimer);
     await this.flush();
-    await this.queue(() => this.drainAll());
+    // A service that is away must not hold the shutdown: give the last move a few seconds.
+    await Promise.race([this.queue(() => this.drainAll()), new Promise((resolve) => setTimeout(resolve, CLOSE_DRAIN_MS).unref())]);
     for (const tier of [this.buffer, this.store, this.file]) {
       await tier?.sink.close().catch((err: Error) => this.logger.warn(`Closing ${tier.sink.name} failed: ${err.message}`));
     }
@@ -185,6 +191,7 @@ export class TieredEventLog extends EventLog {
       try {
         await tier.sink.write(batch);
         this.markUp(tier);
+        this.lastWrote = tier.sink.name;
         return;
       } catch (err) {
         this.markDown(tier, err);
