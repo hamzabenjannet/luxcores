@@ -18,6 +18,7 @@ type Tables = Record<string, Record<string, Doc>>;
  * writes run one at a time, in call order.
  */
 export class JsonFileStore extends DataStore {
+  readonly driver = 'json';
   private readonly logger = new Logger(JsonFileStore.name);
   private tables: Tables = {};
   private queue: Promise<void> = Promise.resolve();
@@ -110,6 +111,19 @@ export class JsonFileStore extends DataStore {
     delete this.tables[collection][id];
     await this.save();
     return true;
+  }
+
+  /** Stores the document whether or not its id exists. The resilient store mirrors another database with it. */
+  async upsert<T extends Doc>(collection: string, doc: T): Promise<void> {
+    (this.tables[collection] ??= {})[doc.id] = structuredClone(doc);
+    await this.save();
+  }
+
+  /** Every document of every collection except the internal ones, for a copy into another database. */
+  dump(): { collection: string; docs: Doc[] }[] {
+    return Object.keys(this.tables)
+      .filter((collection) => !collection.startsWith('_'))
+      .map((collection) => ({ collection, docs: this.rows(collection).map((d) => structuredClone(d)) }));
   }
 
   async close(): Promise<void> {

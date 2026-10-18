@@ -8,12 +8,15 @@ import { type Doc, type FindOptions, DataStore } from './data-store.js';
  * Equality filters use jsonb containment (`data @> $2`).
  */
 export class PostgresStore extends DataStore {
+  readonly driver = 'postgres';
   private readonly logger = new Logger(PostgresStore.name);
   private readonly pool: pg.Pool;
 
-  constructor(connectionString: string) {
+  constructor(connectionString: string, connectionTimeoutMillis = 3000) {
     super();
-    this.pool = new pg.Pool({ connectionString });
+    this.pool = new pg.Pool({ connectionString, connectionTimeoutMillis });
+    // An idle client that loses its server emits 'error'. Unhandled, it would end the process.
+    this.pool.on('error', (err) => this.logger.warn(`PostgreSQL connection error: ${err.message}`));
   }
 
   async init(): Promise<void> {

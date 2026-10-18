@@ -147,12 +147,20 @@ contract(
   'mongodb',
   async () => {
     const { MongoStore } = await import('../src/database/mongo.store.js');
-    const store = new MongoStore(
+    const { MongoHandle } = await import('../src/database/mongo.handle.js');
+    const handle = await MongoHandle.connect(
       process.env.TEST_MONGODB_URL as string,
       `luxcores_test_${Date.now()}`,
     );
+    const store = new MongoStore(handle);
     await store.init();
-    return { store, cleanup: () => store.close() };
+    return {
+      store,
+      cleanup: async () => {
+        await handle.db.dropDatabase();
+        await handle.close();
+      },
+    };
   },
   !process.env.TEST_MONGODB_URL,
 );

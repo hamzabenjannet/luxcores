@@ -1,3 +1,16 @@
+export type DatabaseDriver = 'json' | 'mongodb' | 'postgres';
+
+/** Which adapter serves requests, for the health route. */
+export interface StoreStatus {
+  /** What the settings ask for. */
+  configured: DatabaseDriver;
+  /** What answers now. It differs from `configured` while the server runs on the JSON file instead. */
+  active: DatabaseDriver;
+  degraded: boolean;
+  /** Why the server fell back, when it did. */
+  reason?: string;
+}
+
 /** Every stored document has a string `id`. */
 export interface Doc {
   id: string;
@@ -18,6 +31,7 @@ export interface FindOptions {
  * `where` matches documents whose top-level fields equal the given values.
  */
 export abstract class DataStore {
+  abstract readonly driver: DatabaseDriver;
   /** Open connections and create tables or files. Runs once at startup. */
   abstract init(): Promise<void>;
   abstract find<T extends Doc>(
@@ -44,6 +58,10 @@ export abstract class DataStore {
   abstract remove(collection: string, id: string): Promise<boolean>;
   /** Release connections at shutdown. */
   abstract close(): Promise<void>;
+  /** Which adapter answers now. A plain adapter answers for itself. */
+  status(): StoreStatus {
+    return { configured: this.driver, active: this.driver, degraded: false };
+  }
 }
 
 /** Collection names, shared by every adapter. */

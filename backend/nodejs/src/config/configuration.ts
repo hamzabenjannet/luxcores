@@ -1,6 +1,10 @@
 import { dirname, join, resolve } from 'node:path';
 
-export type DatabaseDriver = 'json' | 'mongodb' | 'postgres';
+import type { DatabaseDriver } from '../database/data-store.js';
+
+export type { DatabaseDriver };
+/** `auto` picks MongoDB when `MONGODB_URL` is set and the JSON file otherwise. */
+export type DatabaseChoice = DatabaseDriver | 'auto';
 
 /** Typed shape of the settings that the rest of the app reads. */
 export interface AppConfig {
@@ -11,8 +15,10 @@ export interface AppConfig {
   jwt: { secret: string; expiresIn: string };
   adminApiKey: string;
   database: {
-    driver: DatabaseDriver;
+    driver: DatabaseChoice;
     jsonPath: string;
+    /** Milliseconds to wait for a database before the server falls back to the JSON file. */
+    timeoutMs: number;
     mongoUrl: string;
     mongoDb: string;
     postgresUrl: string;
@@ -61,8 +67,9 @@ export default (): AppConfig => {
     },
     adminApiKey: env.ADMIN_API_KEY ?? (isProd ? '' : 'dev-admin-key'),
     database: {
-      driver: (env.DATABASE_DRIVER as DatabaseDriver | undefined) ?? 'json',
+      driver: (env.DATABASE_DRIVER as DatabaseChoice | undefined) ?? 'auto',
       jsonPath: resolve(env.JSON_DB_PATH ?? 'data/db.json'),
+      timeoutMs: int(env.DATABASE_TIMEOUT_MS, 3000),
       mongoUrl: env.MONGODB_URL ?? '',
       mongoDb: env.MONGODB_DB ?? 'luxcores',
       postgresUrl: env.POSTGRES_URL ?? '',

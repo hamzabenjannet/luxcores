@@ -1,14 +1,14 @@
-import { Controller, Get } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Controller, Get, Inject } from '@nestjs/common';
 import {
   ApiOkResponse,
   ApiOperation,
   ApiProperty,
   ApiTags,
 } from '@nestjs/swagger';
-import type { AppConfig } from '../config/configuration.js';
 import { Public } from '../common/decorators/public.decorator.js';
 import { COLLECTIONS, DataStore } from '../database/data-store.js';
+import { POSTGRES_PROBE, type PostgresProbe } from '../database/postgres.probe.js';
+import { EventLog } from '../matchlog/event-log.js';
 import { EventBus } from '../events/event-bus.js';
 import { MatchRunnerService } from '../game/match-runner.service.js';
 import { SimService } from '../simulation/sim.service.js';
@@ -19,10 +19,28 @@ class HealthDto {
   @ApiProperty({ example: '0.1.0' }) version!: string;
   @ApiProperty({ example: 42 }) uptimeSeconds!: number;
   @ApiProperty({ example: '0.10.0' }) specVersion!: string;
-  @ApiProperty({ example: { driver: 'json', ok: true } }) database!: {
+  @ApiProperty({
+    example: { driver: 'mongodb', active: 'json', degraded: true, ok: true },
+    description:
+      '`driver` is the configured database and `active` the one that answers. They differ while the server runs on the JSON file.',
+  })
+  database!: {
     driver: string;
+    active: string;
+    degraded: boolean;
     ok: boolean;
+    reason?: string;
   };
+  @ApiProperty({
+    example: { writing: 'file', tiers: [{ name: 'file', up: true }] },
+    description: 'Where the write-ahead log of the running matches goes',
+  })
+  eventLog!: { writing: string; tiers: { name: string; up: boolean }[] };
+  @ApiProperty({
+    example: { configured: false, reachable: false },
+    description: 'PostgreSQL is not used yet; this only tells whether it answered at start-up',
+  })
+  postgres!: { configured: boolean; reachable: boolean };
   @ApiProperty({
     example: 'local',
     enum: ['local', 'rabbitmq'],
@@ -40,7 +58,8 @@ export class HealthController {
     private readonly bus: EventBus,
     private readonly sim: SimService,
     private readonly runner: MatchRunnerService,
-    private readonly config: ConfigService<AppConfig, true>,
+    private readonly log: EventLog,
+    @Inject(POSTGRES_PROBE) private readonly postgres: PostgresProbe,
   ) {}
 
   @Public()
@@ -48,7 +67,7 @@ export class HealthController {
   @ApiOperation({ summary: 'Liveness and dependency check' })
   @ApiOkResponse({ type: HealthDto })
   async health(): Promise<HealthDto> {
-    const driver = this.config.get('database.driver', { infer: true });
+    const status = this.store.status();
     const ok = await this.store.count(COLLECTIONS.players).then(
       () => true,
       () => false,
@@ -58,7 +77,15 @@ export class HealthController {
       version: APP_VERSION,
       uptimeSeconds: Math.round(process.uptime()),
       specVersion: this.sim.specVersion,
-      database: { driver, ok },
+      database: {
+        driver: status.configured,
+        active: status.active,
+        degraded: status.degraded,
+        ok,
+        ...(status.reason ? { reason: status.reason } : {}),
+      },
+      eventLog: this.log.status(),
+      postgres: this.postgres,
       events: this.bus.mode,
       runningMatches: this.runner.runningMatchIds.length,
     };

@@ -102,3 +102,64 @@ describe.skipIf(!process.env.TEST_POSTGRES_URL)('app on postgres', () => {
     }
   });
 });
+
+describe('app with a database that is not there', () => {
+  it('runs on the JSON file when MongoDB is unreachable, and says so on the health route', async () => {
+    const t = await createTestApp({
+      DATABASE_DRIVER: 'auto',
+      MONGODB_URL: 'mongodb://127.0.0.1:1',
+      DATABASE_TIMEOUT_MS: '500',
+    });
+    try {
+      const halo = await guest(t.url, 'Halo');
+      const created = await api(t.url, '/api/matches', { token: halo.token, body: { name: 'Offline', seed: 5 } });
+      expect(created.status).toBe(201);
+      expect((await api(t.url, '/api/health')).body).toMatchObject({
+        status: 'ok',
+        database: { driver: 'mongodb', active: 'json', degraded: true, ok: true },
+      });
+    } finally {
+      await t.close();
+    }
+  });
+
+  it('runs on the JSON file when PostgreSQL is unreachable', async () => {
+    const t = await createTestApp({
+      DATABASE_DRIVER: 'postgres',
+      POSTGRES_URL: 'postgres://nobody:nothing@127.0.0.1:1/none',
+      DATABASE_TIMEOUT_MS: '500',
+    });
+    try {
+      await guest(t.url, 'Halo');
+      expect((await api(t.url, '/api/health')).body).toMatchObject({
+        database: { driver: 'postgres', active: 'json', degraded: true },
+      });
+    } finally {
+      await t.close();
+    }
+  });
+
+  it('only notes an unreachable PostgreSQL when another database is the main one', async () => {
+    const t = await createTestApp({
+      POSTGRES_URL: 'postgres://nobody:nothing@127.0.0.1:1/none',
+      DATABASE_TIMEOUT_MS: '500',
+    });
+    try {
+      expect((await api(t.url, '/api/health')).body).toMatchObject({
+        database: { driver: 'json', active: 'json', degraded: false },
+        postgres: { configured: true, reachable: false },
+      });
+    } finally {
+      await t.close();
+    }
+  });
+
+  it('picks MongoDB by itself when a URL is set and the driver is left on auto', async () => {
+    const t = await createTestApp({ DATABASE_DRIVER: null, MONGODB_URL: 'mongodb://127.0.0.1:1', DATABASE_TIMEOUT_MS: '500' });
+    try {
+      expect((await api(t.url, '/api/health')).body.database).toMatchObject({ driver: 'mongodb', degraded: true });
+    } finally {
+      await t.close();
+    }
+  });
+});

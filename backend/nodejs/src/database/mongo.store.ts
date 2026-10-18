@@ -1,29 +1,24 @@
 import { Logger } from '@nestjs/common';
-import { type Db, MongoClient } from 'mongodb';
 import { type Doc, type FindOptions, DataStore } from './data-store.js';
+import type { MongoHandle } from './mongo.handle.js';
 
 /**
  * MongoDB adapter. One Mongo collection per Luxcores collection. The `id` field
- * is stored as `_id`, so lookups by id use the primary index.
+ * is stored as `_id`, so lookups by id use the primary index. It uses the connection of
+ * a `MongoHandle`, which the match log shares, and leaves closing it to the owner.
  */
 export class MongoStore extends DataStore {
+  readonly driver = 'mongodb';
   private readonly logger = new Logger(MongoStore.name);
-  private readonly client: MongoClient;
-  private db!: Db;
+  private readonly db;
 
-  constructor(
-    url: string,
-    private readonly dbName: string,
-  ) {
+  constructor(private readonly handle: MongoHandle) {
     super();
-    this.client = new MongoClient(url);
+    this.db = handle.db;
   }
 
   async init(): Promise<void> {
-    await this.client.connect();
-    this.db = this.client.db(this.dbName);
-    await this.db.command({ ping: 1 });
-    this.logger.log(`MongoDB database "${this.dbName}" connected`);
+    this.logger.log(`MongoDB database "${this.handle.dbName}" in use`);
   }
 
   async find<T extends Doc>(
@@ -93,7 +88,7 @@ export class MongoStore extends DataStore {
   }
 
   async close(): Promise<void> {
-    await this.client.close();
+    // The handle's owner closes the connection, after the match log has flushed.
   }
 }
 

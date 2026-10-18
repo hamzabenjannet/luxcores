@@ -28,6 +28,7 @@ enum NodeEnv {
 }
 
 enum DbDriver {
+  Auto = 'auto',
   Json = 'json',
   Mongodb = 'mongodb',
   Postgres = 'postgres',
@@ -59,6 +60,7 @@ class EnvironmentVariables {
 
   @IsOptional() @IsEnum(DbDriver) DATABASE_DRIVER?: DbDriver;
   @IsOptional() @IsString() JSON_DB_PATH?: string;
+  @IsOptional() @IsInt() @Min(200) @Max(60000) DATABASE_TIMEOUT_MS?: number;
   @ValidateIf(
     (o: EnvironmentVariables) => o.DATABASE_DRIVER === DbDriver.Mongodb,
   )
