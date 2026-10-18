@@ -73,3 +73,12 @@ test('a restored state runs under changed data: the new numbers apply from the r
   assert.equal(resumed.config.balance.creep.costLux, config.balance.creep.costLux + 1);
   assert.doesNotThrow(() => advance(resumed, botList, 800));
 });
+
+test('a bot memory saved before heroes existed still loads, and the hero route starts at its first vertex', () => {
+  const [bot] = bots(SEED);
+  const old = JSON.parse(JSON.stringify(bot.saveState()));
+  delete old.heroWp;
+  const [again] = bots(SEED);
+  assert.doesNotThrow(() => again.loadState(old));
+  assert.equal(again.saveState().heroWp, 0);
+});

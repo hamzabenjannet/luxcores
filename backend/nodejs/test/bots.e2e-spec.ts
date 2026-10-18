@@ -38,7 +38,8 @@ describe('bots and spectators over the match server', () => {
   const sockets: Socket[] = [];
 
   beforeAll(async () => {
-    t = await createTestApp({ MATCH_MAX_TICKS: '400' });
+    // 700 ticks: the bot pays for a hero before its tower and its first creep group, so those come later than in M4.
+    t = await createTestApp({ MATCH_MAX_TICKS: '700' });
     halo = await guest(t.url, 'Halo');
     watcher = await guest(t.url, 'Watcher');
   });
@@ -60,7 +61,7 @@ describe('bots and spectators over the match server', () => {
       socket,
       'match:snapshot',
       (s) => s.entities.some((e) => e.kind === KIND.TOWER && e.team === 1),
-      15_000,
+      25_000, // the bot pays for a hero first now, so its tower comes around tick 250, 12 seconds in
     );
     await api(t.url, `/api/matches/${created.body.id}/start`, {
       method: 'POST',
@@ -103,7 +104,7 @@ describe('bots and spectators over the match server', () => {
     const members = walking.entities.filter((e) => e.groupId === group.id);
     expect(members).toHaveLength(5);
     expect(members.every((m) => m.kind === 9 && m.team === 1)).toBe(true);
-  }, 30_000);
+  }, 60_000);
 
   it('plays bot against bot while a spectator watches, and refuses the spectator commands', async () => {
     const created = await api(t.url, '/api/matches', {
@@ -168,7 +169,7 @@ describe('bots and spectators over the match server', () => {
       socket,
       'match:ended',
       () => true,
-      30_000,
+      45_000,
     );
     expect(ended.result.reason).toBe('tick-limit');
     const verify = await api(t.url, `/api/replays/${ended.replayId}/verify`, {
@@ -185,7 +186,7 @@ describe('bots and spectators over the match server', () => {
       ),
     );
     expect([...owners].sort()).toEqual([0, 1]);
-  }, 60_000);
+  }, 90_000);
 
   it('keeps a human match closed to strangers', async () => {
     const created = await api(t.url, '/api/matches', {
