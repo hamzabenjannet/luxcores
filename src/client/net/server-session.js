@@ -98,13 +98,26 @@ export async function joinServerMatch({ server, name, matchId, vsBot = false, bo
     socket.once('connect_error', (/** @type {Error} */ err) => reject(new Error(`Socket refused: ${err.message}`)));
   });
 
+  /**
+   * What only the viewer's own team may see (GDD 8.4): inventories and the Energy Grab budget. The server
+   * sends it in `match:private` and in the join ack, and the room snapshot leaves it out.
+   * @type {Record<number, { items: number[], funnelLux: number }>}
+   */
+  let privateByPlayer = {};
+  /** @param {any} state */
+  const takePrivate = (state) => {
+    if (!state) return;
+    privateByPlayer = Object.fromEntries((state.players ?? []).map((/** @type {any} */ p) => [p.id, { items: p.items, funnelLux: p.funnelLux }]));
+    feed.players = feed.players.map((p) => ({ ...p, ...(privateByPlayer[p.id] ?? {}) }));
+  };
+
   /** @param {any} snapshot */
   const apply = (snapshot) => {
     feed.tick = snapshot.tick;
     feed.entities = snapshot.entities;
     feed.groups = snapshot.groups ?? [];
     feed.orders = snapshot.orders ?? [];
-    feed.players = snapshot.players ?? [];
+    feed.players = (snapshot.players ?? []).map((/** @type {any} */ p) => ({ items: [], funnelLux: 0, ...p, ...(privateByPlayer[p.id] ?? {}) }));
     feed.teams = snapshot.teams;
     if (snapshot.hash) feed.hash = snapshot.hash;
     feed.status = 'running';
@@ -114,12 +127,14 @@ export async function joinServerMatch({ server, name, matchId, vsBot = false, bo
   const changed = () => changeListeners.forEach((l) => l());
 
   socket.on('match:snapshot', apply);
+  socket.on('match:private', takePrivate);
   socket.on('match:started', (/** @type {any} */ info) => { apply(info.snapshot); changed(); });
   socket.on('match:updated', (/** @type {any} */ m) => { match = m; changed(); });
   socket.on('match:ended', (/** @type {any} */ e) => { feed.status = 'finished'; feed.result = e.result; changed(); });
 
   const joined = await socket.timeout(5000).emitWithAck('match:join', { matchId: match.id });
   if (!joined.ok) throw new Error(`Cannot join the match room: ${joined.error}`);
+  takePrivate(joined.private);
   if (joined.snapshot) apply(joined.snapshot);
 
   // The server numbers commands per player and tells us where we stand, so a page that rejoins a match
@@ -136,6 +151,7 @@ export async function joinServerMatch({ server, name, matchId, vsBot = false, bo
         const again = await socket.timeout(5000).emitWithAck('match:join', { matchId: match.id });
         if (again.ok) {
           seq = again.nextSeq ?? seq;
+          takePrivate(again.private);
           if (again.snapshot) { apply(again.snapshot); feed.connected = true; return; }
           if (again.status !== 'running') { feed.connected = true; return; }
         }

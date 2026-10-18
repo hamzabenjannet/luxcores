@@ -8,6 +8,8 @@ import { MatchRunnerService } from './match-runner.service.js';
 /** A transport that can deliver an event to everyone it has put in a match room. */
 export interface RoomSink {
   emitToRoom(matchId: string, event: string, data: unknown): void;
+  /** Delivers an event only to the room's members who play for `team`. */
+  emitToTeam(matchId: string, team: number, event: string, data: unknown): void;
 }
 
 /**
@@ -30,7 +32,7 @@ export class RoomHub {
     ownership: MatchOwnership,
     @Optional() @Inject(REDIS_HANDLE) redis?: RedisHandle | null,
   ) {
-    if (redis) this.relay = new RoomRelay(redis, ownership.nodeId, (matchId, event, data) => this.deliver(matchId, event, data));
+    if (redis) this.relay = new RoomRelay(redis, ownership.nodeId, (matchId, event, data, team) => this.deliver(matchId, event, data, team));
     matches.changes.on('changed', (match: { id: string }) =>
       this.broadcast(match.id, 'match:updated', match),
     );
@@ -40,6 +42,7 @@ export class RoomHub {
     runner.onSnapshot((snapshot) =>
       this.broadcast(snapshot.matchId, 'match:snapshot', snapshot),
     );
+    runner.onPrivate((state) => this.broadcast(state.matchId, 'match:private', state, state.team));
     runner.onEnded((info) => this.broadcast(info.matchId, 'match:ended', info));
   }
 
@@ -57,13 +60,19 @@ export class RoomHub {
     void this.relay?.unwatch(matchId);
   }
 
-  /** Sends an event to the room's clients here and, when another server follows the room, there too. */
-  broadcast(matchId: string, event: string, data: unknown): void {
-    this.deliver(matchId, event, data);
-    this.relay?.publish(matchId, event, data);
+  /**
+   * Sends an event to the room's clients here and, when another server follows the room, there too.
+   * With a `team`, only the members who play for that team receive it.
+   */
+  broadcast(matchId: string, event: string, data: unknown, team?: number): void {
+    this.deliver(matchId, event, data, team);
+    this.relay?.publish(matchId, event, data, team);
   }
 
-  private deliver(matchId: string, event: string, data: unknown): void {
-    for (const sink of this.sinks) sink.emitToRoom(matchId, event, data);
+  private deliver(matchId: string, event: string, data: unknown, team?: number): void {
+    for (const sink of this.sinks) {
+      if (team === undefined) sink.emitToRoom(matchId, event, data);
+      else sink.emitToTeam(matchId, team, event, data);
+    }
   }
 }

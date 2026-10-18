@@ -18,6 +18,9 @@ var _match_id := ""
 var _match_status := ""
 var _viewer_team := 0
 var _sequence := 0
+## What only the viewer's own team may see (GDD 8.4), by player id: {items, funnelLux}. The room snapshot
+## leaves it out, so it is merged into every snapshot before the signal.
+var _private: Dictionary = {}
 var _next_frame_id := 1
 var _acknowledgements: Dictionary = {}
 var _map: Dictionary = {}
@@ -134,8 +137,9 @@ func connect_match(options: Dictionary) -> Dictionary:
 	_role = str(join_ack.get("role", "player"))
 	_sequence = int(join_ack.get("nextSeq", 0))
 	_was_open = true
+	_take_private(join_ack.get("private"))
 	if join_ack.get("snapshot") is Dictionary:
-		snapshot_received.emit(join_ack.snapshot)
+		snapshot_received.emit(_with_private(join_ack.snapshot))
 
 	var joined_status := str(join_ack.get("status", match_data.get("status", "")))
 	if joined_status not in ["lobby", "running", "finished", "cancelled"]:
@@ -217,8 +221,9 @@ func _reconnect() -> void:
 				var join_ack := await _send_request("match:join", {"matchId": _match_id})
 				if join_ack.get("ok", false):
 					_sequence = int(join_ack.get("nextSeq", _sequence))
+					_take_private(join_ack.get("private"))
 					if join_ack.get("snapshot") is Dictionary:
-						snapshot_received.emit(join_ack.snapshot)
+						snapshot_received.emit(_with_private(join_ack.snapshot))
 						message_received.emit("Reconnected.")
 						_reconnecting = false
 						return
@@ -340,6 +345,25 @@ func _wait_for_ack(id: int) -> Dictionary:
 		await get_tree().process_frame
 	return {"ok": false, "error": "server acknowledgement timed out"}
 
+func _take_private(state: Variant) -> void:
+	if not state is Dictionary:
+		return
+	_private = {}
+	for entry in state.get("players", []):
+		_private[int(entry.id)] = {"items": entry.get("items", []), "funnelLux": int(entry.get("funnelLux", 0))}
+
+## The snapshot with each known player's inventory and Energy Grab budget filled in. Others get an empty inventory.
+func _with_private(snapshot: Dictionary) -> Dictionary:
+	var players: Array = []
+	for player in snapshot.get("players", []):
+		var merged: Dictionary = {"items": [], "funnelLux": 0}
+		merged.merge(player, true)
+		merged.merge(_private.get(int(player.get("id", -1)), {}), true)
+		players.append(merged)
+	var out := snapshot.duplicate()
+	out["players"] = players
+	return out
+
 func _handle_frame(frame: Dictionary) -> void:
 	var event_name := str(frame.get("event", ""))
 	var data: Variant = frame.get("data", {})
@@ -347,11 +371,13 @@ func _handle_frame(frame: Dictionary) -> void:
 		var acknowledgement: Dictionary = data if data is Dictionary else {}
 		_acknowledgements[int(frame.get("id", -1))] = acknowledgement
 	elif event_name == "match:snapshot" and data is Dictionary:
-		snapshot_received.emit(data)
+		snapshot_received.emit(_with_private(data))
+	elif event_name == "match:private" and data is Dictionary:
+		_take_private(data)
 	elif event_name == "match:started" and data is Dictionary:
 		_match_status = "running"
 		if data.get("snapshot") is Dictionary:
-			snapshot_received.emit(data.snapshot)
+			snapshot_received.emit(_with_private(data.snapshot))
 		match_status_changed.emit("running", data)
 	elif event_name == "match:updated" and data is Dictionary:
 		_match_status = str(data.get("status", _match_status))

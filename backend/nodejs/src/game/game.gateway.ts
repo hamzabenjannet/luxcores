@@ -33,6 +33,9 @@ import { WsJwtGuard } from './ws-jwt.guard.js';
 /** The Socket.IO room that carries the traffic of one match. */
 export const matchRoom = (matchId: string): string => `match:${matchId}`;
 
+/** The part of a match room that holds one team's players, for events that only that team may see. */
+export const teamRoom = (matchId: string, team: number): string => `match:${matchId}:team:${team}`;
+
 const wsValidation = new ValidationPipe({
   whitelist: true,
   forbidNonWhitelisted: true,
@@ -80,6 +83,8 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     hub.addSink({
       emitToRoom: (matchId, event, data) =>
         this.server?.to(matchRoom(matchId)).emit(event, data),
+      emitToTeam: (matchId, team, event, data) =>
+        this.server?.to(teamRoom(matchId, team)).emit(event, data),
     });
   }
 
@@ -113,6 +118,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
     const ack = await this.actions.join(this.playerOf(client), dto.matchId);
     if (ack.ok && !client.rooms.has(matchRoom(dto.matchId))) {
       await client.join(matchRoom(dto.matchId));
+      if (ack.team !== null) await client.join(teamRoom(dto.matchId, ack.team));
       ((client.data.watched as Set<string> | undefined) ?? (client.data.watched = new Set<string>())).add(dto.matchId);
       this.hub.watch(dto.matchId); // tells the other servers that a client here wants this room
     }
@@ -126,6 +132,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
   ): Promise<{ ok: true }> {
     if (client.rooms.has(matchRoom(dto.matchId))) {
       await client.leave(matchRoom(dto.matchId));
+      for (const room of client.rooms) if (room.startsWith(`${matchRoom(dto.matchId)}:team:`)) await client.leave(room);
       (client.data.watched as Set<string> | undefined)?.delete(dto.matchId);
       this.hub.unwatch(dto.matchId);
     }

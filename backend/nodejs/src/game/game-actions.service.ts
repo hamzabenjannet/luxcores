@@ -3,7 +3,7 @@ import { ClusterService } from '../cluster/cluster.service.js';
 import type { AuthenticatedPlayer } from '../common/types.js';
 import { MatchesService } from '../matches/matches.service.js';
 import type { ChatMessageDto, GameCommandDto } from './dto/socket-dtos.js';
-import type { CommandAck, MatchSnapshot } from './match-runner.service.js';
+import type { CommandAck, MatchSnapshot, PrivateState } from './match-runner.service.js';
 import { RoomHub } from './room-hub.service.js';
 
 export type JoinAck =
@@ -16,6 +16,10 @@ export type JoinAck =
       nextSeq: number;
       tick: number | null;
       snapshot: MatchSnapshot | null;
+      /** The team a player plays for, null for a spectator. */
+      team: number | null;
+      /** The inventories of that team (GDD 8.4), which the room snapshot leaves out. */
+      private: PrivateState | null;
     }
   | { ok: false; error: string };
 
@@ -40,7 +44,8 @@ export class GameActions {
     // Only a bot match is open to watchers. Once fog of war ships, watching a human match would leak hidden state.
     if (!member && !match.botVsBot)
       return { ok: false, error: 'You are not in this match' };
-    const { snapshot, nextSeq } = await this.cluster.join(match.id, player.id);
+    const { snapshot, nextSeq, private: privateState } = await this.cluster.join(match.id, player.id);
+    const team = match.players.find((p) => p.playerId === player.id)?.team ?? null; // known in the lobby, before any sim runs
     return {
       ok: true,
       role: member ? 'player' : 'spectator',
@@ -48,6 +53,8 @@ export class GameActions {
       nextSeq,
       tick: snapshot?.tick ?? null,
       snapshot,
+      team,
+      private: member ? privateState : null,
     };
   }
 

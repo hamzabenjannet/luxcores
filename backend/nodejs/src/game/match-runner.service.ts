@@ -67,8 +67,19 @@ export interface MatchSnapshot {
   groups: SimGroup[];
   /** Barracks queues, held groups and hero picks included. */
   orders: SimOrder[];
-  /** Every player with the rotation lock and the pick cooldown of their hero. */
-  players: { id: number; team: number; kind: 'human' | 'bot'; heroLock: number; heroCooldown: number; funnelLux: number; items: number[] }[];
+  /** Every player with the rotation lock and the pick cooldown of their hero. The inventory is private (`PrivateState`). */
+  players: { id: number; team: number; kind: 'human' | 'bot'; heroLock: number; heroCooldown: number }[];
+}
+
+/**
+ * What only a player's own team may see (GDD 8.4): each player's inventory and Energy Grab budget.
+ * It travels in the `match:private` event and in the join ack, never in the room snapshot.
+ */
+export interface PrivateState {
+  matchId: string;
+  tick: number;
+  team: number;
+  players: { id: number; items: number[]; funnelLux: number }[];
 }
 
 export interface CommandAck {
@@ -166,6 +177,10 @@ export class MatchRunnerService
 
   onStarted(listener: (info: StartedInfo) => void): void {
     this.emitter.on('started', listener);
+  }
+
+  onPrivate(listener: (state: PrivateState) => void): void {
+    this.emitter.on('private', listener);
   }
 
   onSnapshot(listener: (snapshot: MatchSnapshot) => void): void {
@@ -330,6 +345,18 @@ export class MatchRunnerService
     return player ? (run?.lastSeq.get(player.simId) ?? -1) + 1 : 0;
   }
 
+  /** The team a player plays for in a running match, or null for a watcher. */
+  teamOf(matchId: string, playerId: string): number | null {
+    return this.runs.get(matchId)?.players.find((p) => p.playerId === playerId)?.team ?? null;
+  }
+
+  /** The private state of a player's team, for the join ack. Null for a watcher or a match that is not running. */
+  privateFor(matchId: string, playerId: string): PrivateState | null {
+    const run = this.runs.get(matchId);
+    const team = this.teamOf(matchId, playerId);
+    return run && team !== null ? this.privateOf(run, team) : null;
+  }
+
   /** The current snapshot, or null when the match is not running. */
   snapshot(matchId: string): MatchSnapshot | null {
     const run = this.runs.get(matchId);
@@ -427,7 +454,7 @@ export class MatchRunnerService
       case 'command':
         return this.submitCommand(matchId, rpc.playerId, rpc.seq, rpc.cmd);
       case 'join':
-        return { nextSeq: this.nextSeq(matchId, rpc.playerId), snapshot: this.snapshot(matchId) } satisfies JoinInfo;
+        return { nextSeq: this.nextSeq(matchId, rpc.playerId), snapshot: this.snapshot(matchId), team: this.teamOf(matchId, rpc.playerId), private: this.privateFor(matchId, rpc.playerId) } satisfies JoinInfo;
       case 'stop':
         return this.stop(matchId);
     }
@@ -597,6 +624,9 @@ export class MatchRunnerService
     }
     if (state.tick % this.snapshotEvery === 0) {
       this.emitter.emit('snapshot', this.snapshotOf(run, hashed));
+      for (const team of new Set(run.players.filter((p) => p.kind === 'human').map((p) => p.team))) {
+        this.emitter.emit('private', this.privateOf(run, team));
+      }
     }
     if (state.outcome || state.tick >= this.maxTicks) {
       this.finish(run).catch((err: Error) =>
@@ -689,6 +719,16 @@ export class MatchRunnerService
     }
   }
 
+  private privateOf(run: Run, team: number): PrivateState {
+    const { state } = run;
+    return {
+      matchId: run.matchId,
+      tick: state.tick,
+      team,
+      players: state.players.filter((p) => p.team === team).map((p) => ({ id: p.id, items: p.items, funnelLux: p.funnelLux })),
+    };
+  }
+
   private snapshotOf(run: Run, withHash: boolean): MatchSnapshot {
     const { state } = run;
     return {
@@ -736,8 +776,6 @@ export class MatchRunnerService
         kind: p.kind,
         heroLock: p.heroLock,
         heroCooldown: p.heroCooldown,
-        funnelLux: p.funnelLux,
-        items: p.items,
       })),
       groups: state.groups.map((g) => ({
         id: g.id,

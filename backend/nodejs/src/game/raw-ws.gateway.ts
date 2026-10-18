@@ -39,6 +39,8 @@ interface Frame {
 interface Connection {
   player?: AuthenticatedPlayer;
   rooms: Set<string>;
+  /** The team the connection plays for in each room it joined; absent for a watcher. */
+  teams: Map<string, number>;
   authTimer?: NodeJS.Timeout;
   alive: boolean;
 }
@@ -87,6 +89,8 @@ export class RawWsGateway
     hub.addSink({
       emitToRoom: (matchId, event, data) =>
         this.emitToRoom(matchId, event, data),
+      emitToTeam: (matchId, team, event, data) =>
+        this.emitToRoom(matchId, event, data, team),
     });
   }
 
@@ -113,11 +117,12 @@ export class RawWsGateway
   }
 
   /** Delivers a frame to every connection in the match room. */
-  emitToRoom(matchId: string, event: string, data: unknown): void {
+  emitToRoom(matchId: string, event: string, data: unknown, team?: number): void {
     const members = this.rooms.get(matchId);
     if (!members?.size) return;
     const text = JSON.stringify({ event, data } satisfies Frame);
     for (const ws of members) {
+      if (team !== undefined && this.connections.get(ws)?.teams.get(matchId) !== team) continue;
       if (event === 'match:snapshot' && ws.bufferedAmount > SLOW_CLIENT_BYTES)
         continue;
       if (ws.readyState === ws.OPEN) ws.send(text);
@@ -151,7 +156,7 @@ export class RawWsGateway
   }
 
   private accept(ws: WebSocket, player?: AuthenticatedPlayer): void {
-    const connection: Connection = { player, rooms: new Set(), alive: true };
+    const connection: Connection = { player, rooms: new Set(), teams: new Map(), alive: true };
     this.connections.set(ws, connection);
 
     if (!player) {
@@ -212,7 +217,7 @@ export class RawWsGateway
       case 'match:join': {
         const dto = await validatePayload(MatchRefDto, frame.data);
         const ack = await this.actions.join(player, dto.matchId);
-        if (ack.ok) this.joinRoom(ws, connection, dto.matchId);
+        if (ack.ok) this.joinRoom(ws, connection, dto.matchId, ack.team);
         return ack;
       }
       case 'match:leave': {
@@ -258,9 +263,12 @@ export class RawWsGateway
     ws: WebSocket,
     connection: Connection,
     matchId: string,
+    team: number | null,
   ): void {
     if (!connection.rooms.has(matchId)) this.hub.watch(matchId); // tells the other servers that a client here wants this room
     connection.rooms.add(matchId);
+    if (team !== null) connection.teams.set(matchId, team);
+    else connection.teams.delete(matchId);
     let members = this.rooms.get(matchId);
     if (!members) this.rooms.set(matchId, (members = new Set()));
     members.add(ws);
@@ -272,6 +280,7 @@ export class RawWsGateway
     matchId: string,
   ): void {
     if (connection.rooms.delete(matchId)) this.hub.unwatch(matchId);
+    connection.teams.delete(matchId);
     const members = this.rooms.get(matchId);
     members?.delete(ws);
     if (members && members.size === 0) this.rooms.delete(matchId);

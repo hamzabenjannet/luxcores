@@ -11,6 +11,8 @@ interface Message {
   o: string;
   e: string;
   d: unknown;
+  /** Set when only one team's members may receive the event. */
+  t?: number;
 }
 
 /**
@@ -29,7 +31,7 @@ export class RoomRelay {
     private readonly redis: RedisHandle,
     private readonly nodeId: string,
     /** Delivers an event from another node to the local clients of the room. */
-    private readonly deliver: (matchId: string, event: string, data: unknown) => void,
+    private readonly deliver: (matchId: string, event: string, data: unknown, team?: number) => void,
   ) {}
 
   private channel(matchId: string): string {
@@ -62,8 +64,8 @@ export class RoomRelay {
   }
 
   /** Sends an event to the other nodes that have a client in the room. Never throws, never waits for the caller. */
-  publish(matchId: string, event: string, data: unknown): void {
-    void this.send(matchId, event, data);
+  publish(matchId: string, event: string, data: unknown, team?: number): void {
+    void this.send(matchId, event, data, team);
   }
 
   async close(): Promise<void> {
@@ -71,10 +73,10 @@ export class RoomRelay {
     this.interest.clear();
   }
 
-  private async send(matchId: string, event: string, data: unknown): Promise<void> {
+  private async send(matchId: string, event: string, data: unknown, team?: number): Promise<void> {
     try {
       if ((await this.othersListening(matchId)) === 0) return;
-      const message: Message = { o: this.nodeId, e: event, d: data };
+      const message: Message = { o: this.nodeId, e: event, d: data, ...(team === undefined ? {} : { t: team }) };
       await this.redis.client.publish(this.channel(matchId), JSON.stringify(message));
     } catch {
       // Redis is away or busy. The clients on other nodes miss this event and get the next one.
@@ -97,7 +99,7 @@ export class RoomRelay {
     try {
       const message = JSON.parse(text) as Message;
       if (message.o === this.nodeId) return;
-      this.deliver(matchId, message.e, message.d);
+      this.deliver(matchId, message.e, message.d, message.t);
     } catch (err) {
       this.logger.warn(`Dropped a malformed room message: ${(err as Error).message}`);
     }

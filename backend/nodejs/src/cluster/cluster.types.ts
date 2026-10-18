@@ -14,6 +14,10 @@ export interface JoinInfo {
   nextSeq: number;
   /** A `MatchSnapshot`, as the owner builds it. */
   snapshot: unknown;
+  /** The team the joiner plays for, or null for a watcher. */
+  team: number | null;
+  /** A `PrivateState` of that team, or null. */
+  private: unknown;
 }
 
 /** Runs a request on the owner and returns its reply. A throw becomes an error reply. */

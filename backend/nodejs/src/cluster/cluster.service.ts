@@ -1,7 +1,7 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '../config/configuration.js';
-import type { CommandAck, MatchSnapshot } from '../game/match-runner.service.js';
+import type { CommandAck, MatchSnapshot, PrivateState } from '../game/match-runner.service.js';
 import { MatchRunnerService } from '../game/match-runner.service.js';
 import type { MatchDto } from '../matches/dto/match.dto.js';
 import type { SimCommand } from '../simulation/sim.types.js';
@@ -13,6 +13,10 @@ import { MatchOwnership } from './match-ownership.js';
 export interface JoinState {
   nextSeq: number;
   snapshot: MatchSnapshot | null;
+  /** The team the joiner plays for, or null for a watcher. */
+  team: number | null;
+  /** The inventories of that team, or null. */
+  private: PrivateState | null;
 }
 
 /**
@@ -63,12 +67,12 @@ export class ClusterService {
 
   async join(matchId: string, playerId: string): Promise<JoinState> {
     if (this.runner.isRunning(matchId) && this.transport === 'auto') {
-      return { nextSeq: this.runner.nextSeq(matchId, playerId), snapshot: this.runner.snapshot(matchId) };
+      return { nextSeq: this.runner.nextSeq(matchId, playerId), snapshot: this.runner.snapshot(matchId), team: this.runner.teamOf(matchId, playerId), private: this.runner.privateFor(matchId, playerId) };
     }
     const reply = await this.ask(matchId, { t: 'join', playerId });
-    if (reply === NOT_RUNNING || typeof reply === 'string') return { nextSeq: 0, snapshot: null };
+    if (reply === NOT_RUNNING || typeof reply === 'string') return { nextSeq: 0, snapshot: null, team: null, private: null };
     const info = reply as JoinInfo;
-    return { nextSeq: info.nextSeq, snapshot: info.snapshot as MatchSnapshot | null };
+    return { nextSeq: info.nextSeq, snapshot: info.snapshot as MatchSnapshot | null, team: info.team ?? null, private: (info.private as PrivateState | null) ?? null };
   }
 
   async stop(matchId: string): Promise<MatchDto> {
