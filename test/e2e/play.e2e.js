@@ -215,7 +215,8 @@ test('a human orders creeps, then splits, merges and sends a group, through the 
     const barracksId = await hook('t.entities().find((e) => e.kind === 6 && e.team === 0).id');
     await hook(`t.send({ t: 'orderCreeps', barracksId: ${barracksId}, mix: ['melee', 'ranged', 'area', 'melee', 'ranged'] })`);
     for (let i = 0; i < 3; i++) await hook(`t.send({ t: 'orderCreeps', barracksId: ${barracksId}, mix: ['melee'] })`);
-    await page.waitForFunction(() => document.querySelectorAll('.queue-row').length >= 4);
+    // The first order (2 s) may already have left the queue by now, and a slow page sees fewer rows.
+    await page.waitForFunction(() => document.querySelectorAll('.queue-row').length >= 3);
     const luxOf = async () => Number(((await page.textContent('#hud-core')) ?? '').replace(/\D/g, ''));
     const before = await luxOf();
     await page.click('.queue-row:last-child .cancel');

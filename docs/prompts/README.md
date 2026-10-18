@@ -38,3 +38,6 @@ The live status of the repo stays in `docs/HANDOVER.md`. This folder keeps the h
 | `handover-2026-10-18-architecture-a.md` | Handover | State after the sim changes, the Redis container and architecture phase A |
 | `2026-10-18-architecture-phase-b-to-e.md` | Prompt | The rule for a Mongo that is down at start-up, and the request to implement everything with the JSON fallback |
 | `handover-2026-10-18-architecture-b-e.md` | Handover | State after checkpoints, storage fallback, the tiered match log, command queues and several servers |
+| `2026-10-18-m5-heroes.md` | Prompt | The go-ahead for M5 |
+| `handover-2026-10-18-m5.md` | Handover | State after M5: heroes in the sim, bot, server and both clients |
+

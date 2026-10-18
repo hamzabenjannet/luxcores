@@ -101,6 +101,11 @@ Each entity in a snapshot carries `id`, `kind`, `team`, `owner`, `x` and `z` (un
 | `powerLevel`, `shellLevel` | Tower upgrade levels |
 | `roll` | Wind output in milli-lux per second |
 | `arrivalTick` | Projectile impact tick |
+| `heroType` | Hero: the roster id plus one (0 for any other entity). The names are in `data/heroes.json` |
+| `shieldHp`, `shieldTicks` | What the shield on this entity still absorbs (milli-HP) and the ticks it has left |
+| `cd0` to `cd3` | Hero: ticks until ability slot 0 (melee), 1 (ranged), 2 (area) and 3 (shield) can be cast again |
+
+A snapshot also carries `groups`, `orders` and `players`. A `players` entry holds `id`, `team`, `kind`, `heroLock` (bit i set while roster hero i is locked by the rotation) and `heroCooldown` (ticks until the player may pick another hero). A hero pick is an order of `type` 2 whose `mix` is `[rosterId, lux]`; creep orders have type 1 and a `mix` of attack codes.
 
 `kind` codes come from `GET /api/game/spec` (`kinds`), so a client never hard-codes them. A projectile lives for one tick, and a snapshot every second tick shows only some of them. Draw an aim line from `targetId` instead of waiting for one.
 
@@ -155,8 +160,10 @@ const ack = await socket.emitWithAck('match:command', {
 | `ping` | client to server | The ack holds the server time |
 | `match:updated` | server to room | The `MatchDto` after a lobby or status change |
 | `match:started` | server to room | `{ matchId, tickHz, players, map, snapshot }` |
-| `match:snapshot` | server to room | `{ matchId, tick, hash?, teams, entities }` (see Snapshot Entities) |
+| `match:snapshot` | server to room | `{ matchId, tick, hash?, teams, entities, groups, orders, players }` (see Snapshot Entities) |
 | `match:ended` | server to room | `{ matchId, endedTick, result, replayId }` |
+
+An accepted ack means that the server queued the command for the next tick. The sim can still refuse it for a reason the ack cannot know, such as too little lux, a locked hero or a cooldown, and the next snapshot shows what happened. The hero commands are `pickHero` (`heroId`, `lux`, `barracksId`), `heroMove`, `heroAttack` and `castAbility` (`slot` 0 to 3, with `targetId` or `x` and `z`); GDD 7.7 describes each.
 
 `GET /api/game/spec` lists the same events in machine-readable form, and the Swagger schemas include their payload DTOs.
 

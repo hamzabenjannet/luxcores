@@ -15,24 +15,24 @@ Milestones M1 (map generation), M2 (economy), M3 (combat and physics) and M4 (cr
 | State, config normalization | Done (`state.js`, `config.js`); `createState` spawns the 2 Cores and 12 blockers; teams are minimal |
 | Map generation (`mapgen.js`) | Done (M1): 3 lanes, 2 vents, 6 blockers and 2 item spawns per team from the seed, point-mirrored, flood-fill checked; stored on `state.map` |
 | Economy and tower upgrades (M2/M3) | Done: collectors, day/night, income buffer, spending, placement, recycling, entropy, meltdown, victory and tower upgrades |
-| Tick pipeline (`step.js`) | Economy, production (barracks queues), behavior (towers, creep targeting and steering, routes), movement and collisions, combat (towers, heroes, creeps) and stun timers, recycle, entropy, meltdown, cleanup, victory and visibility run; hero lifecycle, effects and item systems remain for later milestones |
-| Commands (`commands.js`) | Build, upgrade, recycle, cancelRecycle, orderCreeps, cancelQueue, setBarracksPath, setGroupPath, mergeGroups, splitGroup, heroAttack and heroMove use authoritative handlers; hero pick, ability and item commands remain for later milestones |
-| Hash (`hash.js`) | Canonical layout documented in the file header; all gameplay state, including projectiles, upgrades, entropy remainder, creep groups, barracks queues and waypoints, is hashed; `state.map` stays derived and excluded by owner decision |
+| Tick pipeline (`step.js`) | Economy, production (barracks queues), behavior (towers, creep targeting and steering, routes), movement and collisions, combat (towers, heroes, creeps) and stun timers, recycle, entropy, meltdown, cleanup, victory and visibility run, with the hero lifecycle (picks, rotation lock, death cooldown) and the effects system (shields, ability cooldowns); the item systems remain for M6 |
+| Commands (`commands.js`) | Build, upgrade, recycle, cancelRecycle, orderCreeps, cancelQueue, setBarracksPath, setGroupPath, mergeGroups, splitGroup, heroAttack, heroMove, pickHero and castAbility use authoritative handlers; the item commands (`orderItem`, `useItem`, `pickUp`) remain for M6 |
+| Hash (`hash.js`) | Canonical layout documented in the file header; all gameplay state, including projectiles, upgrades, entropy remainder, creep groups, barracks queues and waypoints, hero types, shields, ability cooldowns and each player's rotation lock and pick cooldown, is hashed; `state.map` stays derived and excluded by owner decision |
 | Replay (`replay.js`) | Record and playback done, mismatch detection tested; the golden replay `replays/golden/seed-1234567.json` (2 400 ticks) plays back in `test/golden.test.js` |
 | Headless runner | `npm run headless`: 12 000 ticks in about 15 ms with empty systems; a third argument saves the run as a replay |
 | Purity guard | `test/sim-boundary.test.js` blocks bare imports, Math.random, wall clock, approximated Math, `**`, DOM, timers, key iteration |
-| Web client | Plays only through the server: a start menu (bot, bots to watch, two humans), a lobby card, a build palette, a selection panel (tower upgrades, recycle), hero orders and a result banner. It draws the map, every entity with its name and lux count, tower attack types, aim lines and projectiles, picks tiles by ray-casting, and pans by drag. It never steps the sim |
+| Web client | Plays only through the server: a start menu (bot, bots to watch, two humans), a lobby card, a build palette, a selection panel (tower upgrades, recycle), hero picks, a hero bar with the four abilities and a result banner. It draws the map, every entity with its name and lux count, tower attack types, aim lines and projectiles, picks tiles by ray-casting, and pans by drag. It never steps the sim |
 | Backend (`backend/nodejs/`) | NestJS 12 multiplayer server: guest auth with JWT guards, players, lobbies, a server-authoritative match runner at 20 Hz, Socket.IO `/game` namespace, replays with server-side verify, static routes for the game files, Swagger at `/api/docs`, JSON file database with MongoDB and PostgreSQL adapters, RabbitMQ events with an in-process fallback. See `backend/nodejs/README.md` |
-| Bots | `src/bot/bot.js` follows the GDD 12.1 rotation (collector, barracks, tower, creep group of 5) and upgrades towers; the server runs it for a `vsBot` or `botVsBot` lobby, and its commands go into the replay. Heroes arrive with M5. `node tools/run-bots.js --soak 100` plays 100 seeds twice and compares the hashes. Golden replays `bots-seed-777` (5 000 ticks), `bots-seed-3-victory` (a creep rush, tick 3699) and `bots-seed-4-stalemate` (no winner, ends at the 10 000-tick limit) pin bot matches. A match nobody has won ends as a draw at `match.stalemateTicks` (10 000); `MATCH_MAX_TICKS` raises it for the server and the tools |
+| Bots | `src/bot/bot.js` follows the GDD 12.1 rotation (collector, barracks, tower, creep group of 5) and upgrades towers; the server runs it for a `vsBot` or `botVsBot` lobby, and its commands go into the replay. It also fields heroes (GDD 12.1): the roster in order, half of the Core's lux, walking the lane and attacking what it meets, with no abilities. `node tools/run-bots.js --soak 100` plays 100 seeds twice and compares the hashes. Golden replays `bots-seed-777` (1 200 ticks), `bots-seed-3-victory` (tick 3201, team 1 wins) and `bots-seed-4-stalemate` (no winner, ends at the 10 000-tick limit) pin bot matches, and `heroes-seed-515151` pins a scripted match of two human heroes (`node tools/record-hero-golden.js`). A match nobody has won ends as a draw at `match.stalemateTicks` (10 000); `MATCH_MAX_TICKS` raises it for the server and the tools |
 | Match log and resume | Every running match has a write-ahead log (`backend/nodejs/src/matchlog`): seed, every command, a hash every 20 ticks and a checkpoint every 400. The log goes to a Redis Stream, MongoDB or files, whichever works. The server rebuilds running matches from it at start-up, after a crash, a graceful stop (`MATCH_ON_SHUTDOWN`) or a change of the rules. Clients rejoin by themselves and continue their command count (`nextSeq`). See `backend/nodejs/README.md`, Match Log and Resume |
 | Several servers | Redis leases say which server runs a match, and RabbitMQ holds one command queue per match, so a client on one server plays a match on another and a dead server's matches are adopted. See `backend/nodejs/README.md`, Running Several Servers |
 | Spectators | Any signed-in player may join the room of a `botVsBot` match and receives every event, with no commands. A human match stays closed to strangers |
 | Entity labels | Every entity and map marker shows its name and, for entities, its lux count under it (`render/labels.js`) |
 | Project memory (`docs/prompts/`) | Tracked in git: prompt history, handovers, progress and knowledge notes; see its README |
 | Prose gate | `tools/check_style.py` labels hits `deny` or `ask`, supports `--register informal`, reads `.js` files through their comments and checks the whole repo with `npm run lint:prose:all`; `test/prose.test.js` fails `npm test` on any `deny` hit |
-| Godot project (`vone/`) | Godot 4.6, GL Compatibility renderer, a thin client at M4 (see Client Alignment below): spec check, server data, build, upgrade, recycle, creep orders, queue, groups, merge, split, paths, hero orders, combat visuals, bot and spectator modes |
-| Cross-runtime check | `determinism.html` plays the sim inside Chromium. The idle hash at tick 120 (`173b2eec`, seed 1234567) and the bot hash at tick 5000 (`72bb2207`, seed 777, with creeps, A* and collisions) equal the Node values |
-| Latest validation (2026-10-18) | `npm test`: 159 passed; backend `npm test`: 38 passed and 12 skipped without services; backend `npm run test:e2e`: 67 passed and 4 skipped (the RabbitMQ pair passes on a real broker); root `npm run test:e2e`: 11 passed (Chromium, a crash and restart of the server, Godot parity 63 checks, Godot live 44 checks); Chromium and Node agree on the bot hash at tick 5000 (`72bb2207`) |
+| Godot project (`vone/`) | Godot 4.6, GL Compatibility renderer, a thin client at M5 (see Client Alignment below): spec check, server data, build, upgrade, recycle, creep orders, queue, groups, merge, split, paths, hero picks and abilities, hero orders, combat visuals, bot and spectator modes |
+| Cross-runtime check | `determinism.html` plays the sim inside Chromium. The idle hash at tick 120 (`f9055d2f`, seed 1234567) and the bot hash at tick 1 200 (`bbd219bc`, seed 777, with creeps, heroes, A* and collisions) equal the Node values |
+| Latest validation (2026-10-18, M5) | `npm test`: 194 passed; `node tools/run-bots.js --soak 100`: 100 seeds of 10 000 ticks, twice each, identical hashes, no crash (573 s); backend `npm test`: 93 passed and 42 skipped without services (135 passed with MongoDB, Redis, RabbitMQ and PostgreSQL containers, before M5); backend `npm run test:e2e`: 76 passed and 13 skipped without services; root `npm run test:e2e`: 12 passed (Chromium, the hero controls, a crash and restart of the server, Godot parity 103 checks, Godot live 59 checks). One creeps browser test raced once with the first queue order and passed on three reruns; its row count is relaxed |
 
 ### Browser and Godot Tests
 
@@ -49,10 +49,10 @@ Build the backend once (`npm run serve:install`, then `npm --prefix backend/node
 
 Three programs now share one rule engine and one protocol. `src/sim/` runs only in the backend (and in `determinism.html` and the headless tools). The web client and the Godot client are thin clients of the backend, so a rule changes in one place.
 
-- **Protocol.** Snapshots carry the combat fields (`attack`, `recycle`, `stunTicks`, `targetId`, `powerLevel`, `shellLevel`, `roll`, `arrivalTick`), and `GET /api/game/spec` lists the entity `kinds`. Both clients read costs, upgrades, the build zone and the HP factor from `data/*.json` served by the backend.
+- **Protocol.** Snapshots carry the combat fields (`attack`, `recycle`, `stunTicks`, `targetId`, `powerLevel`, `shellLevel`, `roll`, `arrivalTick`), the hero fields (`heroType`, `shieldHp`, `shieldTicks`, `cd0` to `cd3`) and a `players` list with each player's rotation lock and pick cooldown, and `GET /api/game/spec` lists the entity `kinds`. Both clients read costs, upgrades, the build zone and the HP factor from `data/*.json` served by the backend.
 - **Parity cases.** `test/fixtures/client-parity.json` holds the cases for label text, affordability, tap resolution and panel actions. `test/client-parity.test.js` runs them in JavaScript and `vone/tests/run_tests.gd` in GDScript. The JavaScript test also reads `GameLogic.SPEC_VERSION` from the `.gd` file and fails when it differs from the sim.
-- **Workflow.** A change to a UI decision goes into `src/client/entity-text.js` or `src/client/ui/controls.js`, into `vone/scripts/game_logic.gd` and into the fixture, in one commit. A rule change goes into `src/sim/` and the GDD. Then both clients grow with the milestone: M4 adds creep orders to both.
-- **Hero controls.** No hero exists before M5, because nothing in the sim spawns one. Both clients wire hero move and attack, and the parity cases cover them. No live match has exercised them yet. The owners test heroes in M5.
+- **Workflow.** A change to a UI decision goes into `src/client/entity-text.js` or `src/client/ui/controls.js`, into `vone/scripts/game_logic.gd` and into the fixture, in one commit. A rule change goes into `src/sim/` and the GDD. Then both clients grow with the milestone: M4 added creep orders to both, and M5 added heroes.
+- **Hero controls.** Both clients pick a hero at a barracks, show the hero bar with the four abilities, aim ranged and area abilities with a tap, and move or attack with taps. The web browser test and the Godot live test drive each of those through the controls. No human has played a full match with a hero yet.
 - **Not verified.** A real phone, a Godot export for web, Android or iOS, and a Godot match between two humans (the protocol is the same as the covered bot match). `[UNVERIFIED]`
 
 ## M1 to M3 Closure
@@ -72,7 +72,7 @@ M3 acceptance checks:
 - Physics resolves unit-to-unit and unit-to-building collisions; a 0.5-tile knockback lands exactly over five linearly weighted ticks.
 - Visibility updates every five ticks. Gameplay rules run through commands and `step()`.
 
-Creep production, groups and pathing were M4 and are done (see M4 below). Hero production and abilities belong to M5; item effects belong to M6.
+Creep production, groups and pathing were M4 and hero production and abilities were M5, and both are done (see below). Item effects belong to M6.
 
 ## M4 (Creeps)
 
@@ -89,15 +89,32 @@ Open for the owners:
 - **Bots win fast.** With the spacing and collision fixes, seeds 1 to 10 of `tools/run-bots.js` end between tick 1 644 and 9 493, and seeds 1, 4 and 10 hit the 10 000-tick stalemate limit. Most wins are creep rushes. The bot builds no defense against groups. I read this as a balance question for the creep and tower numbers in `data/`, not a bug. `[UNVERIFIED]` as a design judgment.
 - **Creep labels.** Each creep shows its own name and lux count, which crowds the screen at 30 creeps. M7 plans instancing and a calmer layout.
 
-## Next Milestone: M5
+## M5 (Heroes)
+
+Done on 2026-10-18 in the sim, the bot, the server, the web client and the Godot client. `src/sim/heroes.js` holds the pick, the rotation lock, the abilities and the shield; `damage.js` applies damage so a shield absorbs every source; `systems/hero.js`, `effects.js` and `cleanup.js` run the cooldowns and the death wait. GDD 7.7 states the rules that the GDD left open, and they await the owners' approval (`SPEC_VERSION` stays 0.10.0, so the golden replays were re-recorded and `heroes-seed-515151` was added). The acceptance checks are tests in `test/heroes.test.js`:
+
+- The rotation lock across six picks: a picked hero stays locked until the other four were picked, the fifth pick unlocks the whole roster, and the sixth pick may be the first hero again.
+- A pick pays its lux at once, builds for 5 seconds and puts a hero with ten HP per lux next to the barracks. Cancelling refunds in full, and a barracks that dies with the order in its queue loses the lux.
+- After a death the player waits exactly 100 ticks before the next pick, and the hero is on the field 100 ticks after that.
+- Each ability: melee (60 damage, guaranteed stun, Corona's dash), ranged (60 damage, 6 tiles, Prism 8), area (40 damage in 1.5 tiles, Flare larger), shield (150 absorbed, Halo 250). A refused cast costs nothing, and a cooldown lasts 100 ticks counting the cast tick.
+- A shield absorbs damage before HP from abilities, and the rest of a blow goes through. A hero told to attack walks into reach and stops when the target dies.
+- A checkpoint from before heroes existed still loads (`importState` fills new fields), and a bot memory from before heroes loads too.
+
+The bot fields heroes as GDD 12.1 says. It found two bugs while I tested: the minimum Core lux was multiplied by 1000 twice, so it never picked, and the first lane vertex lies under the Core, which `heroMove` refuses, so a hero never left. The bot now skips vertices under buildings.
+
+Open for the owners:
+
+- **Approve GDD 7.7.** The details most likely to matter: the rotation lock applies at spawn, an ability resolves in the tick of the cast (no projectile), the area ability also hits enemy buildings and the Lumen Core, and a stunned hero cannot cast.
+- **Bots and balance.** Of seeds 1 to 6 of `tools/run-bots.js`, five now end in a victory between ticks 1 034 and 5 413, and seed 4 reaches the 10 000-tick limit. The bot spends half of its Core on a hero as soon as it has a barracks, so its first tower comes at tick 248 in seed 11 and later than before `[UNVERIFIED]`: I did not measure the older timing. Whether that is the balance the owners want is their judgment.
+- **Hero roster.** Names and kits are still the placeholders in `data/heroes.json` until Hama designs them.
+- **No camera follow, no portrait, no hold-to-aim.** M7 and M8 own those, as the milestone table says.
+
+## Next Milestone: M6
 
 From `docs/TECH_ARCHITECTURE.md` section 14. Each milestone ends with tests green and a short demo on a phone. Both clients grow together: put every UI decision in `src/client/ui/controls.js` and `vone/scripts/game_logic.gd`, and add parity cases.
 
-From `docs/TECH_ARCHITECTURE.md` section 14. Each milestone ends with tests green and a short demo on a phone.
-
 | # | Scope | Done when |
 |---|---|---|
-| M5 | Hero: roster of 5, rotation lock, HP allocation, 5 s production, 5 s respawn cooldown, 4 abilities from data, shield targets | Rotation lock test across 6 picks |
 | M6 | Items: inventory (50), barracks orders waiting for a hero, drops, map spawns, loot bags (owner can reclaim), the 4 starter items | Energy Boost refused on the Core; Energy Grab funnels exactly 50 lux then is consumed |
 | M7 | Client: instanced rendering, interpolation, camera follow on the selected hero, a small lux count beside every unit and building (no glow-as-health, GDD 13.1), end-of-match stats | 60 creeps on screen at 60 fps on a mid-range Android phone |
 | M8 | Touch controls per GDD 11: tap select, hero move and attack, ability targeting, path mode with Undo/Go/Cancel and Reuse last path, build ghost, quick slots, pinch zoom | A full match playable by touch |

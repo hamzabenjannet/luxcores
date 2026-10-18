@@ -2,6 +2,12 @@
 
 Newest first. One entry per milestone or notable change. Add the commit hash and the verification, not just the intent.
 
+## 2026-10-18: M5 (Heroes)
+
+- `4ab84db` the sim, the bot and the golden replays. `56e4b2c` the web client and the snapshot fields. Then the Godot client, the Chromium hash fix and the documentation.
+- Verified: see `docs/HANDOVER.md`, validation row. A bot soak and the Godot live test with heroes pass.
+- Next: the owners approve GDD 7.7 and decide on M6 or the deferred snapshot work. See `handover-2026-10-18-m5.md`.
+
 ## 2026-10-18: Architecture Phases B to E and Resume Across Edits
 
 - `45251cf` sim checkpoints. `7b5e711` checkpoints in the server and the tiered match log. `22bd1dc` storage with the JSON fallback. `e4cf63c` and `1a0a5bc` Redis Stream buffer and MongoDB events. `645a04c` leases, command queues and room relay. Then the later commits of that day: start-up window, deploy stack, docs.
