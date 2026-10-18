@@ -27,7 +27,7 @@ npm run gen:sin                      # regenerate src/sim/sin-table.js (rarely)
 npm run serve                        # backend on :3000 serving the game page and every match; run `npm run serve:install` once
 ```
 
-The repo needs Node 22 or newer and Python 3 for the prose checker. There is no build step, and `npm test` needs no install. Two dependency sets are approved: `playwright-core` 1.58.2 (dev, pinned) for `npm run test:e2e`, and the NestJS stack in `backend/nodejs/package.json` (owners, 2026-10-16). The Redis client `@redis/client` 6.3.0 was added on 2026-10-18 with Hamza's approval; Hama has yet to confirm it. Ask the owners before you add anything else.
+The repo needs Node 22 or newer and Python 3 for the prose checker. There is no build step, and `npm test` needs no install. Two dependency sets are approved: `playwright-core` 1.58.2 (dev, pinned) for `npm run test:e2e`, and the NestJS stack in `backend/nodejs/package.json` (owners, 2026-10-16). The Redis client `@redis/client` 6.3.0 was added on 2026-10-18 (Hamza). Ask the owners before you add anything else.
 
 ## Simulation Rules (`src/sim/`)
 
@@ -195,4 +195,4 @@ The Godot client is a thin client of the backend, like the web client, and runs 
 - **Hamza BEN JANNET:** project owner. Decides rules, scope and architecture.
 - **Hama BEN JANNET:** project owner. Game and UI/UX designer; makes the low-poly neon `.glb` models in `assets/` and owns team colors and art direction.
 
-Both owners approve changes to game rules and new dependencies.
+Both owners approve changes to game rules. Hamza approves infrastructure dependencies; Hama decides graphics and user experience.

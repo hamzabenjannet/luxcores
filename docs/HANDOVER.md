@@ -178,7 +178,7 @@ Decisions:
 - Events are commands, hashes and lifecycle, and snapshots stay live-only. A checkpoint is state, saved beside the events.
 - Mongo holds one events collection indexed by match, not a collection per match.
 - When MongoDB fails during the run, the server switches to the JSON file until the next restart and does not switch back by itself, so the two stores never diverge while the server runs.
-- The only new dependency is `@redis/client` 6.3.0. Hamza approved the Redis layer on 2026-10-18. CLAUDE.md asks for both owners to approve a dependency, and Hama has not confirmed this one yet.
+- The only new dependency is `@redis/client` 6.3.0. Hamza approved the Redis layer on 2026-10-18.
 
 | Phase | Scope | State |
 |---|---|---|

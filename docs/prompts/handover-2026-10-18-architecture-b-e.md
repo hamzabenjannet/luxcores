@@ -24,7 +24,7 @@ Describes the state after the commits from `45251cf` (sim checkpoints) to the co
 - A Redis outage never takes a match from the server that holds it. The lease is lost only when Redis answers that another server has it.
 - The public health route shows counts and booleans, not match ids or error messages.
 - The first checkpoint comes at tick 20, so a change of rules loses only a match younger than one second.
-- A new dependency, `@redis/client` 6.3.0. Hama has not confirmed it (CLAUDE.md asks for both owners).
+- A new dependency, `@redis/client` 6.3.0, approved by Hamza. Hamza later ruled that his approval is enough for infrastructure dependencies; Hama decides graphics and user experience.
 
 ## Not Verified
 
@@ -34,6 +34,5 @@ Describes the state after the commits from `45251cf` (sim checkpoints) to the co
 
 ## Open for the Owners
 
-- Confirm the Redis client dependency (Hama).
-- Decide when to build delta, fog-filtered snapshots and placement by load, which the 100-match target needs. They change the protocol of both clients.
+- Deferred by Hamza: delta, fog-filtered snapshots and placement by load, which the 100-match target needs. They change the protocol of both clients.
 - Then M5 (heroes).
