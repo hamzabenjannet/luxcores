@@ -17,6 +17,7 @@ import {
   type MatchDto,
   type MatchPlayerDto,
   type MatchResultDto,
+  type TeamStatsDto,
   MatchStatus,
 } from '../matches/dto/match.dto.js';
 import { MatchesService } from '../matches/matches.service.js';
@@ -817,16 +818,31 @@ function toMatchPlayer(p: RunnerPlayer): MatchPlayerDto {
 }
 
 function resultOf(state: SimState, forced?: MatchEndReason): MatchResultDto {
-  if (forced) return { winnerTeam: null, draw: true, reason: forced };
+  const stats = statsOf(state);
+  if (forced) return { winnerTeam: null, draw: true, reason: forced, stats };
   const outcome = state.outcome;
   if (outcome && 'winnerTeam' in outcome)
     return {
       winnerTeam: outcome.winnerTeam,
       draw: false,
       reason: MatchEndReason.Victory,
+      stats,
     };
   if (outcome)
-    return { winnerTeam: null, draw: true, reason: MatchEndReason.Draw };
+    return { winnerTeam: null, draw: true, reason: MatchEndReason.Draw, stats };
   // Timed mode needs a score rule that the GDD defines for later milestones.
-  return { winnerTeam: null, draw: true, reason: MatchEndReason.TickLimit };
+  return { winnerTeam: null, draw: true, reason: MatchEndReason.TickLimit, stats };
+}
+
+/** The end-of-match counters of every team (GDD 13.2). */
+function statsOf(state: SimState): TeamStatsDto[] {
+  return state.teams.map((t, team) => ({
+    team,
+    collected: t.statCollected,
+    spent: t.statSpent,
+    drained: t.statDrained,
+    funneled: t.statFunneled,
+    recycled: t.statRecycled,
+    entropy: t.statEntropy,
+  }));
 }

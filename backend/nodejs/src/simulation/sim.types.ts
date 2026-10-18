@@ -100,6 +100,13 @@ export interface SimTeam {
   coreLux: number;
   pendingLux: number;
   ticksSinceSpend: number;
+  /** End-of-match counters in milli-lux (GDD 13.2). */
+  statCollected: number;
+  statSpent: number;
+  statDrained: number;
+  statFunneled: number;
+  statRecycled: number;
+  statEntropy: number;
 }
 
 export interface SimLane {

@@ -172,6 +172,13 @@ describe('bots and spectators over the match server', () => {
       45_000,
     );
     expect(ended.result.reason).toBe('tick-limit');
+    // The end-of-match counters (GDD 13.2): both bots collected and spent lux.
+    const stats = (ended.result as unknown as { stats: { team: number; collected: number; spent: number }[] }).stats;
+    expect(stats.map((s) => s.team)).toEqual([0, 1]);
+    for (const s of stats) {
+      expect(s.collected).toBeGreaterThan(0);
+      expect(s.spent).toBeGreaterThan(0);
+    }
     const verify = await api(t.url, `/api/replays/${ended.replayId}/verify`, {
       method: 'POST',
       token: halo.token,

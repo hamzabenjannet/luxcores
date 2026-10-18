@@ -33,11 +33,24 @@ export class MatchPlayerDto {
   @ApiProperty({ enum: ['human', 'bot'] }) kind!: 'human' | 'bot';
 }
 
+/** What one team did over the match, in milli-lux (GDD 13.2). Whole lux is the value divided by 1000. */
+export class TeamStatsDto {
+  @ApiProperty({ example: 0 }) team!: number;
+  @ApiProperty({ description: 'Total collector output' }) collected!: number;
+  @ApiProperty({ description: 'Paid for buildings, upgrades, creeps, heroes, abilities and items' }) spent!: number;
+  @ApiProperty({ description: 'Enemy lux destroyed by this team\'s damage' }) drained!: number;
+  @ApiProperty({ description: 'Enemy lux that Energy Grab moved to this team' }) funneled!: number;
+  @ApiProperty({ description: 'Refunds received for recycled buildings' }) recycled!: number;
+  @ApiProperty({ description: 'Lux this team\'s units and buildings lost to entropy' }) entropy!: number;
+}
+
 export class MatchResultDto {
   @ApiProperty({ nullable: true, type: Number, example: 0 }) winnerTeam!:
     number | null;
   @ApiProperty() draw!: boolean;
   @ApiProperty({ enum: MatchEndReason }) reason!: MatchEndReason;
+  @ApiPropertyOptional({ type: [TeamStatsDto], description: 'The counters of each team at the end of the match' })
+  stats?: TeamStatsDto[];
 }
 
 /** A lobby or match. Also the stored document of the `matches` collection. */
