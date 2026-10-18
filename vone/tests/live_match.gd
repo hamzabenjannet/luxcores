@@ -154,6 +154,38 @@ func _run() -> void:
 	_check("the group takes the custom path", await _until(func(): return _main._current_snapshot.groups.any(func(g): return int(g.id) == int(ids[1]) and int(g.custom) == 1 and g.waypoints.size() == 2)), true)
 	_main._leave_match()
 
+	# Part 1c: heroes. Pick one at a barracks through the panel, shield it, aim the area ability.
+	_main._mode_selector.select(0)
+	_main._match_input.text = ""
+	await _main._connect_match()
+	await _main._start_match()
+	_check("part 1c starts", await _until(func(): return _entities().size() > 0), true)
+	var hero_tile := _free_tile(0)
+	_main._select_building("barracks")
+	await _main._on_arena_tapped(Vector2(hero_tile.x + 0.5, hero_tile.y + 0.5))
+	_check("the hero barracks appears", await _until(func(): return _find(GameLogic.KIND_BARRACKS, 0).size() == 1), true)
+	_main._select_building("barracks") # build mode off
+	await _main._on_arena_tapped(Vector2(hero_tile.x + 0.5, hero_tile.y + 0.5))
+	_check("the barracks panel offers the whole roster", _main._hero_box.get_child_count() == 3 and _main._hero_box.get_child(2).get_child_count() == 5, true)
+	_check("no hero, no hero bar", _main._hero_bar.visible, false)
+	_main._hero_box.get_child(2).get_child(1).pressed.emit() # Prism, with the default allocation
+	_check("the queue lists the hero pick", await _until(func(): return _main._queue_box.get_child_count() == 1 and _main._queue_labels[0].text.begins_with("Hero Prism")), true)
+	_check("the hero stands next to its barracks", await _until(func(): return _find(GameLogic.KIND_HERO, 0).size() == 1), true)
+	var hero: Dictionary = _find(GameLogic.KIND_HERO, 0)[0]
+	_check("the hero is Prism with its allocated HP", int(hero.heroType) == 2 and int(hero.hp) >= 290000, true)
+	_check("the hero bar shows", await _until(func(): return _main._hero_bar.visible and _main._hero_name_label.text.begins_with("Prism")), true)
+	_check("Prism is locked in the rotation", int(_main._viewer_player().get("heroLock", 0)), 2)
+	_check("the roster says a hero is on the field", await _until(func(): return _main._hero_box.get_child_count() > 0 and _main._hero_box.get_child(0).text == "Hero: Your hero is on the field."), true)
+	_main._ability_buttons[3].pressed.emit() # shield on the hero
+	_check("the shield covers the hero", await _until(func(): return int(_find(GameLogic.KIND_HERO, 0)[0].get("shieldHp", 0)) > 0), true)
+	_check("the label shows the shield", _main._hero_name_label.text.ends_with("SHIELD"), true)
+	_main._ability_buttons[2].pressed.emit() # area: aim
+	_check("aiming the area ability waits for a tap", _main._ability, 2)
+	await _main._on_arena_tapped(Vector2(float(hero.x) / 1000.0, float(hero.z) / 1000.0 - 3.0))
+	_check("the area ability starts its cooldown", await _until(func(): return int(_find(GameLogic.KIND_HERO, 0)[0].get("cd2", 0)) > 0), true)
+	_check("the aim ended with the cast", _main._ability, -1)
+	_main._leave_match()
+
 	# Part 2: two bots play, and this client only watches.
 	_main._mode_selector.select(1)
 	_main._match_input.text = ""

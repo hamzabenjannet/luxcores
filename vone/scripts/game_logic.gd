@@ -65,20 +65,110 @@ static func mix_for(count: int, type: String) -> Array:
 		out.append(cycle[i % cycle.size()] if type == "mixed" else type)
 	return out
 
+## Order type code of a hero pick in Order.type (ORDER_TYPE.hero in src/sim/creeps.js).
+const HERO_ORDER := 2
+
+## Seconds as the UI writes them, rounded up to a tenth, with integer math only:
+## 99 ticks at 20 Hz is "5.0s".
+static func seconds_text(ticks: int, tick_hz: int) -> String:
+	@warning_ignore("integer_division")
+	var tenths := (maxi(ticks, 0) * 10 + tick_hz - 1) / tick_hz
+	@warning_ignore("integer_division")
+	return "%d.%ds" % [tenths / 10, tenths % 10]
+
 ## The lines of a barracks queue, in queue order: [{index, orderId, text}]. A held group shows HELD.
-static func queue_lines(orders: Array, barracks_id: int, tick_hz: int) -> Array:
+## A hero pick shows the hero's name and the lux allocated to it.
+static func queue_lines(orders: Array, barracks_id: int, tick_hz: int, hero_names: Array = []) -> Array:
 	var initials := {1: "M", 2: "R", 3: "A"}
 	var out: Array = []
 	var index := 0
 	for order in orders:
 		if int(order.get("barracksId", -1)) != barracks_id:
 			continue
-		var mix := ""
-		for code in order.get("mix", []):
-			mix += String(initials.get(int(code), "?"))
-		var status := "HELD" if int(order.get("held", 0)) == 1 else "%.1fs" % (maxf(0.0, float(order.get("ticksLeft", 0))) / float(tick_hz))
-		out.append({"index": index, "orderId": int(order.id), "text": "Group of %d %s %s" % [order.get("mix", []).size(), mix, status]})
+		var mix: Array = order.get("mix", [])
+		if int(order.get("type", 1)) == HERO_ORDER:
+			var hero_name := String(hero_names[int(mix[0])]) if int(mix[0]) < hero_names.size() else "?"
+			out.append({"index": index, "orderId": int(order.id), "text": "Hero %s %d lux %s" % [hero_name, int(mix[1]), seconds_text(int(order.get("ticksLeft", 0)), tick_hz)]})
+		else:
+			var letters := ""
+			for code in mix:
+				letters += String(initials.get(int(code), "?"))
+			var status := "HELD" if int(order.get("held", 0)) == 1 else "%.1fs" % (maxf(0.0, float(order.get("ticksLeft", 0))) / float(tick_hz))
+			out.append({"index": index, "orderId": int(order.id), "text": "Group of %d %s %s" % [mix.size(), letters, status]})
 		index += 1
+	return out
+
+## The four abilities in slot order: type in data/abilities.json, letter, and how it is aimed.
+const ABILITY_SLOTS := [
+	{"slot": 0, "type": "melee", "letter": "M", "aim": "none"},
+	{"slot": 1, "type": "ranged", "letter": "R", "aim": "target"},
+	{"slot": 2, "type": "area", "letter": "A", "aim": "point"},
+	{"slot": 3, "type": "shield", "letter": "S", "aim": "none"},
+]
+
+## The ability buttons of the hero bar: [{slot, type, letter, aim, costLux, ready, poor, text}].
+## ready is false while the cooldown runs, poor when the Core could not pay and keep its minimum.
+## abilities is data/abilities.json (costs in whole lux).
+static func ability_states(hero: Dictionary, abilities: Dictionary, core_lux_milli: int, min_left_lux: int, tick_hz: int) -> Array:
+	var cooldowns := [int(hero.get("cd0", 0)), int(hero.get("cd1", 0)), int(hero.get("cd2", 0)), int(hero.get("cd3", 0))]
+	var out: Array = []
+	for def in ABILITY_SLOTS:
+		var slot := int(def.slot)
+		var cost := int(abilities.templates[def.type].costLux)
+		var ticks: int = cooldowns[slot]
+		out.append({
+			"slot": slot, "type": def.type, "letter": def.letter, "aim": def.aim, "costLux": cost,
+			"ready": ticks == 0,
+			"poor": not can_afford(core_lux_milli, cost, min_left_lux),
+			"text": "%s %s" % [def.letter, seconds_text(ticks, tick_hz)] if ticks > 0 else "%s %d" % [def.letter, cost],
+		})
+	return out
+
+## The command of an ability that needs no second tap, or an empty Dictionary for the aimed ones.
+static func immediate_cast(slot: int, hero: Dictionary) -> Dictionary:
+	if slot == 0:
+		return {"t": "castAbility", "slot": 0}
+	if slot == 3:
+		return {"t": "castAbility", "slot": 3, "targetId": int(hero.id)}
+	return {}
+
+## What the barracks panel offers for picking a hero (GDD 7.1): {note, options}. note is empty when a
+## pick is possible. ctx: player ({heroLock, heroCooldown}, or empty), hero_alive, hero_queued,
+## roster ([{id, name, primary}]) and tick_hz.
+static func hero_pick_state(ctx: Dictionary) -> Dictionary:
+	var player: Dictionary = ctx.get("player", {})
+	var tick_hz := int(ctx.get("tick_hz", 20))
+	var note := ""
+	if bool(ctx.get("hero_alive", false)):
+		note = "Your hero is on the field."
+	elif bool(ctx.get("hero_queued", false)):
+		note = "Your hero is being built."
+	elif not player.is_empty() and int(player.get("heroCooldown", 0)) > 0:
+		note = "Next pick in %s" % seconds_text(int(player.heroCooldown), tick_hz)
+	var options: Array = []
+	for entry in ctx.get("roster", []):
+		var locked := not player.is_empty() and (int(player.get("heroLock", 0)) & (1 << int(entry.id))) != 0
+		options.append({"id": int(entry.id), "name": String(entry.name), "primary": String(entry.primary), "locked": locked, "enabled": not locked and note.is_empty()})
+	return {"note": note, "options": options}
+
+## The lux a hero pick can allocate (GDD 7.2): 25%, 50% and 75% of the Core's lux and the most the Core
+## can pay while keeping its minimum. Whole lux, at least 1, without repeats: [{label, lux}].
+static func hero_lux_choices(core_lux_milli: int, min_left_lux: int) -> Array:
+	@warning_ignore("integer_division")
+	var most := (core_lux_milli - min_left_lux * MILLI) / MILLI
+	var out: Array = []
+	if most < 1:
+		return out
+	for share in [["25%", 25], ["50%", 50], ["75%", 75], ["Max", 100]]:
+		@warning_ignore("integer_division")
+		var lux := mini(most, (core_lux_milli * int(share[1])) / (100 * MILLI))
+		if lux < 1:
+			continue
+		var seen := false
+		for c in out:
+			seen = seen or int(c.lux) == lux
+		if not seen:
+			out.append({"label": share[0], "lux": lux})
 	return out
 
 ## Buttons of the group panel. Split needs 2 or more creeps; the lane route button shows only after a custom path.
@@ -107,13 +197,18 @@ static func lux_of(entity: Dictionary, hp_factor: Dictionary) -> int:
 	var factor := float(hp_factor.get("core", 1)) if kind == KIND_CORE else float(hp_factor.get("default", 10))
 	return roundi(float(entity.get("hp", 0)) / factor / float(MILLI))
 
-## Label text of an entity, or "" for kinds with no name (projectiles).
-## Examples: "Solar 20", "Tower R P2 S1 18", "Barracks 40 REC", "Lumen Core 94".
-static func entity_text(entity: Dictionary, hp_factor: Dictionary) -> String:
+## Label text of an entity, or "" for kinds with no name (projectiles). A hero shows its roster name
+## when hero_names has one, and any entity under a shield shows SHIELD.
+## Examples: "Solar 20", "Tower R P2 S1 18", "Barracks 40 REC", "Lumen Core 94", "Halo 30 SHIELD".
+static func entity_text(entity: Dictionary, hp_factor: Dictionary, hero_names: Array = []) -> String:
 	var kind := int(entity.get("kind", 0))
 	if not KIND_NAMES.has(kind):
 		return ""
-	var parts: Array[String] = [KIND_NAMES[kind]]
+	var hero_type := int(entity.get("heroType", 0))
+	var label: String = KIND_NAMES[kind]
+	if kind == KIND_HERO and hero_type > 0 and hero_type <= hero_names.size():
+		label = String(hero_names[hero_type - 1])
+	var parts: Array[String] = [label]
 	if kind == KIND_TOWER:
 		parts.append(String(ATTACK_NAMES.get(int(entity.get("attack", 0)), "?")).substr(0, 1))
 		if int(entity.get("powerLevel", 0)) > 0:
@@ -123,6 +218,8 @@ static func entity_text(entity: Dictionary, hp_factor: Dictionary) -> String:
 	parts.append(str(lux_of(entity, hp_factor)))
 	if int(entity.get("stunTicks", 0)) > 0:
 		parts.append("STUN")
+	if int(entity.get("shieldHp", 0)) > 0:
+		parts.append("SHIELD")
 	if int(entity.get("recycle", 0)) > 0:
 		parts.append("REC")
 	return " ".join(parts)
@@ -172,7 +269,8 @@ static func pick_entity(entities: Array, ground: Vector2) -> Dictionary:
 ##   ground (Vector2, tiles), entities, viewer_team, building ("" for none),
 ##   attack, core_lux_milli, data ({buildings, balance, mapgen}), vents, and for creeps
 ##   mode ("path" adds waypoints, "merge" picks the group to join, "" for none),
-##   selected_group (id, or -1) and path_count (waypoints placed so far).
+##   selected_group (id, or -1) and path_count (waypoints placed so far), and ability
+##   (1 ranged or 2 area while the next tap aims that ability, -1 for none).
 static func resolve_tap(ctx: Dictionary) -> Dictionary:
 	var ground: Vector2 = ctx.ground
 	var entities: Array = ctx.get("entities", [])
@@ -181,6 +279,15 @@ static func resolve_tap(ctx: Dictionary) -> Dictionary:
 	var data: Dictionary = ctx.data
 	var tile_x := int(floor(ground.x))
 	var tile_z := int(floor(ground.y))
+
+	var ability := int(ctx.get("ability", -1))
+	if ability == 1:
+		var target := pick_entity(entities, ground)
+		if not target.is_empty() and int(target.kind) != KIND_PROJECTILE and (int(target.kind) == KIND_BLOCKER or (int(target.get("team", -1)) >= 0 and int(target.get("team", -1)) != viewer_team)):
+			return {"command": {"t": "castAbility", "slot": 1, "targetId": int(target.id)}}
+		return {"message": "Tap an enemy to hit."}
+	if ability == 2:
+		return {"command": {"t": "castAbility", "slot": 2, "x": roundi(ground.x * UNITS_PER_TILE), "z": roundi(ground.y * UNITS_PER_TILE)}}
 
 	if not building.is_empty():
 		var zone := build_zone(data.mapgen, viewer_team)

@@ -15,6 +15,7 @@ func _init() -> void:
 	var root := ProjectSettings.globalize_path("res://").path_join("..").simplify_path()
 	var fixture: Dictionary = _read_json(root.path_join("test/fixtures/client-parity.json"))
 	var data := {
+		"heroes": _read_json(root.path_join("data/heroes.json")),
 		"buildings": _read_json(root.path_join("data/buildings.json")),
 		"balance": _read_json(root.path_join("data/balance.json")),
 		"mapgen": _read_json(root.path_join("data/mapgen.json")),
@@ -33,9 +34,28 @@ func _init() -> void:
 	}), _normalize(fixture.kinds))
 	_check("the fixture HP factor matches the balance data", _normalize(fixture.hpFactor), _normalize(data.balance.hpFactor))
 
+	var hero_names: Array = fixture.heroNames
+	var roster: Array = fixture.roster
+	_check("the fixture hero names match the roster", _normalize(hero_names), _normalize(_names_of(roster)))
+	_check("the fixture roster matches data/heroes.json", _normalize(roster), _normalize(_roster_of(data.heroes)))
 	for c in fixture.entityText:
 		var expected := "" if c.expect == null else String(c.expect)
-		_check("entity text %s" % JSON.stringify(c.entity), GameLogic.entity_text(c.entity, fixture.hpFactor), expected)
+		_check("entity text %s" % JSON.stringify(c.entity), GameLogic.entity_text(c.entity, fixture.hpFactor, hero_names), expected)
+	for c in fixture.secondsText:
+		_check("seconds text %s" % JSON.stringify(c), GameLogic.seconds_text(int(c.ticks), int(c.tickHz)), String(c.expect))
+	for c in fixture.abilityStates:
+		_check("ability buttons: %s" % String(c.name), _normalize(GameLogic.ability_states(c.hero, fixture.abilities, int(c.coreLuxMilli), int(c.minLeftLux), int(c.tickHz))), _normalize(c.expect))
+	for c in fixture.immediateCast:
+		var cast := GameLogic.immediate_cast(int(c.slot), c.hero)
+		_check("immediate cast %s" % JSON.stringify(c), _normalize(cast if not cast.is_empty() else null), _normalize(c.expect))
+	for c in fixture.heroPickState:
+		var state := GameLogic.hero_pick_state({
+			"player": c.player if c.player != null else {}, "hero_alive": bool(c.heroAlive), "hero_queued": bool(c.heroQueued),
+			"roster": roster, "tick_hz": int(c.tickHz),
+		})
+		_check("hero pick: %s" % String(c.name), _normalize(state), _normalize(c.expect))
+	for c in fixture.heroLuxChoices:
+		_check("hero lux %s" % JSON.stringify(c), _normalize(GameLogic.hero_lux_choices(int(c.coreLuxMilli), int(c.minLeftLux))), _normalize(c.expect))
 	for c in fixture.isDay:
 		_check("day at tick %d" % int(c.tick), GameLogic.is_day(int(c.tick), fixture.dayNight), bool(c.expect))
 	for c in fixture.canAfford:
@@ -45,7 +65,7 @@ func _init() -> void:
 	for c in fixture.mixFor:
 		_check("order mix %s" % JSON.stringify(c), _normalize(GameLogic.mix_for(int(c.count), String(c.type))), _normalize(c.expect))
 	for c in fixture.queueLines:
-		_check("queue lines for barracks %d" % int(c.barracksId), _normalize(GameLogic.queue_lines(c.orders, int(c.barracksId), int(c.tickHz))), _normalize(c.expect))
+		_check("queue lines for barracks %d" % int(c.barracksId), _normalize(GameLogic.queue_lines(c.orders, int(c.barracksId), int(c.tickHz), fixture.heroNames)), _normalize(c.expect))
 	for c in fixture.groupActions:
 		var ids: Array = []
 		for action in GameLogic.group_actions(int(c.size), bool(c.custom)):
@@ -65,6 +85,7 @@ func _init() -> void:
 			"mode": String(ctx.get("mode", "")),
 			"selected_group": int(ctx.get("selectedGroup", -1)) if ctx.get("selectedGroup") != null else -1,
 			"path_count": int(ctx.get("pathCount", 0)),
+			"ability": int(ctx.get("ability", -1)) if ctx.get("ability") != null else -1,
 		})
 		_check("tap: %s" % String(c.name), _normalize(result), _normalize(c.expect))
 
@@ -83,6 +104,18 @@ func _check(name: String, actual: Variant, expected: Variant) -> void:
 		return
 	_failures += 1
 	printerr("FAIL %s\n  actual:   %s\n  expected: %s" % [name, JSON.stringify(actual) if typeof(actual) != TYPE_VECTOR2I else str(actual), JSON.stringify(expected) if typeof(expected) != TYPE_VECTOR2I else str(expected)])
+
+func _names_of(roster: Array) -> Array:
+	var out: Array = []
+	for entry in roster:
+		out.append(String(entry.name))
+	return out
+
+func _roster_of(heroes: Dictionary) -> Array:
+	var out: Array = []
+	for entry in heroes.get("roster", []):
+		out.append({"id": int(entry.id), "name": String(entry.name), "primary": String(entry.primary)})
+	return out
 
 func _read_json(path: String) -> Dictionary:
 	var file := FileAccess.open(path, FileAccess.READ)

@@ -41,6 +41,15 @@ var _panel_key := ""
 var _order_box: VBoxContainer
 var _queue_box: VBoxContainer
 var _order_key := ""
+var _hero_box: VBoxContainer
+var _hero_key := ""
+var _hero_bar: HBoxContainer
+var _hero_name_label: Label
+var _ability_buttons: Array = []
+## The slot (1 ranged, 2 area) whose target the next tap chooses, or -1.
+var _ability := -1
+## Label of the chosen hero allocation, one of GameLogic.hero_lux_choices.
+var _hero_alloc := "50%"
 var _queue_key := ""
 var _queue_labels := {}
 var _mode := ""
@@ -239,10 +248,30 @@ func _build_interface() -> void:
 	_order_box = VBoxContainer.new()
 	_order_box.add_theme_constant_override("separation", 6)
 	_panel.add_child(_order_box)
+	_hero_box = VBoxContainer.new()
+	_hero_box.add_theme_constant_override("separation", 6)
+	_panel.add_child(_hero_box)
 	_queue_box = VBoxContainer.new()
 	_queue_box.add_theme_constant_override("separation", 4)
 	_panel.add_child(_queue_box)
 	_game.add_child(_panel)
+
+	# The hero bar: the hero's label and its four abilities, M R A S. It shows while a hero lives.
+	_hero_bar = HBoxContainer.new()
+	_hero_bar.visible = false
+	_hero_bar.add_theme_constant_override("separation", 8)
+	_hero_name_label = Label.new()
+	_hero_name_label.add_theme_font_size_override("font_size", 18)
+	_hero_name_label.custom_minimum_size.x = 120
+	_hero_bar.add_child(_hero_name_label)
+	for ability_def in GameLogic.ABILITY_SLOTS:
+		var ability_button := _make_button(String(ability_def.letter), Color("#24364a"))
+		ability_button.custom_minimum_size = Vector2(0, 52)
+		ability_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		ability_button.pressed.connect(_cast_from_bar.bind(int(ability_def.slot)))
+		_hero_bar.add_child(ability_button)
+		_ability_buttons.append(ability_button)
+	_game.add_child(_hero_bar)
 
 	var game_controls := HBoxContainer.new()
 	_start_button = _make_button("START MATCH", Color("#287557"))
@@ -397,7 +426,7 @@ func _connect_match() -> void:
 	_is_host = bool(result.get("is_host", false))
 	_role = str(result.get("role", "player"))
 	_data = result.data
-	_arena.set_balance(_data.balance)
+	_arena.set_balance(_data.balance, _data.heroes)
 	_tick_hz = int(_backend.get_spec().get("tickHz", 20))
 	_match_id_input.text = _backend.get_match_id()
 	_home.visible = false
@@ -439,6 +468,7 @@ func _start_match() -> void:
 	_set_status("Match running. Waiting for the first server snapshot...")
 
 func _select_building(building: String) -> void:
+	_ability = -1
 	_selected_group = -1
 	_mode = ""
 	_path_points = []
@@ -492,8 +522,10 @@ func _on_arena_tapped(ground: Vector2) -> void:
 		"mode": _mode,
 		"selected_group": _selected_group,
 		"path_count": _path_points.size(),
+		"ability": _ability,
 	})
 	if result.has("command"):
+		_ability = -1
 		var acknowledgement: Dictionary = await _backend.send_command(result.command)
 		if acknowledgement.get("accepted", false):
 			_set_status("Order sent. The server will validate it.")
@@ -550,6 +582,7 @@ func _refresh_panel() -> void:
 	if _data.is_empty():
 		return
 	_arena.set_paths(_paths_to_draw())
+	_refresh_hero_bar()
 	if _mode == "path":
 		_show_path_bar()
 		return
@@ -571,6 +604,7 @@ func _refresh_panel() -> void:
 		_panel.visible = false
 		_panel_key = ""
 		_order_key = ""
+		_hero_key = ""
 		_queue_key = ""
 		return
 	_show_building_panel(selected)
@@ -602,8 +636,10 @@ func _fill_row(row: Container, items: Array) -> void:
 func _show_path_bar() -> void:
 	_panel.visible = true
 	_clear_box(_order_box)
+	_clear_box(_hero_box)
 	_clear_box(_queue_box)
 	_order_key = ""
+	_hero_key = ""
 	_queue_key = ""
 	_panel_title.text = "Path: %d/%d waypoints. Tap the map to add one." % [_path_points.size(), int(_data.balance.creep.maxWaypoints)]
 	var key := "path|%d|%d" % [_path_points.size(), _last_path.size()]
@@ -648,8 +684,10 @@ func _path_go() -> void:
 func _show_group_panel(group: Dictionary) -> void:
 	_panel.visible = true
 	_clear_box(_order_box)
+	_clear_box(_hero_box)
 	_clear_box(_queue_box)
 	_order_key = ""
+	_hero_key = ""
 	_queue_key = ""
 	var size := GameLogic.group_size(_current_snapshot.get("entities", []), int(group.id))
 	_panel_title.text = "Group of %d: tap another of your groups to merge." % size if _mode == "merge" else "Group of %d, %s" % [size, "custom path" if int(group.get("custom", 0)) == 1 else "lane route"]
@@ -710,8 +748,10 @@ func _show_building_panel(selected: Dictionary) -> void:
 		_show_barracks_controls(selected, lux, min_left)
 	else:
 		_clear_box(_order_box)
+		_clear_box(_hero_box)
 		_clear_box(_queue_box)
 		_order_key = ""
+		_hero_key = ""
 		_queue_key = ""
 
 ## Creep order controls and the queue of a barracks.
@@ -756,7 +796,8 @@ func _show_barracks_controls(barracks: Dictionary, lux: int, min_left: int) -> v
 			clear_button.pressed.connect(_run_panel_action.bind({"t": "setBarracksPath", "barracksId": int(barracks.id), "waypoints": []}))
 			_order_box.add_child(clear_button)
 
-	var lines := GameLogic.queue_lines(_current_snapshot.get("orders", []), int(barracks.id), _tick_hz)
+	_show_hero_picks(barracks, lux, min_left)
+	var lines := GameLogic.queue_lines(_current_snapshot.get("orders", []), int(barracks.id), _tick_hz, _hero_names())
 	var queue_key := str(barracks.id)
 	for order in _current_snapshot.get("orders", []):
 		if int(order.barracksId) == int(barracks.id):
@@ -782,6 +823,142 @@ func _show_barracks_controls(barracks: Dictionary, lux: int, min_left: int) -> v
 			var node: Label = _queue_labels.get(int(line.index))
 			if node != null and node.text != String(line.text):
 				node.text = String(line.text)
+
+## Roster names in roster order, from data/heroes.json.
+func _hero_names() -> Array:
+	var names: Array = []
+	for entry in _data.get("heroes", {}).get("roster", []):
+		names.append(String(entry.name))
+	return names
+
+func _roster() -> Array:
+	var roster: Array = []
+	for entry in _data.get("heroes", {}).get("roster", []):
+		roster.append({"id": int(entry.id), "name": String(entry.name), "primary": String(entry.primary)})
+	return roster
+
+func _viewer_hero() -> Dictionary:
+	if _role == "spectator":
+		return {}
+	for entity in _current_snapshot.get("entities", []):
+		if int(entity.get("kind", 0)) == GameLogic.KIND_HERO and int(entity.get("owner", -1)) == _viewer_team and int(entity.get("hp", 0)) > 0:
+			return entity
+	return {}
+
+func _viewer_player() -> Dictionary:
+	for player in _current_snapshot.get("players", []):
+		if int(player.get("id", -1)) == _viewer_team:
+			return player
+	return {}
+
+## The hero part of a barracks panel (GDD 7.1): the lux to allocate and the roster, with locked heroes
+## and the death cooldown shown. A tap on a hero picks it at this barracks.
+func _show_hero_picks(barracks: Dictionary, lux: int, min_left: int) -> void:
+	var queued := false
+	for order in _current_snapshot.get("orders", []):
+		if int(order.get("owner", -1)) == _viewer_team and int(order.get("type", 1)) == GameLogic.HERO_ORDER:
+			queued = true
+	var pick_state := GameLogic.hero_pick_state({
+		"player": _viewer_player(), "hero_alive": not _viewer_hero().is_empty(), "hero_queued": queued,
+		"roster": _roster(), "tick_hz": _tick_hz,
+	})
+	var choices := GameLogic.hero_lux_choices(lux, min_left)
+	var chosen: Dictionary = {}
+	for choice in choices:
+		if String(choice.label) == _hero_alloc:
+			chosen = choice
+	if chosen.is_empty() and not choices.is_empty():
+		chosen = choices[0]
+	var key := "%d|%s" % [int(barracks.id), String(pick_state.note)]
+	for option in pick_state.options:
+		key += "|%d%s%s" % [int(option.id), "L" if option.locked else "", "E" if option.enabled else ""]
+	for choice in choices:
+		key += "|%d" % int(choice.lux)
+	key += "|" + (String(chosen.label) if not chosen.is_empty() else "")
+	if key == _hero_key:
+		return
+	_hero_key = key
+	_clear_box(_hero_box)
+	var note := Label.new()
+	note.add_theme_font_size_override("font_size", 15)
+	note.add_theme_color_override("font_color", Color("#8a93a6"))
+	note.text = "Hero: %s" % pick_state.note if not String(pick_state.note).is_empty() else "Hero: pick one, with the lux below"
+	_hero_box.add_child(note)
+	var allocation := HBoxContainer.new()
+	allocation.add_theme_constant_override("separation", 6)
+	for choice in choices:
+		var alloc_button := _make_button("%s %d" % [choice.label, int(choice.lux)], Color("#315f95") if choice == chosen else Color("#24364a"))
+		alloc_button.custom_minimum_size = Vector2(0, 44)
+		alloc_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		alloc_button.pressed.connect(_set_hero_alloc.bind(String(choice.label)))
+		allocation.add_child(alloc_button)
+	_hero_box.add_child(allocation)
+	var heroes := HBoxContainer.new()
+	heroes.add_theme_constant_override("separation", 6)
+	for option in pick_state.options:
+		var hero_button := _make_button("%s %s" % [option.name, String(option.primary).substr(0, 1).to_upper()], Color("#24364a"))
+		hero_button.custom_minimum_size = Vector2(0, 44)
+		hero_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hero_button.name = "HeroPick%d" % int(option.id)
+		if not bool(option.enabled):
+			hero_button.modulate = Color(1, 1, 1, 0.5)
+		hero_button.pressed.connect(_pick_hero.bind(int(option.id), int(barracks.id), int(chosen.lux) if not chosen.is_empty() else 0))
+		heroes.add_child(hero_button)
+	_hero_box.add_child(heroes)
+
+func _set_hero_alloc(label: String) -> void:
+	_hero_alloc = label
+	_refresh_panel()
+
+func _pick_hero(hero_id: int, barracks_id: int, lux: int) -> void:
+	if lux < 1:
+		_set_status("Not enough lux for a hero.")
+		return
+	_run_panel_action({"t": "pickHero", "heroId": hero_id, "lux": lux, "barracksId": barracks_id})
+
+## The hero bar: the ability buttons show the letter and cost, or the seconds until ready.
+func _refresh_hero_bar() -> void:
+	var hero := _viewer_hero()
+	if hero.is_empty() or _data.is_empty():
+		_hero_bar.visible = false
+		_ability = -1
+		return
+	_hero_bar.visible = true
+	_hero_name_label.text = GameLogic.entity_text(hero, _data.balance.hpFactor, _hero_names())
+	var states := GameLogic.ability_states(hero, _data.abilities, _viewer_core_lux_milli(), int(_data.balance.core.minLeftAfterSpendLux), _tick_hz)
+	for state in states:
+		var button: Button = _ability_buttons[int(state.slot)]
+		button.text = String(state.text)
+		var dim: bool = not bool(state.ready) or bool(state.poor)
+		button.modulate = Color(1, 1, 1, 0.5 if dim else 1.0)
+		button.flat = _ability != int(state.slot)
+
+func _cast_from_bar(slot: int) -> void:
+	var hero := _viewer_hero()
+	if hero.is_empty():
+		return
+	var state: Dictionary = GameLogic.ability_states(hero, _data.abilities, _viewer_core_lux_milli(), int(_data.balance.core.minLeftAfterSpendLux), _tick_hz)[slot]
+	if not bool(state.ready):
+		_set_status("%s is not ready: %s." % [state.letter, String(state.text).substr(2)])
+		return
+	var cast := GameLogic.immediate_cast(slot, hero)
+	if not cast.is_empty():
+		_ability = -1
+		_run_panel_action(cast)
+	elif _ability == slot:
+		_ability = -1
+	else:
+		_ability = slot
+		_building = ""
+		_selected_entity = -1
+		_selected_group = -1
+		_mode = ""
+		_build_description.visible = false
+		_tower_attack_row.visible = false
+		_set_status("Tap an enemy to hit." if slot == 1 else "Tap the ground to strike.")
+	_arena.set_selection(_building, _selected_entity)
+	_refresh_palette()
+	_refresh_panel()
 
 func _set_order_count(count: int) -> void:
 	_order_count = count

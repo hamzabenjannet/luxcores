@@ -27,6 +27,8 @@ var map_data: Dictionary = {}
 var snapshot: Dictionary = {}
 var viewer_team := 0
 var hp_factor := {"core": 1, "default": 10}
+## Roster names in roster order, for the hero labels (data/heroes.json).
+var hero_names: Array = []
 ## Ticks of the recycle channel, from the server's balance data (economy.recycleChannelTicks).
 var recycle_channel_ticks := 60
 var selected_building := ""
@@ -55,8 +57,11 @@ func set_world(layout: Dictionary, world_snapshot: Dictionary, team: int) -> voi
 	queue_redraw()
 
 ## Takes the numbers the drawing needs from the server's balance data.
-func set_balance(balance: Dictionary) -> void:
+func set_balance(balance: Dictionary, heroes: Dictionary = {}) -> void:
 	hp_factor = balance.hpFactor
+	hero_names = []
+	for entry in heroes.get("roster", []):
+		hero_names.append(String(entry.name))
 	recycle_channel_ticks = int(balance.economy.recycleChannelTicks)
 	queue_redraw()
 
@@ -185,7 +190,9 @@ func _draw_entities(entities: Array) -> void:
 			draw_arc(center, radius + 4.0, -PI / 2.0, -PI / 2.0 + TAU * done, 20, Color("#ffd76a"), 2.0)
 		if int(entity.get("id", -1)) == selected_entity_id:
 			draw_arc(center, radius + 3.0, 0.0, TAU, 20, Color("#fff2a8"), 1.5)
-		var text := GameLogic.entity_text(entity, hp_factor)
+		if int(entity.get("shieldHp", 0)) > 0:
+			draw_arc(center, radius + 5.2, 0.0, TAU, 20, Color("#6ae4ff"), 1.6)
+		var text := GameLogic.entity_text(entity, hp_factor, hero_names)
 		if not text.is_empty():
 			_draw_map_label(text, center, tint.lightened(0.18))
 

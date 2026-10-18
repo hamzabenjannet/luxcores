@@ -1,6 +1,6 @@
 # Luxcores Godot Client
 
-The Godot client renders match maps and server snapshots. Match simulation, command validation, and updates run on the backend through its plain WebSocket API (`/ws`). The client stands at milestone M4 of the web reference and matches the web client rule for rule. It covers the economy, buildings, tower upgrades, creep orders and groups, combat visuals and hero orders.
+The Godot client renders match maps and server snapshots. Match simulation, command validation, and updates run on the backend through its plain WebSocket API (`/ws`). The client stands at milestone M5 of the web reference and matches the web client rule for rule. It covers the economy, buildings, tower upgrades, creep orders and groups, combat visuals, and heroes with their picks and abilities.
 
 ## Run
 
@@ -21,9 +21,10 @@ A Match ID in the field joins that match instead. An ID of a bot match joins as 
 - Draws the map, lanes, vents, item spawns and every entity with its name and lux count (GDD 13.1), like the web client.
 - Shows tower attack types (a colored cap), upgrade levels (`P2 S1`), stuns, recycle progress, aim lines from towers and heroes to their targets, and projectiles.
 - Builds all six buildings with a tower attack type, upgrades towers (power and shell), recycles and cancels a recycle.
+- Picks a hero at a barracks (M5): the panel lists the roster, greys out locked heroes and says why no pick is possible (a hero on the field, in production or the 5 second wait after a death), and offers 25%, 50%, 75% or the most the Core can spare as the lux to allocate. A hero bar then shows M R A S with each cost or cooldown: melee and shield cast at once, ranged and area wait for a tap. A shield draws as a cyan ring and a SHIELD tag.
 - Orders creeps from a barracks: 1 to 5 creeps, melee, ranged, area or mixed, with the queue listed and a cancel button per order (by order id).
 - Selects a creep group by tapping one of its creeps, then offers Path, Merge, Split and Lane Route. Path mode takes up to 10 waypoints with Undo, Go, Cancel and Reuse Last, and a barracks keeps a default path for new groups. The arena draws the selected group's route.
-- Resolves taps through `scripts/game_logic.gd`. A tap builds, selects an own building or creep group, adds a waypoint in path mode or picks the group to join in merge mode. Once a hero exists, a tap moves it or attacks an enemy. Heroes appear in M5, so fixtures test those two orders and no live match has run them yet.
+- Resolves taps through `scripts/game_logic.gd`. A tap builds, selects an own building or creep group, adds a waypoint in path mode or picks the group to join in merge mode. Once a hero exists, a tap moves it or attacks an enemy, and a hero told to attack walks into reach first. With an ability aimed, a tap casts it.
 
 ## Staying in Step with the Web Client
 
@@ -61,4 +62,4 @@ An Android or iOS build can reach the backend only over the LAN address, and a p
 
 ## Not Done Yet
 
-Hero production and abilities, items (M5 and M6), rendering polish, instancing, and mobile touch gestures such as pinch zoom and path mode (M7 and M8) remain future work. The web client and `src/sim/` stay the executable reference for the rules.
+Items (M6), rendering polish, instancing, and mobile touch gestures such as pinch zoom and path mode (M7 and M8) remain future work. The web client and `src/sim/` stay the executable reference for the rules.
