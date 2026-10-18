@@ -1,4 +1,4 @@
-# Production stack for one VPS: the API, PostgreSQL, RabbitMQ and Caddy, which
+# Production stack for one VPS: the API, PostgreSQL, RabbitMQ, Redis and Caddy, which
 # terminates TLS with a certificate it fetches and renews by itself.
 #
 #   cp .env.example .env      # fill in every value
@@ -20,6 +20,8 @@ services:
       DATABASE_DRIVER: postgres
       POSTGRES_URL: postgres://luxcores:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/luxcores
       RABBITMQ_URL: amqp://luxcores:${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD}@rabbitmq:5672
+      # The server does not read this yet. It is reserved for the planned event cache.
+      REDIS_URL: redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD}@redis:6379
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
       ADMIN_API_KEY: ${ADMIN_API_KEY:?set ADMIN_API_KEY}
       CORS_ORIGIN: https://${DOMAIN:?set DOMAIN}
@@ -27,6 +29,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
+      redis: { condition: service_healthy }
     expose: ['3000']
 
   postgres:
@@ -60,6 +63,20 @@ services:
       retries: 10
       start_period: 20s
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Append-only persistence, so events that wait in the cache survive a restart of the container.
+    command: ['redis-server', '--appendonly', 'yes', '--requirepass', '${REDIS_PASSWORD:?set REDIS_PASSWORD}']
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep -q PONG']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -78,5 +95,6 @@ services:
 volumes:
   postgres-data:
   rabbitmq-data:
+  redis-data:
   caddy-data:
   caddy-config:

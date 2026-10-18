@@ -1,6 +1,6 @@
 # Deploying to One VPS
 
-This folder runs the whole backend on a single Linux server with Docker Compose: the API, PostgreSQL, RabbitMQ and Caddy, which gets and renews a TLS certificate by itself. Only Caddy publishes ports (80 and 443). The database and the broker stay on the internal network.
+This folder runs the whole backend on a single Linux server with Docker Compose: the API, PostgreSQL, RabbitMQ, Redis and Caddy, which gets and renews a TLS certificate by itself. Only Caddy publishes ports (80 and 443). The database, the broker and Redis stay on the internal network. Redis is not used by the server yet.
 
 Matches live in the memory of the API process, so run one API container. A second one would need sticky routing and a shared match registry.
 

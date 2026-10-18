@@ -4,10 +4,12 @@
 #   docker compose --profile postgres up -d     # then DATABASE_DRIVER=postgres, POSTGRES_URL below
 #   docker compose --profile mongodb up -d      # then DATABASE_DRIVER=mongodb, MONGODB_URL below
 #   docker compose --profile rabbitmq up -d     # then RABBITMQ_URL below
+#   docker compose --profile redis up -d        # reserved for the planned event cache; the server does not read REDIS_URL yet
 #
 # Postgres:  POSTGRES_URL=postgres://luxcores:luxcores@localhost:5432/luxcores
 # MongoDB:   MONGODB_URL=mongodb://localhost:27017
 # RabbitMQ:  RABBITMQ_URL=amqp://guest:guest@localhost:5672   (management UI on :15672)
+# Redis:     REDIS_URL=redis://localhost:6379
 services:
   postgres:
     profiles: [postgres]
@@ -36,7 +38,15 @@ services:
     ports: ['5672:5672', '15672:15672']
     volumes: [rabbitmq-data:/var/lib/rabbitmq]
 
+  redis:
+    profiles: [redis]
+    image: redis:7-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    ports: ['6379:6379']
+    volumes: [redis-data:/data]
+
 volumes:
   postgres-data:
   mongo-data:
   rabbitmq-data:
+  redis-data:

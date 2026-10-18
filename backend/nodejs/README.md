@@ -47,7 +47,7 @@ To play against the server from a browser, open `http://localhost:3000/?server=&
 | `WS_AUTH_TIMEOUT_MS`, `WS_MAX_PAYLOAD_BYTES` | `5000`, `16384` | Plain WebSocket auth window and largest frame |
 | `LUXCORES_ROOT` | `../..` | Repo root with `src/sim`, `data/` and `index.html` |
 | `PUBLIC_DIR` | `public` | Backend static folder |
-| `MATCH_MAX_TICKS` | `12000` | A match ends after this many ticks (10 minutes at 20 Hz) |
+| `MATCH_MAX_TICKS` | `match.stalemateTicks` in `data/balance.json` (10000) | An undecided match ends as a draw after this many ticks (about 8 minutes at 20 Hz). Set it higher for long test runs |
 | `SNAPSHOT_EVERY_TICKS` | `2` | Ticks between snapshots (10 per second) |
 
 ## Architecture
@@ -210,7 +210,11 @@ Services talk to the abstract `DataStore`, so the driver is a configuration choi
 | `mongodb` | One collection per entity | The `id` is stored as `_id` |
 | `postgres` | One `documents` table with a `jsonb` column | Adding an entity field needs no migration |
 
-`docker-compose.yml` starts Postgres, MongoDB or RabbitMQ on demand through profiles, for example `docker compose --profile postgres up -d`. For a server, see `deploy/README.md`: a Dockerfile and a production stack with Caddy for TLS.
+`docker-compose.yml` starts Postgres, MongoDB, RabbitMQ or Redis on demand through profiles, for example `docker compose --profile postgres up -d`. For a server, see `deploy/README.md`: a Dockerfile and a production stack with Caddy for TLS.
+
+## Redis
+
+A Redis 7 container is in both Compose files (a `redis` profile for development, a password-protected service with append-only persistence in `deploy/`). The server does not use it yet: `REDIS_URL` is reserved for the event cache of the planned architecture change (`docs/prompts/handover-2026-10-18-m4.md`, open questions). Verified: the production service starts healthy, answers `PONG` to the password and refuses a client without it.
 
 ## RabbitMQ
 
@@ -244,7 +248,7 @@ Build the image from the repo root, because the server runs the repo's sim and s
 docker build -f backend/nodejs/Dockerfile -t luxcores-backend .
 ```
 
-The image holds the compiled app, production dependencies, and the `src`, `data`, `assets` and `index.html` of the game, and it runs as the unprivileged `node` user. `deploy/` adds a production Compose stack for one VPS (API, PostgreSQL, RabbitMQ, Caddy with automatic TLS) and a guide.
+The image holds the compiled app, production dependencies, and the `src`, `data`, `assets` and `index.html` of the game, and it runs as the unprivileged `node` user. `deploy/` adds a production Compose stack for one VPS (API, PostgreSQL, RabbitMQ, Redis, Caddy with automatic TLS) and a guide.
 
 ## Shutdown
 
@@ -257,4 +261,4 @@ On SIGTERM the server ends in three phases, in this order: live matches end and 
 - A running match lives in the memory of one process, and a restart ends it. Scaling out needs sticky routing or a shared match registry.
 - The JSON driver suits development. Use Postgres or MongoDB when more than one process shares the data.
 - `/src` serves the sim and client code, because the game page needs it. Nothing outside `src`, `data`, `assets` and `public` is reachable.
-- A match ends in a draw at `MATCH_MAX_TICKS`. Timed mode needs the score rule that comes with the economy milestone.
+- A match ends in a draw at the tick limit (`MATCH_MAX_TICKS`, default `match.stalemateTicks`). Timed mode needs the score rule that comes with the economy milestone.
