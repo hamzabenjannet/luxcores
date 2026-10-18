@@ -44,6 +44,17 @@ func _run() -> void:
 	await _main._on_arena_tapped(Vector2(solar_tile.x + 0.5, solar_tile.y + 0.5))
 	_check("a solar plant appears", await _until(func(): return _find(GameLogic.KIND_SOLAR, 0).size() > 0), true)
 
+	# Two buildings never share a tile, but a neighbour is fine even right next to an existing building.
+	await _main._on_arena_tapped(Vector2(solar_tile.x + 0.5, solar_tile.y + 0.5))
+	_check("a second building on the same tile is refused", _main._status_label.text, "That tile is taken.")
+	_main._select_building("wind")
+	var wind_tile := Vector2i(solar_tile.x + 1, solar_tile.y)
+	# Tap by screen position, so the arena's own hit test runs: it must not snap the tap onto the solar plant.
+	_main._arena._handle_map_tap(_main._arena._tile_center(wind_tile.x, wind_tile.y))
+	_check("a wind plant fits on the tile beside the solar plant", await _until(func(): return _find(GameLogic.KIND_WIND, 0).size() == 1), true)
+	_main._select_building("wind") # toggles build mode off
+	_main._select_building("solar")
+
 	# Build mode stays on after a placement, like the web client. A refused tap explains itself and sends nothing.
 	await _main._on_arena_tapped(Vector2(48.5, 56.5))
 	_check("a build in the DMZ is refused with a reason", _main._status_label.text, "Build inside your own zone.")

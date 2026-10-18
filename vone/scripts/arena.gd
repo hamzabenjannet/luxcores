@@ -283,9 +283,10 @@ func _handle_map_tap(position: Vector2) -> void:
 	if not _bounds.has_point(position):
 		return
 	var ground := ground_at(position)
-	# A finger is wider than a 6 px tile. Snap a tap near an entity onto it, so the shared
-	# tap rules see the entity at the pick radius they know.
-	var near := _entity_near(position)
+	# A finger is wider than a 6 px tile. Outside build mode, snap a tap near an entity onto it,
+	# so the shared tap rules see the entity at the pick radius they know.
+	# In build mode the tap is a tile choice, so it never snaps: a building goes exactly where the finger lands.
+	var near := _entity_near(position) if selected_building.is_empty() else {}
 	if not near.is_empty():
 		ground = Vector2(float(near.get("x", 0)) / GameLogic.UNITS_PER_TILE, float(near.get("z", 0)) / GameLogic.UNITS_PER_TILE)
 	tapped.emit(ground)
