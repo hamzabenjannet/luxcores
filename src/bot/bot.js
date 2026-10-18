@@ -4,10 +4,10 @@
  * the same CommandEnvelopes a human produces. Its commands are recorded in
  * replays, so replays never depend on this code.
  *
- * What it does at M3: every second it spends settled lux in the GDD rotation
- * (collector, barracks, tower), then upgrades its towers once the rotation is
- * full. Creep groups and heroes arrive with M4 and M5, and so do the rest of
- * GDD 12.1. A bot never reads the enemy's hidden state, because WorldView
+ * What it does at M4: every second it spends settled lux in the GDD rotation
+ * (collector, barracks, tower, creep group of 5), then upgrades its towers once
+ * the rotation is full. Its groups walk the default lane route. Heroes arrive
+ * with M5, and so do the rest of GDD 12.1. A bot never reads the enemy's hidden state, because WorldView
  * offers none.
  *
  * Any randomness comes from the bot's own seeded RNG (rng.js), never
@@ -21,13 +21,19 @@ const THINK_EVERY = 20;
 /** Whole lux the bot keeps in the Core, so spending never leaves the Core empty. */
 const RESERVE_LUX = 20;
 /** The GDD 12.1 spending rotation. */
-const ROTATION = /** @type {const} */ (['collector', 'barracks', 'tower']);
+const ROTATION = /** @type {const} */ (['collector', 'barracks', 'tower', 'creeps']);
 /** Collector types in build order; geothermal needs a free vent and falls back to solar. */
 const COLLECTORS = /** @type {const} */ (['solar', 'wind', 'geothermal', 'solar']);
 /** Tower attack types in build order. */
 const ATTACKS = /** @type {const} */ (['ranged', 'area', 'melee']);
-/** Most buildings of each rotation slot. A barracks does nothing before M4, so the bot builds one. */
-const CAP = { collector: 10, barracks: 1, tower: 8 };
+/** Most buildings of each rotation slot. The bot builds one barracks, and creeps have their own gate (see `creepsFor`). */
+const CAP = { collector: 10, barracks: 1, tower: 8, creeps: Infinity };
+/** Attack types of the 5 creeps of its groups; the first group is the mix the GDD suggests, the next ones rotate. */
+const CREEP_MIX = /** @type {const} */ (['melee', 'melee', 'ranged', 'area', 'melee']);
+/** The bot stops ordering while this many creeps are alive or queued, so held groups never pile up (cap is 30). */
+const CREEP_LIMIT = 25;
+/** Orders it keeps waiting per barracks. */
+const QUEUE_LIMIT = 2;
 const MAX_UPGRADE_LEVEL = 3;
 /** Column centers in tiles (three columns of 32), where the towers go. */
 const COLUMN_CENTERS = [16, 48, 80];
@@ -65,20 +71,23 @@ export function createBot({ playerId, team, config, seed }) {
    */
   function decide(view) {
     const budget = view.team(team).coreLux - RESERVE_LUX * MILLI;
+    const orders = view.orders().filter((o) => o.owner === playerId);
     const mine = view.entities().filter((e) => e.owner === playerId && e.kind >= KIND.SOLAR && e.kind <= KIND.TOWER && e.recycle === 0);
     const count = {
       collector: mine.filter((e) => COLLECTOR_KINDS.has(e.kind)).length,
       barracks: mine.filter((e) => e.kind === KIND.BARRACKS).length,
       tower: mine.filter((e) => e.kind === KIND.TOWER).length,
+      creeps: 0,
     };
 
     // The next open slot of the rotation; a full slot is skipped.
     for (let i = 0; i < ROTATION.length; i++) {
       const slot = ROTATION[(rotation + i) % ROTATION.length];
       if (count[slot] >= CAP[slot]) continue;
-      const cmd = buildFor(view, slot, count[slot]);
+      const cmd = slot === 'creeps' ? creepsFor(view, mine, orders) : buildFor(view, slot, count[slot]);
       if (!cmd) continue;
-      if (costOf(cmd.building) > budget) return null; // wait for income instead of skipping the slot
+      const cost = cmd.t === 'orderCreeps' ? cmd.mix.length * config.balance.creep.costLux : costOf(cmd.building);
+      if (cost > budget) return null; // wait for income instead of skipping the slot
       rotation = (rotation + i + 1) % ROTATION.length;
       return cmd;
     }
@@ -108,6 +117,23 @@ export function createBot({ playerId, team, config, seed }) {
     if (!tile) return null;
     const cmd = { t: /** @type {const} */ ('build'), building, tileX: tile.x, tileZ: tile.z };
     return slot === 'tower' ? { ...cmd, attack: ATTACKS[owned % ATTACKS.length] } : cmd;
+  }
+
+  /**
+   * A group of 5 at the newest barracks, unless the creep limit or the queue is full.
+   * @param {import('../shared/world-view.js').WorldView} view
+   * @param {readonly import('../sim/state.js').Entity[]} mine
+   * @param {readonly import('../sim/state.js').Order[]} orders
+   * @returns {import('../sim/commands.js').Command | null}
+   */
+  function creepsFor(view, mine, orders) {
+    const barracks = mine.filter((e) => e.kind === KIND.BARRACKS).pop();
+    if (!barracks) return null;
+    const alive = view.entities().filter((e) => e.kind === KIND.CREEP && e.owner === playerId).length;
+    const queued = orders.reduce((sum, o) => sum + o.mix.length, 0);
+    if (alive + queued + CREEP_MIX.length > CREEP_LIMIT || orders.filter((o) => o.barracksId === barracks.id).length >= QUEUE_LIMIT) return null;
+    const shift = orders.length + alive; // varies the mix a little from group to group, without randomness
+    return { t: 'orderCreeps', barracksId: barracks.id, mix: CREEP_MIX.map((_, i) => CREEP_MIX[(i + shift) % CREEP_MIX.length]) };
   }
 
   /** @param {string} building */

@@ -23,6 +23,8 @@ import type {
   SimCommandEnvelope,
   SimBot,
   SimEntity,
+  SimGroup,
+  SimOrder,
   SimMap,
   SimPlayer,
   SimRecorder,
@@ -52,6 +54,10 @@ export interface MatchSnapshot {
   hash?: string;
   teams: { coreLux: number; pendingLux: number }[];
   entities: SimEntity[];
+  /** Creep groups with their paths. */
+  groups: SimGroup[];
+  /** Barracks queues, held groups included. */
+  orders: SimOrder[];
 }
 
 export interface CommandAck {
@@ -394,6 +400,25 @@ export class MatchRunnerService implements OnModuleDestroy {
         shellLevel: e.shellLevel,
         roll: e.roll,
         arrivalTick: e.arrivalTick,
+        groupId: e.groupId,
+        waypoints: e.waypoints,
+      })),
+      groups: state.groups.map((g) => ({
+        id: g.id,
+        owner: g.owner,
+        team: g.team,
+        custom: g.custom,
+        wpIndex: g.wpIndex,
+        waypoints: g.waypoints,
+      })),
+      orders: state.orders.map((o) => ({
+        id: o.id,
+        barracksId: o.barracksId,
+        owner: o.owner,
+        type: o.type,
+        mix: o.mix,
+        ticksLeft: o.ticksLeft,
+        held: o.held,
       })),
     };
   }

@@ -167,7 +167,7 @@ export function tryUpgradeTower(state, playerId, cmd) {
  * @param {number} playerId
  * @param {unknown} buildingId
  */
-function ownedBuilding(state, playerId, buildingId) {
+export function ownedBuilding(state, playerId, buildingId) {
   if (!state.players.some((p) => p.id === playerId) || !Number.isSafeInteger(buildingId)) return undefined;
   const e = findEntity(state, /** @type {number} */ (buildingId));
   return e && isBuildingKind(e.kind) && e.owner === playerId ? e : undefined;

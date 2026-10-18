@@ -41,7 +41,7 @@ function play(seed, ticks, record = false) {
 
 /** @param {import('../src/sim/state.js').SimState} state @param {number} team */
 function owned(state, team) {
-  const names = { [KIND.SOLAR]: 'solar', [KIND.WIND]: 'wind', [KIND.GEOTHERMAL]: 'geothermal', [KIND.BARRACKS]: 'barracks', [KIND.TOWER]: 'tower' };
+  const names = { [KIND.SOLAR]: 'solar', [KIND.WIND]: 'wind', [KIND.GEOTHERMAL]: 'geothermal', [KIND.BARRACKS]: 'barracks', [KIND.TOWER]: 'tower', [KIND.CREEP]: 'creeps' };
   /** @type {Record<string, number>} */
   const out = {};
   for (const e of state.entities) if (e.team === team && names[e.kind]) out[names[e.kind]] = (out[names[e.kind]] ?? 0) + 1;

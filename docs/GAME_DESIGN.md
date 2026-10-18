@@ -2,11 +2,22 @@
 
 Working title. A strategy game mixing hero control (Dota 2), creep waypoint paths (Age of Empires) and base building with tower defense (Generals Zero Hour, Clash Royale). Everything in the world is made of light energy, measured in **lux**. Destroyed things dissolve into light; there is no blood or gore.
 
-Status: draft v0.9.5. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
+Status: draft v0.9.6. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
 
 ---
 
 ## 0. Changelog
+
+### v0.9.5 → v0.9.6
+
+Clarifications that the creep milestone (M4) needed. They are pending owner approval; section 9.3 states each one.
+
+| Area | Change |
+|---|---|
+| Barracks queue | One group in production per barracks; held groups never block it; cancelling refunds 100%; recycling refunds queued orders and loses held groups (section 9.3) |
+| Creep spawn and routes | Groups spawn on free tiles around the barracks; the default route is own lane, then the enemy lane of the same column (section 9.3) |
+| Creep behavior | Nearest enemy in sight is the target; melee stands beside a building; leader advances waypoints (section 9.3) |
+| Groups | Merge and split details; a split puts the highest creep ids in the new group (section 9.3) |
 
 ### v0.9.4 → v0.9.5
 
@@ -403,6 +414,19 @@ Haste turns 1 hit/s into 4 hits/s. If playtests show it's dominant, +100 (2 hits
 
 - Auto-engage enemy creeps, heroes and buildings within sight.
 - After the target dies, resume toward the current waypoint.
+
+### 9.3 Rules as Implemented (M4, pending owner approval)
+
+The sections above left these details open. `src/sim/creeps.js` and the behavior system follow them.
+
+- **Queue.** A barracks builds one group at a time, in the order the player gave. The lux is paid at order time. `cancelQueue` removes any order, held ones included, and refunds 100%. Recycling a barracks refunds the queued orders at 100% and loses held groups; a barracks destroyed by an enemy loses everything with no refund. A barracks in its recycle channel stops producing and takes no new order.
+- **Spawn.** A finished group appears on the nearest free tiles around its barracks (ring by ring, row by row). The physics then separates overlapping creeps.
+- **Default route.** A group without a path walks the team's lane nearest to its spawn, from the lane vertex nearest to the spawn out to the map center, then the enemy lane that ends next to it, down to the enemy Lumen Core. After the last waypoint the group heads for the enemy Core.
+- **Targets.** A creep keeps its target while it lives and stays within sight (6 tiles). Without one, it takes the nearest enemy creep, hero, building or Lumen Core in sight, and never a neutral blocker. It stands still and attacks inside its attack reach: melee 1 tile between centers, ranged 4, area 3. Melee creeps walk to the free tile beside a building.
+- **Waypoints.** A group moves on when its leader, the creep with the lowest id, comes within 1.5 tiles of the current waypoint. A waypoint on a blocked tile moves to the nearest free tile within 3 tiles.
+- **Paths.** A barracks default path is copied into each new group and does not change existing groups. A custom path replaces the old one and restarts at its first waypoint. An empty path puts the group back on the lane route.
+- **Merge and split.** Merge needs no distance; the result may hold up to 30 creeps. A split gives the new group the creeps with the highest ids, so the original keeps the lowest and the odd one. Both halves keep the path and its progress.
+- **Entropy.** Creeps lose 1% of max HP per minute like buildings and heroes (section 3.7).
 
 ## 10. Map
 

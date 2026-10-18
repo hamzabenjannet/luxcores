@@ -43,7 +43,7 @@ export const ENTITY_HASH_FIELDS = Object.freeze([
   'impulseX', 'impulseZ', 'impulseTicks',
   'powerLevel', 'powerDamagePct', 'shellLevel', 'powerLux', 'entropyRemainder',
   'arrivalTick', 'projectileDamage', 'projectileProc',
-  'projectileProcChance', 'projectileProcValue',
+  'projectileProcChance', 'projectileProcValue', 'groupId',
 ]);
 
 /** Team fields included in the hash, in this exact order. */
@@ -88,7 +88,33 @@ export const TEAM_HASH_FIELDS = Object.freeze([
  * @property {number} projectileProc projectile proc code
  * @property {number} projectileProcChance projectile proc chance in percent
  * @property {number} projectileProcValue projectile stun ticks or knockback distance
+ * @property {number} groupId creeps: id of the creep group, 0 for other kinds
+ * @property {number[][]} waypoints barracks: default path for new groups, as [x, z] pairs in units
  * @property {boolean[]} [visibleTo] derived per-team visibility, excluded from the hash
+ */
+
+/**
+ * A creep group: its members are the creeps with this `groupId`, in id order.
+ * It is created when a barracks finishes an order and removed when its last creep dies.
+ * @typedef {Object} Group
+ * @property {number} id          from the shared id counter
+ * @property {number} owner       player id
+ * @property {number} team
+ * @property {number} custom      1 when the path was set by a player or a barracks default, 0 for the lane route
+ * @property {number} wpIndex     next waypoint; past the end, the group heads for the enemy Core
+ * @property {number[][]} waypoints  [x, z] pairs in units, at most `creep.maxWaypoints` for a custom path
+ */
+
+/**
+ * A barracks queue entry. Today only creep orders exist; hero picks (M5) and items (M6) add types.
+ * @typedef {Object} Order
+ * @property {number} id          from the shared id counter, so the queue order is the id order
+ * @property {number} barracksId
+ * @property {number} owner       player id
+ * @property {number} type        ORDER_TYPE code (creeps.js)
+ * @property {number[]} mix       creeps: the attack type code of each creep (ATTACK_CODE in buildings.js)
+ * @property {number} ticksLeft   build time left; a held order has 0
+ * @property {number} held        1 when the group is finished but the creep cap has no room for it
  */
 
 /**
@@ -114,6 +140,8 @@ export const TEAM_HASH_FIELDS = Object.freeze([
  * @property {Team[]} teams
  * @property {Player[]} players
  * @property {Entity[]} entities  always sorted by ascending id
+ * @property {Group[]} groups  creep groups, ascending id
+ * @property {Order[]} orders  barracks queues, ascending id
  * @property {import('./config.js').SimConfig} config  normalized data, read-only
  * @property {null | { winnerTeam: number } | { draw: true }} outcome  set by the victory system
  * @property {StaticMap} map  generated layout, never changes after createState
@@ -162,6 +190,8 @@ export function createState({ seed, players, config }) {
     teams,
     players: players.map((p) => ({ ...p })),
     entities: [],
+    groups: [],
+    orders: [],
     config,
     outcome: null,
     visibility: teams.map(() => new Uint8Array(Math.ceil(layout.width * layout.height / 8))),
@@ -203,7 +233,7 @@ export function createState({ seed, players, config }) {
  * Create an entity with the next id and append it (keeps id order).
  * `born` defaults to the current tick, the other extra fields to 0.
  * @param {SimState} state
- * @param {Omit<Entity, 'id' | 'born' | 'roll' | 'recycle' | 'attack' | 'targetId' | 'attackCooldown' | 'overrideTargetId' | 'overrideTicks' | 'stunTicks' | 'moveTargetX' | 'moveTargetZ' | 'movePath' | 'movePathIndex' | 'pathDirty' | 'impulseX' | 'impulseZ' | 'impulseTicks' | 'powerLevel' | 'powerDamagePct' | 'shellLevel' | 'powerLux' | 'entropyRemainder' | 'arrivalTick' | 'projectileDamage' | 'projectileProc' | 'projectileProcChance' | 'projectileProcValue'> & Partial<Pick<Entity, 'born' | 'roll' | 'recycle' | 'attack' | 'targetId' | 'attackCooldown' | 'overrideTargetId' | 'overrideTicks' | 'stunTicks' | 'moveTargetX' | 'moveTargetZ' | 'movePath' | 'movePathIndex' | 'pathDirty' | 'impulseX' | 'impulseZ' | 'impulseTicks' | 'powerLevel' | 'powerDamagePct' | 'shellLevel' | 'powerLux' | 'entropyRemainder' | 'arrivalTick' | 'projectileDamage' | 'projectileProc' | 'projectileProcChance' | 'projectileProcValue'>>} fields
+ * @param {Pick<Entity, 'kind' | 'team' | 'owner' | 'x' | 'z' | 'hp' | 'maxHp'> & Partial<Entity>} fields
  * @returns {Entity}
  */
 export function spawnEntity(state, fields) {
@@ -214,7 +244,7 @@ export function spawnEntity(state, fields) {
     impulseX: 0, impulseZ: 0, impulseTicks: 0,
     powerLevel: 0, powerDamagePct: 0, shellLevel: 0, powerLux: 0, entropyRemainder: 0,
     arrivalTick: 0, projectileDamage: 0, projectileProc: 0,
-    projectileProcChance: 0, projectileProcValue: 0,
+    projectileProcChance: 0, projectileProcValue: 0, groupId: 0, waypoints: [],
     ...fields,
   };
   state.entities.push(e);

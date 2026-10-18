@@ -8,7 +8,8 @@ import { createBot } from '../src/bot/bot.js';
 const { config } = loadData();
 
 /**
- * Two bots play `ticks` ticks. Returns the final state and every command the bots issued.
+ * Two bots play `ticks` ticks. Returns the final state, every command the bots issued, and
+ * which creep orders the sim took (an accepted order gets the next id, so it shows in the queue at once).
  * @param {number} seed
  * @param {number} ticks
  */
@@ -21,12 +22,20 @@ function botMatch(seed, ticks) {
   const bots = players.map((p) => createBot({ playerId: p.id, team: p.team, config, seed }));
   const views = players.map((p) => localWorldView(state, p.team));
   const issued = [];
-  while (state.tick < ticks) {
+  let refusedOrders = 0;
+  let mostHeld = 0;
+  let mostCreeps = 0;
+  while (state.tick < ticks && !state.outcome) { // a victory freezes the state
     const cmds = bots.flatMap((bot, i) => bot.think(views[i]));
     issued.push(...cmds);
+    const nextId = state.nextId;
     step(state, cmds);
+    // The bots act on different ticks, so a tick holds at most one command and its id is `nextId`.
+    for (const e of cmds) if (e.cmd.t === 'orderCreeps' && !state.orders.some((o) => o.id === nextId)) refusedOrders++;
+    mostHeld = Math.max(mostHeld, state.orders.filter((o) => o.held).length);
+    for (const team of [0, 1]) mostCreeps = Math.max(mostCreeps, state.entities.filter((e) => e.kind === KIND.CREEP && e.team === team).length);
   }
-  return { state, issued };
+  return { state, issued, refusedOrders, mostHeld, mostCreeps };
 }
 
 test('a bot match is reproducible: the same seed gives the same hash and the same commands', () => {
@@ -41,7 +50,8 @@ test('different seeds give different matches', () => {
 });
 
 test('every command a bot issues is accepted by the sim', () => {
-  const { state, issued } = botMatch(7, 6000);
+  const { state, issued, refusedOrders } = botMatch(4, 6000);
+  assert.equal(refusedOrders, 0, 'a refused creep order leaves no entry in the queue');
   const builds = issued.filter((e) => e.cmd.t === 'build').length;
   const upgrades = issued.filter((e) => e.cmd.t === 'upgrade').length;
   const buildings = state.entities.filter((e) => e.kind >= KIND.SOLAR && e.kind <= KIND.TOWER);
@@ -51,7 +61,7 @@ test('every command a bot issues is accepted by the sim', () => {
 });
 
 test('a bot builds only in its own zone, off its lanes, and keeps the Core above the reserve', () => {
-  const { state } = botMatch(7, 6000);
+  const { state } = botMatch(4, 6000);
   for (const team of [0, 1]) {
     const { z0, z1 } = buildZoneOf(config, team);
     const laneTiles = new Set(state.map.lanes.filter((l) => l.team === team).flatMap((l) => l.tiles));
@@ -66,7 +76,7 @@ test('a bot builds only in its own zone, off its lanes, and keeps the Core above
 });
 
 test('the rotation builds a collector, a barracks, then a tower, and fills every tower upgrade', () => {
-  const { state, issued } = botMatch(7, 6000);
+  const { state, issued } = botMatch(4, 6000);
   const first = issued.filter((e) => e.playerId === 0 && e.cmd.t === 'build').slice(0, 3).map((e) => e.cmd.building);
   assert.deepEqual([first[0], first[1], first[2]], ['solar', 'barracks', 'tower']);
   for (const tower of state.entities.filter((e) => e.kind === KIND.TOWER)) {
@@ -75,8 +85,20 @@ test('the rotation builds a collector, a barracks, then a tower, and fills every
   }
 });
 
+test('a bot orders groups of 5 from its barracks, keeps its creeps under the cap and never piles up held groups', () => {
+  const { issued, state, mostHeld, mostCreeps } = botMatch(4, 6000);
+  const orders = issued.filter((e) => e.playerId === 0 && e.cmd.t === 'orderCreeps');
+  assert.ok(orders.length >= 4, `the bot ordered ${orders.length} groups`);
+  for (const e of orders) assert.equal(e.cmd.mix.length, 5);
+  assert.ok(orders[0].tick > issued.find((x) => x.playerId === 0 && x.cmd.t === 'build' && x.cmd.building === 'tower').tick, 'the first group follows the tower in the rotation');
+  assert.equal(mostHeld, 0, 'no group waits for cap room');
+  assert.ok(mostCreeps <= 30 && mostCreeps >= 10, `most creeps alive at once: ${mostCreeps}`);
+  assert.ok(state.groups.length >= 1);
+  assert.ok(new Set(orders.map((e) => e.cmd.mix.join())).size > 1, 'the mix varies from group to group');
+});
+
 test('a bot builds its geothermal collectors on its own vents', () => {
-  const { state } = botMatch(7, 6000);
+  const { state } = botMatch(4, 6000);
   for (const team of [0, 1]) {
     const geothermal = state.entities.filter((e) => e.team === team && e.kind === KIND.GEOTHERMAL);
     assert.ok(geothermal.length >= 1);

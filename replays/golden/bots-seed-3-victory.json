@@ -1,0 +1,605 @@
+{
+  "version": 1,
+  "specVersion": "0.10.0",
+  "dataHash": "daf8fc27fcac0af09c1ba44dd198403587e8f9a0aad0c403b5dd998e8b35eb87",
+  "mapgenVersion": 1,
+  "seed": 3,
+  "players": [
+    {
+      "id": 0,
+      "team": 0,
+      "kind": "bot"
+    },
+    {
+      "id": 1,
+      "team": 1,
+      "kind": "bot"
+    }
+  ],
+  "ticks": 2142,
+  "commands": [
+    {
+      "tick": 0,
+      "playerId": 0,
+      "seq": 0,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 45,
+        "tileZ": 97
+      }
+    },
+    {
+      "tick": 7,
+      "playerId": 1,
+      "seq": 0,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 44,
+        "tileZ": 15
+      }
+    },
+    {
+      "tick": 20,
+      "playerId": 0,
+      "seq": 1,
+      "cmd": {
+        "t": "build",
+        "building": "barracks",
+        "tileX": 48,
+        "tileZ": 99
+      }
+    },
+    {
+      "tick": 27,
+      "playerId": 1,
+      "seq": 1,
+      "cmd": {
+        "t": "build",
+        "building": "barracks",
+        "tileX": 47,
+        "tileZ": 12
+      }
+    },
+    {
+      "tick": 40,
+      "playerId": 0,
+      "seq": 2,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 16,
+        "tileZ": 65,
+        "attack": "ranged"
+      }
+    },
+    {
+      "tick": 47,
+      "playerId": 1,
+      "seq": 2,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 16,
+        "tileZ": 46,
+        "attack": "ranged"
+      }
+    },
+    {
+      "tick": 300,
+      "playerId": 0,
+      "seq": 3,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 307,
+      "playerId": 1,
+      "seq": 3,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 500,
+      "playerId": 0,
+      "seq": 4,
+      "cmd": {
+        "t": "build",
+        "building": "wind",
+        "tileX": 51,
+        "tileZ": 97
+      }
+    },
+    {
+      "tick": 507,
+      "playerId": 1,
+      "seq": 4,
+      "cmd": {
+        "t": "build",
+        "building": "wind",
+        "tileX": 48,
+        "tileZ": 12
+      }
+    },
+    {
+      "tick": 647,
+      "playerId": 1,
+      "seq": 5,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 48,
+        "tileZ": 46,
+        "attack": "area"
+      }
+    },
+    {
+      "tick": 660,
+      "playerId": 0,
+      "seq": 5,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 46,
+        "tileZ": 64,
+        "attack": "area"
+      }
+    },
+    {
+      "tick": 787,
+      "playerId": 1,
+      "seq": 6,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 820,
+      "playerId": 0,
+      "seq": 6,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 1360,
+      "playerId": 0,
+      "seq": 7,
+      "cmd": {
+        "t": "build",
+        "building": "geothermal",
+        "tileX": 74,
+        "tileZ": 99
+      }
+    },
+    {
+      "tick": 1367,
+      "playerId": 1,
+      "seq": 7,
+      "cmd": {
+        "t": "build",
+        "building": "geothermal",
+        "tileX": 21,
+        "tileZ": 12
+      }
+    },
+    {
+      "tick": 1460,
+      "playerId": 0,
+      "seq": 8,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 79,
+        "tileZ": 64,
+        "attack": "melee"
+      }
+    },
+    {
+      "tick": 1487,
+      "playerId": 1,
+      "seq": 8,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 49,
+        "tileZ": 47,
+        "attack": "area"
+      }
+    },
+    {
+      "tick": 1560,
+      "playerId": 0,
+      "seq": 9,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "melee",
+          "ranged",
+          "area"
+        ]
+      }
+    },
+    {
+      "tick": 1587,
+      "playerId": 1,
+      "seq": 9,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "melee",
+          "ranged",
+          "area"
+        ]
+      }
+    },
+    {
+      "tick": 1620,
+      "playerId": 0,
+      "seq": 10,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 49,
+        "tileZ": 99
+      }
+    },
+    {
+      "tick": 1647,
+      "playerId": 1,
+      "seq": 10,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 46,
+        "tileZ": 12
+      }
+    },
+    {
+      "tick": 1687,
+      "playerId": 1,
+      "seq": 11,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 80,
+        "tileZ": 47,
+        "attack": "melee"
+      }
+    },
+    {
+      "tick": 1700,
+      "playerId": 0,
+      "seq": 11,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 15,
+        "tileZ": 64,
+        "attack": "ranged"
+      }
+    },
+    {
+      "tick": 1747,
+      "playerId": 1,
+      "seq": 12,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "area",
+          "melee",
+          "melee",
+          "melee",
+          "ranged"
+        ]
+      }
+    },
+    {
+      "tick": 1760,
+      "playerId": 0,
+      "seq": 12,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "melee",
+          "ranged",
+          "area"
+        ]
+      }
+    },
+    {
+      "tick": 1807,
+      "playerId": 1,
+      "seq": 13,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 50,
+        "tileZ": 14
+      }
+    },
+    {
+      "tick": 1820,
+      "playerId": 0,
+      "seq": 13,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 46,
+        "tileZ": 93
+      }
+    },
+    {
+      "tick": 1867,
+      "playerId": 1,
+      "seq": 14,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 17,
+        "tileZ": 47,
+        "attack": "ranged"
+      }
+    },
+    {
+      "tick": 1880,
+      "playerId": 0,
+      "seq": 14,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 14,
+        "tileZ": 65,
+        "attack": "ranged"
+      }
+    },
+    {
+      "tick": 1927,
+      "playerId": 1,
+      "seq": 15,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "ranged",
+          "area",
+          "melee",
+          "melee",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 1940,
+      "playerId": 0,
+      "seq": 15,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "ranged",
+          "area",
+          "melee",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 1980,
+      "playerId": 0,
+      "seq": 16,
+      "cmd": {
+        "t": "build",
+        "building": "wind",
+        "tileX": 45,
+        "tileZ": 98
+      }
+    },
+    {
+      "tick": 1987,
+      "playerId": 1,
+      "seq": 16,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 45,
+        "tileZ": 12
+      }
+    },
+    {
+      "tick": 2020,
+      "playerId": 0,
+      "seq": 17,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 47,
+        "tileZ": 65,
+        "attack": "area"
+      }
+    },
+    {
+      "tick": 2027,
+      "playerId": 1,
+      "seq": 17,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 48,
+        "tileZ": 47,
+        "attack": "area"
+      }
+    },
+    {
+      "tick": 2100,
+      "playerId": 0,
+      "seq": 18,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    }
+  ],
+  "hashes": {
+    "20": "a1f10768",
+    "40": "cbf54be2",
+    "60": "018f2c8b",
+    "80": "6076efeb",
+    "100": "2fea4d13",
+    "120": "7040dac7",
+    "140": "3b26f53b",
+    "160": "b3d98507",
+    "180": "f96ef297",
+    "200": "8e460533",
+    "220": "03db257f",
+    "240": "04045dcb",
+    "260": "5a02b9d4",
+    "280": "15f1d588",
+    "300": "86ad277f",
+    "320": "eebdb6f2",
+    "340": "824964b6",
+    "360": "e5dee75e",
+    "380": "394b846f",
+    "400": "3375148b",
+    "420": "cabf7120",
+    "440": "31c037ab",
+    "460": "70730b59",
+    "480": "0114f589",
+    "500": "a490c2ed",
+    "520": "2adc68d2",
+    "540": "4e9302f1",
+    "560": "12293c73",
+    "580": "5c3d8a63",
+    "600": "64a2ace4",
+    "620": "d17e30f3",
+    "640": "317d1bcc",
+    "660": "150f2e59",
+    "680": "fed57e62",
+    "700": "c8201444",
+    "720": "84423c87",
+    "740": "409a31d2",
+    "760": "0198b10a",
+    "780": "374b3ce4",
+    "800": "53f88fcd",
+    "820": "db507532",
+    "840": "3097dfb8",
+    "860": "27ba7548",
+    "880": "2451dfed",
+    "900": "165b479b",
+    "920": "03fc167d",
+    "940": "a5d06fd2",
+    "960": "6260e494",
+    "980": "1ec2849d",
+    "1000": "93b20119",
+    "1020": "a009fa4d",
+    "1040": "63cb98d6",
+    "1060": "08384aca",
+    "1080": "b481a01a",
+    "1100": "84244af1",
+    "1120": "372fd896",
+    "1140": "0c01bc6b",
+    "1160": "d59bf0d8",
+    "1180": "78386530",
+    "1200": "c698b75e",
+    "1220": "3830ef26",
+    "1240": "7135b132",
+    "1260": "8b803960",
+    "1280": "5fe173c5",
+    "1300": "63c25739",
+    "1320": "f5a0c80c",
+    "1340": "76dd0fff",
+    "1360": "b7a4c758",
+    "1380": "60637067",
+    "1400": "965fbcf5",
+    "1420": "f055218b",
+    "1440": "bdc06735",
+    "1460": "71cf0678",
+    "1480": "78c1a9e3",
+    "1500": "2212c6d6",
+    "1520": "2df77e03",
+    "1540": "e4c5c661",
+    "1560": "741a8046",
+    "1580": "924cf92e",
+    "1600": "0a3c3702",
+    "1620": "85909d13",
+    "1640": "71d298c0",
+    "1660": "794c720e",
+    "1680": "c6fbebb5",
+    "1700": "fc12c43c",
+    "1720": "37f05974",
+    "1740": "5e74bd15",
+    "1760": "4b8addd9",
+    "1780": "d6de9161",
+    "1800": "9e7ce432",
+    "1820": "da778609",
+    "1840": "2dd38c57",
+    "1860": "1742e29b",
+    "1880": "1acd21d5",
+    "1900": "c2dec9e5",
+    "1920": "856e1ef5",
+    "1940": "4a88c8fc",
+    "1960": "fc70a3c2",
+    "1980": "baae9a77",
+    "2000": "6087edcb",
+    "2020": "072d4ce2",
+    "2040": "e0e057bc",
+    "2060": "49d4eefb",
+    "2080": "c6807e7b",
+    "2100": "e2d34f0d",
+    "2120": "67c144ee",
+    "2140": "88a68978"
+  }
+}

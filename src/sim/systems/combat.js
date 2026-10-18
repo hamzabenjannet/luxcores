@@ -1,8 +1,8 @@
 // @ts-check
 /**
  * System: combat
- * Scope: tower and hero basic attacks, simultaneous damage, and attack procs. GDD 3.5, 5.0, 7.4
- * Milestone: M3
+ * Scope: tower, hero and creep basic attacks, simultaneous damage, and attack procs. GDD 3.5, 5.0, 7.4, 9
+ * Milestone: M3, M4 (creeps)
  */
 
 import { chancePct } from '../rng.js';
@@ -78,10 +78,13 @@ export function run(state) {
     projectile.hp = 0;
   }
 
+  // Heroes and creeps attack alike, with their own damage and speed. A creep never attacks a neutral
+  // blocker, and its stun timer already ran down in the first loop of this system.
   for (const attacker of state.entities) {
-    if (attacker.kind !== KIND.HERO) continue;
+    const isHero = attacker.kind === KIND.HERO;
+    if (!isHero && attacker.kind !== KIND.CREEP) continue;
     if (attacker.stunTicks > 0) {
-      attacker.stunTicks--;
+      if (isHero) attacker.stunTicks--;
       continue;
     }
     if (attacker.attackCooldown > 0) {
@@ -90,14 +93,15 @@ export function run(state) {
     }
     const target = findEntity(state, attacker.targetId);
     const type = attackType(attacker);
-    if (!target || !type || !isHeroTarget(attacker, target)) continue;
+    if (!target || !type || !(isHero ? isHeroTarget(attacker, target) : isEnemy(attacker, target))) continue;
+    const stats = isHero ? balance.hero : balance.creep;
     const rules = balance.attackTypes[type];
     const range = rules.reachTiles > 0 ? rules.reachTiles : CONTACT_RANGE;
     if (dist2(attacker.x, attacker.z, target.x, target.z) > range * range) continue;
-    attacker.attackCooldown = attackInterval(balance.hero.attackSpeed) - 1;
-    const damage = idiv(balance.hero.damagePerHit * MILLI * rules.damagePct, 100);
+    attacker.attackCooldown = attackInterval(stats.attackSpeed) - 1;
+    const damage = idiv(stats.damagePerHit * MILLI * rules.damagePct, 100);
     dispatchAttack(state, hits, attacker, target, damage, rules);
-    readyHeroes.push({ attacker, target });
+    if (isHero) readyHeroes.push({ attacker, target });
     if (type === 'area') addSplashHits(state, hits, attacker, target, damage, rules.splashMilliTiles);
   }
 

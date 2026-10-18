@@ -36,6 +36,35 @@ export interface SimEntity {
   roll: number;
   /** Projectiles: the tick of impact. */
   arrivalTick: number;
+  /** Creeps: the id of their group, 0 for other kinds. */
+  groupId: number;
+  /** Barracks: the default path of new groups, as [x, z] pairs in units. */
+  waypoints: number[][];
+}
+
+/** A creep group. Its members are the creeps that carry its id in `groupId`. */
+export interface SimGroup {
+  id: number;
+  owner: number;
+  team: number;
+  /** 1 when a player or a barracks default set the path, 0 for the lane route. */
+  custom: number;
+  /** Next waypoint; past the end, the group heads for the enemy Core. */
+  wpIndex: number;
+  waypoints: number[][];
+}
+
+/** A barracks queue entry. */
+export interface SimOrder {
+  id: number;
+  barracksId: number;
+  owner: number;
+  type: number;
+  /** Attack type code of each creep of the group. */
+  mix: number[];
+  ticksLeft: number;
+  /** 1 when the group is finished but the creep cap has no room for it. */
+  held: number;
 }
 
 export interface SimTeam {
@@ -77,6 +106,8 @@ export interface SimState {
   tick: number;
   teams: SimTeam[];
   entities: SimEntity[];
+  groups: SimGroup[];
+  orders: SimOrder[];
   outcome: SimOutcome;
   map: SimMap;
 }

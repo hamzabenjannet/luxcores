@@ -14,6 +14,8 @@
  * @property {() => number} tick
  * @property {() => readonly import('../sim/state.js').Entity[]} entities
  * @property {() => import('../sim/state.js').StaticMap} map  generated lanes, vents and item spawns; never changes
+ * @property {() => readonly import('../sim/state.js').Group[]} groups  creep groups with their paths
+ * @property {() => readonly import('../sim/state.js').Order[]} orders  barracks queues, held groups included
  * @property {(team: number) => { coreLux: number, pendingLux: number }} team  milli-lux
  * @property {(entity: import('../sim/state.js').Entity) => boolean} isVisibleToViewer  always true until fog of war ships
  */
@@ -28,6 +30,8 @@ export function localWorldView(state, _viewerTeam) {
     tick: () => state.tick,
     entities: () => state.entities,
     map: () => state.map,
+    groups: () => state.groups,
+    orders: () => state.orders,
     team: (t) => ({ coreLux: state.teams[t].coreLux, pendingLux: state.teams[t].pendingLux }),
     isVisibleToViewer: () => true,
   };
@@ -44,6 +48,8 @@ export function networkWorldView(feed) {
     tick: () => feed.tick,
     entities: () => feed.entities,
     map: () => feed.map,
+    groups: () => feed.groups,
+    orders: () => feed.orders,
     team: (t) => ({ coreLux: feed.teams[t]?.coreLux ?? 0, pendingLux: feed.teams[t]?.pendingLux ?? 0 }),
     isVisibleToViewer: () => true,
   };

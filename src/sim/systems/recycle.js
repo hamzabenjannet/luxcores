@@ -8,6 +8,8 @@
 
 import { credit } from '../lux.js';
 import { recycleRefund } from '../buildings.js';
+import { idiv } from '../fixed.js';
+import { orderCost } from '../creeps.js';
 
 /** @param {import('../state.js').SimState} state */
 export function run(state) {
@@ -15,7 +17,12 @@ export function run(state) {
     if (e.recycle === 0) continue;
     e.recycle--;
     if (e.recycle > 0) continue;
-    credit(state, e.team, recycleRefund(state, e));
+    let refund = recycleRefund(state, e);
+    // Orders still in the queue come back in full (GDD 3.6). A finished group held in the barracks is lost.
+    for (const order of state.orders) {
+      if (order.barracksId === e.id && order.held === 0) refund += idiv(orderCost(state, order) * state.config.balance.economy.recycleQueueRefundPct, 100);
+    }
+    credit(state, e.team, refund);
     e.hp = 0; // the cleanup system removes it, in the same tick
   }
 }

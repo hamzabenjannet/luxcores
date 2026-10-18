@@ -12,7 +12,14 @@
  *      settleTick and amount, each i64 LE
  *   5. entity count              i64 LE
  *      per entity, in ascending id order: ENTITY_HASH_FIELDS, each i64 LE,
- *      then the path length and each path tile index as i64 LE
+ *      then the path length and each path tile index as i64 LE, then the
+ *      waypoint count and each waypoint's x and z as i64 LE
+ *   6. group count               i64 LE
+ *      per group, in ascending id order: id, owner, team, custom, wpIndex,
+ *      then the waypoint count and each waypoint's x and z, all i64 LE
+ *   7. order count               i64 LE
+ *      per order, in ascending id order: id, barracksId, owner, type,
+ *      ticksLeft, held, then the mix length and each attack code, all i64 LE
  *
  * Every hashed value must be a safe integer; anything else throws, which
  * catches floats leaking into sim state.
@@ -59,6 +66,15 @@ export function hashState(state) {
     h.i64(/** @type {number} */ (v));
   };
 
+  /** @param {number[][]} list @param {string} where */
+  function putWaypoints(list, where) {
+    put(list.length, `${where}.waypoints.length`);
+    for (const [x, z] of list) {
+      put(x, `${where}.waypoints.x`);
+      put(z, `${where}.waypoints.z`);
+    }
+  }
+
   put(state.tick, 'tick');
   put(state.rng.s, 'rng.s');
   put(state.nextId, 'nextId');
@@ -81,6 +97,20 @@ export function hashState(state) {
     for (const f of ENTITY_HASH_FIELDS) put(/** @type {any} */ (e)[f], `entity ${e.id}.${f}`);
     put(e.movePath.length, `entity ${e.id}.movePath.length`);
     for (let i = 0; i < e.movePath.length; i++) put(e.movePath[i], `entity ${e.id}.movePath[${i}]`);
+    putWaypoints(e.waypoints, `entity ${e.id}`);
+  }
+
+  put(state.groups.length, 'groups.length');
+  for (const g of state.groups) {
+    for (const v of [g.id, g.owner, g.team, g.custom, g.wpIndex]) put(v, `group ${g.id}`);
+    putWaypoints(g.waypoints, `group ${g.id}`);
+  }
+
+  put(state.orders.length, 'orders.length');
+  for (const o of state.orders) {
+    for (const v of [o.id, o.barracksId, o.owner, o.type, o.ticksLeft, o.held]) put(v, `order ${o.id}`);
+    put(o.mix.length, `order ${o.id}.mix.length`);
+    for (const code of o.mix) put(code, `order ${o.id}.mix`);
   }
 
   return h.digest();

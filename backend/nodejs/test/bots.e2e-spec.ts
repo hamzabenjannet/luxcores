@@ -17,6 +17,8 @@ const KIND = { CORE: 1, SOLAR: 2, BARRACKS: 6, TOWER: 7 };
 interface Snapshot {
   tick: number;
   teams: { coreLux: number }[];
+  groups: { id: number; owner: number; team: number; wpIndex: number; waypoints: number[][] }[];
+  orders: { id: number; barracksId: number; owner: number; mix: number[]; ticksLeft: number; held: number }[];
   entities: {
     id: number;
     kind: number;
@@ -25,6 +27,7 @@ interface Snapshot {
     recycle: number;
     powerLevel: number;
     shellLevel: number;
+    groupId: number;
   }[];
 }
 
@@ -79,7 +82,28 @@ describe('bots and spectators over the match server', () => {
     expect(built).toHaveProperty('targetId', 0);
     expect(s.teams[1].coreLux).toBeLessThan(100_000); // the bot paid for it
     expect(s.teams[0].coreLux).toBeGreaterThanOrEqual(100_000); // the human did nothing
-  });
+
+    // The fourth slot of the rotation is a creep group: the queue shows it, then the group walks.
+    const queued = await waitFor<Snapshot>(
+      socket,
+      'match:snapshot',
+      (x) => x.orders.some((o) => o.owner === 1),
+      15_000,
+    );
+    expect(queued.orders[0]).toMatchObject({ owner: 1, held: 0 });
+    expect(queued.orders[0].mix).toHaveLength(5);
+    const walking = await waitFor<Snapshot>(
+      socket,
+      'match:snapshot',
+      (x) => x.groups.some((g) => g.team === 1),
+      15_000,
+    );
+    const group = walking.groups.find((g) => g.team === 1)!;
+    expect(group.waypoints.length).toBeGreaterThanOrEqual(8); // the lane route
+    const members = walking.entities.filter((e) => e.groupId === group.id);
+    expect(members).toHaveLength(5);
+    expect(members.every((m) => m.kind === 9 && m.team === 1)).toBe(true);
+  }, 30_000);
 
   it('plays bot against bot while a spectator watches, and refuses the spectator commands', async () => {
     const created = await api(t.url, '/api/matches', {

@@ -18,6 +18,8 @@
  * @typedef {Object} Feed
  * @property {number} tick
  * @property {import('../../sim/state.js').Entity[]} entities
+ * @property {import('../../sim/state.js').Group[]} groups  creep groups with their paths
+ * @property {import('../../sim/state.js').Order[]} orders  barracks queues, held groups included
  * @property {{ coreLux: number, pendingLux: number }[]} teams  milli-lux
  * @property {import('../../sim/state.js').StaticMap} map
  * @property {'lobby' | 'running' | 'finished'} status
@@ -78,7 +80,7 @@ export async function joinServerMatch({ server, name, matchId, vsBot = false, bo
   const map = await request(`${base}/api/game/maps/${match.seed}`);
 
   /** @type {Feed} */
-  const feed = { tick: 0, entities: [], teams: [], map, status: 'lobby', hash: undefined, result: null };
+  const feed = { tick: 0, entities: [], groups: [], orders: [], teams: [], map, status: 'lobby', hash: undefined, result: null };
   /** @type {((snapshot: any) => void)[]} */
   const snapshotListeners = [];
   /** @type {(() => void)[]} */
@@ -98,6 +100,8 @@ export async function joinServerMatch({ server, name, matchId, vsBot = false, bo
   const apply = (snapshot) => {
     feed.tick = snapshot.tick;
     feed.entities = snapshot.entities;
+    feed.groups = snapshot.groups ?? [];
+    feed.orders = snapshot.orders ?? [];
     feed.teams = snapshot.teams;
     if (snapshot.hash) feed.hash = snapshot.hash;
     feed.status = 'running';

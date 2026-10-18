@@ -9,6 +9,7 @@
  */
 
 import { tryBuild, tryCancelRecycle, tryRecycle, tryUpgradeTower } from './buildings.js';
+import { tryCancelQueue, tryMergeGroups, tryOrderCreeps, trySetBarracksPath, trySetGroupPath, trySplitGroup } from './creeps.js';
 import { tryHeroAttack } from './systems/combat.js';
 import { tryHeroMove } from './systems/movement.js';
 
@@ -27,7 +28,7 @@ import { tryHeroMove } from './systems/movement.js';
  *  | {t:'upgrade', towerId:number, track:'power'|'shell'}
  *  | {t:'recycle', buildingId:number}
  *  | {t:'cancelRecycle', buildingId:number}
- *  | {t:'orderCreeps', barracksId:number, mix:string[]}
+ *  | {t:'orderCreeps', barracksId:number, mix:('melee'|'ranged'|'area')[]}
  *  | {t:'orderItem', barracksId:number, itemId:number}
  *  | {t:'cancelQueue', barracksId:number, index:number}
  *  | {t:'setBarracksPath', barracksId:number, waypoints:number[][]}
@@ -54,6 +55,12 @@ export const HANDLERS = {
   upgrade: tryUpgradeTower,
   recycle: tryRecycle,
   cancelRecycle: tryCancelRecycle,
+  orderCreeps: tryOrderCreeps,
+  cancelQueue: tryCancelQueue,
+  setBarracksPath: trySetBarracksPath,
+  setGroupPath: trySetGroupPath,
+  mergeGroups: tryMergeGroups,
+  splitGroup: trySplitGroup,
   heroAttack: tryHeroAttack,
   heroMove: tryHeroMove,
 };
