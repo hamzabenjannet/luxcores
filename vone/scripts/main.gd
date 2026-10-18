@@ -2,6 +2,7 @@ extends Control
 
 const BackendClientScript = preload("res://scripts/backend_client.gd")
 const ArenaScript = preload("res://scripts/arena.gd")
+const Arena3DScript = preload("res://scripts/arena_3d.gd")
 const GameLogic = preload("res://scripts/game_logic.gd")
 const TEAM_BLUE := Color("#3d8bff")
 const TEAM_RED := Color("#ff4d4d")
@@ -53,6 +54,7 @@ var _order_type := "mixed"
 var _tower_attack_row: HBoxContainer
 var _tower_attack_selector: OptionButton
 var _arena: Control
+var _world_3d: Node3D
 var _building := ""
 var _selected_entity := -1
 var _current_snapshot: Dictionary = {}
@@ -75,6 +77,9 @@ func _ready() -> void:
 	_build_interface()
 	_restore_window_size()
 	_on_window_resized()
+
+func configure_3d_world(world: Node3D) -> void:
+	_world_3d = world
 
 func _build_interface() -> void:
 	_set_dark_theme()
@@ -192,7 +197,9 @@ func _build_interface() -> void:
 	_build_description.visible = false
 	_game.add_child(_build_description)
 
-	_arena = ArenaScript.new()
+	_arena = Arena3DScript.new() if _world_3d != null else ArenaScript.new()
+	if _arena is Control and _arena.has_method("set_world_root"):
+		_arena.set_world_root(_world_3d)
 	_arena.custom_minimum_size = Vector2.ZERO
 	_arena.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_arena.size_flags_horizontal = Control.SIZE_EXPAND_FILL
