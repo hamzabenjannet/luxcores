@@ -38,6 +38,8 @@ export interface StartedEvent extends Base {
     seed: number;
     players: LoggedPlayer[];
     mapgenVersion: number;
+    /** Settings of this match, such as the entropy rate. Absent in older logs and for a default match. */
+    options?: { entropyPctPerMinute?: number };
   };
 }
 

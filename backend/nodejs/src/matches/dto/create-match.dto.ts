@@ -41,6 +41,19 @@ export class CreateMatchDto {
   seed?: number;
 
   @ApiPropertyOptional({
+    example: 1,
+    minimum: 0,
+    maximum: 100,
+    description:
+      'Entropy rate in percent of the maximum HP per minute; 0 turns entropy off. The default of data/balance.json applies when omitted.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  entropyPctPerMinute?: number;
+
+  @ApiPropertyOptional({
     default: false,
     description: 'Fill the second slot with a bot',
   })

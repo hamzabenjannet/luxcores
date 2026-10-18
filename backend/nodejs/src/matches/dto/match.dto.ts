@@ -59,6 +59,14 @@ export class MatchDto {
       'Both slots are bots and nobody plays. The lobby has no human players; anyone signed in may watch.',
   })
   botVsBot?: boolean;
+  @ApiPropertyOptional({
+    example: 1,
+    minimum: 0,
+    maximum: 100,
+    description:
+      'Entropy rate of this match in percent of the maximum HP per minute (GDD 3.7). The host sets it when the match is created, and the lobby shows it to the other player. The default of data/balance.json applies when it is absent.',
+  })
+  entropyPctPerMinute?: number;
   @ApiProperty({ format: 'uuid' }) hostId!: string;
   @ApiProperty({ type: [MatchPlayerDto] }) players!: MatchPlayerDto[];
   @ApiProperty({ format: 'date-time' }) createdAt!: string;

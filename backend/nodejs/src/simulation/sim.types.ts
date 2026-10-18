@@ -164,6 +164,8 @@ export interface SimReplay {
   ticks: number;
   commands: SimCommandEnvelope[];
   hashes: Record<string, string>;
+  /** Settings of this match; absent for a default match. */
+  options?: SimMatchOptions;
 }
 
 export interface SimRecorder {
@@ -198,6 +200,12 @@ export interface WorldViewApi {
   localWorldView(state: SimState, viewerTeam: number): unknown;
 }
 
+/** Settings of one match on top of the data files (`MatchOptions` in `src/sim/config.js`). */
+export interface SimMatchOptions {
+  /** Percent of the maximum HP that buildings, creeps and heroes lose per minute. 0 turns entropy off. */
+  entropyPctPerMinute?: number;
+}
+
 export interface SimApi {
   SPEC_VERSION: string;
   TICK_HZ: number;
@@ -206,7 +214,9 @@ export interface SimApi {
   KIND: Record<string, number>;
   normalizeData(
     raw: Record<string, unknown>,
+    options?: SimMatchOptions,
   ): { mapgen: { version: number } } & Record<string, unknown>;
+  validOptions(options: unknown): boolean;
   createState(opts: {
     seed: number;
     players: SimPlayer[];

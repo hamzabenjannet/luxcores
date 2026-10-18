@@ -26,11 +26,12 @@ export const REPLAY_VERSION = 1;
  * @property {number} ticks         total ticks simulated
  * @property {import('./commands.js').CommandEnvelope[]} commands
  * @property {Record<string, string>} hashes  tick -> state hash
+ * @property {import('./config.js').MatchOptions} [options]  settings of this match, such as the entropy rate; absent for a default match
  */
 
 export class Recorder {
   /**
-   * @param {{ seed: number, players: import('./state.js').Player[], dataHash: string, mapgenVersion: number }} meta
+   * @param {{ seed: number, players: import('./state.js').Player[], dataHash: string, mapgenVersion: number, options?: import('./config.js').MatchOptions }} meta
    */
   constructor(meta) {
     /** @type {Replay} */
@@ -45,6 +46,7 @@ export class Recorder {
       commands: [],
       hashes: {},
     };
+    if (meta.options?.entropyPctPerMinute !== undefined) this.replay.options = { entropyPctPerMinute: meta.options.entropyPctPerMinute };
   }
 
   /**

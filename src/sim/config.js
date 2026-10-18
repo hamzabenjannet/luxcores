@@ -16,6 +16,27 @@
 
 import { MILLI, UNITS_PER_TILE } from './fixed.js';
 
+/** The highest entropy rate a match may set, in percent of the maximum HP per minute. */
+export const ENTROPY_MAX_PCT = 100;
+
+/**
+ * Settings a match may change at its start, on top of the data files. Both are optional.
+ * @typedef {Object} MatchOptions
+ * @property {number} [entropyPctPerMinute] percent of maximum HP that buildings, creeps and heroes lose per minute (GDD 3.7); 0 turns entropy off
+ */
+
+/**
+ * Whether the options are valid: a whole entropy rate from 0 to `ENTROPY_MAX_PCT`.
+ * @param {unknown} options
+ * @returns {options is MatchOptions}
+ */
+export function validOptions(options) {
+  if (options === null || typeof options !== 'object') return false;
+  const { entropyPctPerMinute } = /** @type {MatchOptions} */ (options);
+  return entropyPctPerMinute === undefined
+    || (Number.isSafeInteger(entropyPctPerMinute) && entropyPctPerMinute >= 0 && entropyPctPerMinute <= ENTROPY_MAX_PCT);
+}
+
 /**
  * @typedef {Object} RawData
  * @property {any} balance
@@ -63,11 +84,16 @@ function convert(value, path) {
 
 /**
  * @param {RawData} raw
+ * @param {MatchOptions} [options] settings of one match; they replace the matching data values
  * @returns {SimConfig}
  */
-export function normalizeData(raw) {
+export function normalizeData(raw, options = {}) {
+  if (!validOptions(options)) throw new RangeError('normalizeData: invalid match options');
+  const balance = options.entropyPctPerMinute === undefined
+    ? raw.balance
+    : { ...raw.balance, economy: { ...raw.balance.economy, entropyPctPerMinute: options.entropyPctPerMinute } };
   const out = {
-    balance: convert(raw.balance, 'balance'),
+    balance: convert(balance, 'balance'),
     buildings: convert(raw.buildings, 'buildings'),
     heroes: convert(raw.heroes, 'heroes'),
     abilities: convert(raw.abilities, 'abilities'),

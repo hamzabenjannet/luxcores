@@ -14,6 +14,7 @@ import type {
   SimBot,
   SimMapLayout,
   SimPlayer,
+  SimMatchOptions,
   SimRecorder,
   SimReplay,
   SimState,
@@ -39,6 +40,9 @@ export class SimService {
   private worldViewApi!: WorldViewApi;
   private config!: ReturnType<SimApi['normalizeData']>;
   private mapgenRaw!: unknown;
+  private raw!: Record<string, unknown>;
+  /** Rules of matches with options, by their options, so a match does not normalize the data again. */
+  private readonly variants = new Map<string, ReturnType<SimApi['normalizeData']>>();
 
   /** sha256 over the data files, computed the way `test/helpers/load-data.js` does. */
   dataHash!: string;
@@ -82,6 +86,7 @@ export class SimService {
     this.dataHash = sha.digest('hex');
     this.codeHash = await hashCode(root);
     this.mapgenRaw = raw.mapgen;
+    this.raw = raw;
     this.config = this.api.normalizeData(raw);
     this.logger.log(
       `Simulation spec ${this.specVersion} loaded from ${root}, data ${this.dataHash.slice(0, 8)}, code ${this.codeHash.slice(0, 8)}`,
@@ -119,27 +124,49 @@ export class SimService {
     return this.config.mapgen.version;
   }
 
+  /** The default entropy rate of `data/balance.json`, in percent of the maximum HP per minute. */
+  get defaultEntropyPct(): number {
+    return (this.config.balance as { economy: { entropyPctPerMinute: number } }).economy.entropyPctPerMinute;
+  }
+
+  /** Whether the options of a match are valid. */
+  validOptions(options: unknown): boolean {
+    return this.api.validOptions(options);
+  }
+
+  /** The rules of a match: the data files with the match's own settings on top. */
+  configFor(options?: SimMatchOptions): ReturnType<SimApi['normalizeData']> {
+    if (options?.entropyPctPerMinute === undefined || options.entropyPctPerMinute === this.defaultEntropyPct) return this.config;
+    const key = JSON.stringify({ entropyPctPerMinute: options.entropyPctPerMinute });
+    let config = this.variants.get(key);
+    if (!config) this.variants.set(key, (config = this.api.normalizeData(this.raw, { entropyPctPerMinute: options.entropyPctPerMinute })));
+    return config;
+  }
+
   /** A fresh match and the recorder that logs it. */
   createMatch(
     seed: number,
     players: SimPlayer[],
+    options?: SimMatchOptions,
   ): { state: SimState; recorder: SimRecorder } {
-    const state = this.api.createState({ seed, players, config: this.config });
+    const config = this.configFor(options);
+    const state = this.api.createState({ seed, players, config });
     const recorder = new this.api.Recorder({
       seed,
       players,
       dataHash: this.dataHash,
       mapgenVersion: this.mapgenVersion,
+      ...(options ? { options } : {}),
     });
     return { state, recorder };
   }
 
   /** A bot for one player. Its commands are ordinary envelopes, so the replay holds them like a human's. */
-  createBot(playerId: number, team: number, seed: number): SimBot {
+  createBot(playerId: number, team: number, seed: number, options?: SimMatchOptions): SimBot {
     const bot = this.botApi.createBot({
       playerId,
       team,
-      config: this.config,
+      config: this.configFor(options),
       seed,
     });
     return {
@@ -178,15 +205,18 @@ export class SimService {
     /** The rules the match began under, kept in the replay header. */
     began: { dataHash: string; mapgenVersion: number };
     players: SimPlayer[];
+    /** The settings of the match, which a rebuild must run under. */
+    options?: SimMatchOptions;
     bots: SimBot[];
     attempt: ResumeAttempt;
     targetTick: number;
   }): Promise<{ state: SimState; recorder: SimRecorder }> {
     const { attempt } = opts;
+    const config = this.configFor(opts.options);
     const { checkpoint } = attempt;
     let state: SimState;
     if (checkpoint) {
-      state = this.api.importState(checkpoint.state, this.config);
+      state = this.api.importState(checkpoint.state, config);
       if (attempt.strict && this.hash(state) !== checkpoint.hash) {
         throw new Error(`The checkpoint at tick ${checkpoint.tick} does not hash to its saved value`);
       }
@@ -195,13 +225,14 @@ export class SimService {
         if (saved) bot.load(saved.memory);
       }
     } else {
-      state = this.api.createState({ seed: opts.seed, players: opts.players, config: this.config });
+      state = this.api.createState({ seed: opts.seed, players: opts.players, config });
     }
     const recorder = new this.api.Recorder({
       seed: opts.seed,
       players: opts.players,
       dataHash: opts.began.dataHash,
       mapgenVersion: opts.began.mapgenVersion,
+      ...(opts.options ? { options: opts.options } : {}),
     });
     recorder.replay.commands.push(...attempt.before.commands);
     Object.assign(recorder.replay.hashes, attempt.before.hashes);
@@ -263,7 +294,7 @@ export class SimService {
   }
 
   playReplay(replay: SimReplay): ReturnType<SimApi['playReplay']> {
-    return this.api.playReplay(replay, this.config);
+    return this.api.playReplay(replay, this.configFor(replay.options));
   }
 }
 

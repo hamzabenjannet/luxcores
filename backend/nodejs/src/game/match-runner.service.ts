@@ -238,7 +238,8 @@ export class MatchRunnerService
     if (!(await this.ownership.claim(match.id))) {
       throw new ConflictException('Another server runs this match');
     }
-    const { state, recorder } = this.sim.createMatch(match.seed, simPlayers);
+    const options = this.optionsOf(match);
+    const { state, recorder } = this.sim.createMatch(match.seed, simPlayers, options);
     const run: Run = {
       matchId: match.id,
       players,
@@ -247,7 +248,7 @@ export class MatchRunnerService
       inbox: [],
       bots: players
         .filter((p) => p.kind === 'bot')
-        .map((p) => this.sim.createBot(p.simId, p.team, match.seed)),
+        .map((p) => this.sim.createBot(p.simId, p.team, match.seed, options)),
       lastSeq: new Map(),
       startedAt: Date.now(),
       ending: false,
@@ -274,6 +275,7 @@ export class MatchRunnerService
         players: players as LoggedPlayer[],
         ...this.sim.fingerprint,
         mapgenVersion: this.sim.mapgenVersion,
+        ...(options ? { options } : {}),
       },
     });
     await this.publish('match.started', {
@@ -336,6 +338,11 @@ export class MatchRunnerService
     run.lastSeq.set(player.simId, seq);
     run.inbox.push({ tick: run.state.tick, playerId: player.simId, seq, cmd });
     return { accepted: true, tick: run.state.tick };
+  }
+
+  /** The settings the host chose for a match, or undefined for the defaults. */
+  private optionsOf(match: MatchDto): { entropyPctPerMinute: number } | undefined {
+    return match.entropyPctPerMinute === undefined ? undefined : { entropyPctPerMinute: match.entropyPctPerMinute };
   }
 
   /** The sequence number a player's next command must use. 0 for a match that is not running. */
@@ -473,6 +480,7 @@ export class MatchRunnerService
     const plan = planResume(events, checkpoints, this.sim.fingerprint);
     if (!plan) throw new Error('its log has no start event');
     const { seed, players } = plan;
+    const options = plan.started.data.options;
     const simPlayers = players.map((p) => ({ id: p.simId, team: p.team, kind: p.kind }));
 
     let rebuilt: Awaited<ReturnType<SimService['rebuild']>> | undefined;
@@ -480,12 +488,13 @@ export class MatchRunnerService
     let bots: SimBot[] = [];
     const failures: string[] = [];
     for (const attempt of plan.attempts) {
-      bots = players.filter((p) => p.kind === 'bot').map((p) => this.sim.createBot(p.simId, p.team, seed));
+      bots = players.filter((p) => p.kind === 'bot').map((p) => this.sim.createBot(p.simId, p.team, seed, options));
       try {
         rebuilt = await this.sim.rebuild({
           seed,
           began: { dataHash: plan.started.data.dataHash, mapgenVersion: plan.started.data.mapgenVersion },
           players: simPlayers,
+          options,
           bots,
           attempt,
           targetTick: plan.target,
