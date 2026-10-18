@@ -25,14 +25,15 @@ COPY --from=build /app/backend/dist ./dist
 COPY --from=build /app/backend/public ./public
 
 # What the server loads and serves: the sim and the web client (src), the game data, the models and the page.
-COPY index.html /app/game/index.html
+COPY index.html determinism.html /app/game/
 COPY src /app/game/src
 COPY data /app/game/data
 COPY assets /app/game/assets
 # COPY keeps the file modes of the checkout, and a developer machine may use 700. The app runs as the unprivileged node user, so make the files readable.
 RUN chmod -R a+rX /app/game
 
-# The JSON database driver writes here. Production uses PostgreSQL instead.
+# The JSON database driver and the match event logs write here. Mount a volume on it: a running match is rebuilt from its log after a restart,
+# and the logs must outlive the container.
 RUN mkdir -p /app/backend/data && chown node:node /app/backend/data
 USER node
 EXPOSE 3000

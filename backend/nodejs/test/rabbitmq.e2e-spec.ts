@@ -51,6 +51,7 @@ describe.skipIf(!process.env.TEST_RABBITMQ_URL)(
         RABBITMQ_URL: url,
         RABBITMQ_QUEUE: queue,
         MATCH_MAX_TICKS: '6000',
+        MATCH_ON_SHUTDOWN: 'end', // this test is about ending a live match cleanly
       });
       const halo = await guest(first.url, 'Halo');
       const created = await api(first.url, '/api/matches', {

@@ -1,6 +1,6 @@
 # Handover
 
-Status as of 2026-10-18, after M4 (creeps) in the sim, the bot and both clients. Read `CLAUDE.md` first for the working rules.
+Status as of 2026-10-18, after M4 (creeps), unit spacing and phase A of the server architecture plan (match log and crash resume). Read `CLAUDE.md` first for the working rules.
 
 ## Where things stand
 
@@ -24,13 +24,14 @@ Milestones M1 (map generation), M2 (economy), M3 (combat and physics) and M4 (cr
 | Web client | Plays only through the server: a start menu (bot, bots to watch, two humans), a lobby card, a build palette, a selection panel (tower upgrades, recycle), hero orders and a result banner. It draws the map, every entity with its name and lux count, tower attack types, aim lines and projectiles, picks tiles by ray-casting, and pans by drag. It never steps the sim |
 | Backend (`backend/nodejs/`) | NestJS 12 multiplayer server: guest auth with JWT guards, players, lobbies, a server-authoritative match runner at 20 Hz, Socket.IO `/game` namespace, replays with server-side verify, static routes for the game files, Swagger at `/api/docs`, JSON file database with MongoDB and PostgreSQL adapters, RabbitMQ events with an in-process fallback. See `backend/nodejs/README.md` |
 | Bots | `src/bot/bot.js` follows the GDD 12.1 rotation (collector, barracks, tower, creep group of 5) and upgrades towers; the server runs it for a `vsBot` or `botVsBot` lobby, and its commands go into the replay. Heroes arrive with M5. `node tools/run-bots.js --soak 100` plays 100 seeds twice and compares the hashes. Golden replays `bots-seed-777` (5 000 ticks), `bots-seed-3-victory` (a creep rush, tick 3699) and `bots-seed-4-stalemate` (no winner, ends at the 10 000-tick limit) pin bot matches. A match nobody has won ends as a draw at `match.stalemateTicks` (10 000); `MATCH_MAX_TICKS` raises it for the server and the tools |
+| Match log and resume | Every running match has a write-ahead log (`backend/nodejs/src/matchlog`): seed, every command, a hash every 20 ticks. The server rebuilds running matches from it at start-up, after a crash or a graceful stop (`MATCH_ON_SHUTDOWN`). Clients rejoin by themselves and continue their command count (`nextSeq`). See `backend/nodejs/README.md`, Match Log and Resume |
 | Spectators | Any signed-in player may join the room of a `botVsBot` match and receives every event, with no commands. A human match stays closed to strangers |
 | Entity labels | Every entity and map marker shows its name and, for entities, its lux count under it (`render/labels.js`) |
 | Project memory (`docs/prompts/`) | Tracked in git: prompt history, handovers, progress and knowledge notes; see its README |
 | Prose gate | `tools/check_style.py` labels hits `deny` or `ask`, supports `--register informal`, reads `.js` files through their comments and checks the whole repo with `npm run lint:prose:all`; `test/prose.test.js` fails `npm test` on any `deny` hit |
 | Godot project (`vone/`) | Godot 4.6, GL Compatibility renderer, a thin client at M4 (see Client Alignment below): spec check, server data, build, upgrade, recycle, creep orders, queue, groups, merge, split, paths, hero orders, combat visuals, bot and spectator modes |
 | Cross-runtime check | `determinism.html` plays the sim inside Chromium. The idle hash at tick 120 (`173b2eec`, seed 1234567) and the bot hash at tick 5000 (`72bb2207`, seed 777, with creeps, A* and collisions) equal the Node values |
-| Latest validation (2026-10-18) | `npm test`: 159 passed; `npm run headless`: 12 000 ticks, hash `d548a8fa`; backend `npm test`: 38 passed and 12 skipped without services; backend `npm run test:e2e`: 61 passed and 4 skipped; root `npm run test:e2e`: 10 passed (Chromium, Godot parity 63 checks, Godot live 41 checks); Chromium and Node agree on the bot hash at tick 5000 (`72bb2207`) |
+| Latest validation (2026-10-18) | `npm test`: 159 passed; backend `npm test`: 38 passed and 12 skipped without services; backend `npm run test:e2e`: 67 passed and 4 skipped (the RabbitMQ pair passes on a real broker); root `npm run test:e2e`: 11 passed (Chromium, a crash and restart of the server, Godot parity 63 checks, Godot live 44 checks); Chromium and Node agree on the bot hash at tick 5000 (`72bb2207`) |
 
 ### Browser and Godot Tests
 
@@ -150,11 +151,47 @@ A nuclear plant earns 5 lux/s. It earns 600 lux in the 120 s before it melts dow
 
 ## Known Gaps
 
-- The backend sends full snapshots with every entity, uses guest sign-in only, has no rate limiting, and keeps a running match in the memory of one process. `backend/nodejs/README.md` lists these limits with the planned fixes.
+- The backend sends full snapshots with every entity and uses guest sign-in only. A running match lives in the memory of one process, and the match log lets another start rebuild it. `backend/nodejs/README.md` lists these limits with the planned fixes.
 - The web controls are the M8 minimum: tap to build, select and order, with no build ghost, path mode, quick slots or pinch zoom. Buildings and units draw as placeholder boxes. A tap on the map takes effect at once, so a stray tap builds.
 - The camera stays north-up for team 1, so its base appears at the top.
 - Projectiles live one tick and snapshots arrive every second tick, so clients draw an aim line from `targetId` to show each shot. Delta snapshots and interpolation belong to M7.
 - The client compares the sim spec version with the server but not the data hash, because `crypto.subtle` needs a secure context and a LAN address is not one.
+
+## Server Architecture Plan
+
+Decided with the owners on 2026-10-18. The server stays the only endpoint that clients talk to (Socket.IO and plain WebSocket). Behind it, each service is optional, and the server falls back when one is away, down to a JSON file and in-process queues, so it always runs alone.
+
+| Layer | Used when available | Fallback |
+|---|---|---|
+| Commands per match | RabbitMQ queue `match.<id>.commands`, one consumer owns the match | direct in-process call |
+| Event log (commands, hashes, lifecycle) | Redis Stream per match, flushed in the background to MongoDB (`match_events`, indexed by match) | append-only NDJSON file per match |
+| Main storage | MongoDB | JSON file |
+| Relational data later (profiles, teams, guilds) | PostgreSQL, adapter stays as it is and is tried at start-up | skipped |
+| Cross-node socket rooms (later) | Socket.IO Redis Streams adapter | one node |
+
+Decisions:
+
+- A running match resumes automatically after a restart.
+- Redis Streams, not a custom RabbitMQ bridge, carries socket traffic between nodes, because Socket.IO has no official RabbitMQ adapter.
+- Events are commands, hashes and lifecycle, and snapshots stay live-only.
+- Mongo holds one events collection indexed by match, not a collection per match.
+- The JSON file stays as the fallback store.
+
+| Phase | Scope | State |
+|---|---|---|
+| A | The `EventLog` port and its file implementation, the runner writes the log, `SimService.rebuild`, automatic resume, `nextSeq` for rejoining clients (web and Godot), a volume in the production stack | Done and verified (below) |
+| B | MongoDB as main store with the fallback choice at start-up, `match_events`, indexes | Next |
+| C | Redis Stream buffer and the Mongo flusher, tests that kill Redis mid-match | Planned |
+| D | RabbitMQ per-match command queues, queue lifecycle, broker-outage test | Planned |
+| E | Match ownership across nodes and worker processes, cross-node socket fan-out | Planned, see Capacity |
+
+Phase A was checked in four ways. The rebuild fails loudly when a bot or a hash disagrees with the log. Two deliberate breaks of it (skipping the bot sync, dropping the command counter) each failed a test. A `SIGKILL` of the real server, with a browser page that rejoined and kept playing, passed twice in a row. The production image resumed a match across `docker stop` and `docker start` on a volume.
+
+### Capacity
+
+The owners' target is about 100 simultaneous 5v5 matches per node. A measured 1v1 bot match (seed 4, up to 50 creeps, two bots) costs 0.86 ms per tick on average (p99 1.2 ms, worst 10 ms) and 0.08 ms per snapshot, which is about 18 ms of CPU per second per match. One Node process uses one core, so one process runs roughly 33 such matches at 60% load. Snapshots weigh about 19.5 KB each, 10 per second per client.
+
+Extrapolating to 5v5 `[UNVERIFIED]`, because the sim has no teams of 5 or heroes yet: five times the units would cost about 5 ms per tick (the targeting loops grow with the square of the unit count) and about 100 KB per snapshot. That is 100 ms of CPU per second per match, so one core carries 6 or 7 matches, and 100 matches need 15 or more cores. Ten clients per match at 100 KB and 10 snapshots per second is 10 MB/s per match, far too much. Two things follow. The match runner has to run in worker processes or threads, one per core, which the queue-per-match ownership of phase D and E supports. And snapshots need the delta, fog-filtered form of `docs/TECH_ARCHITECTURE.md` section 13.1 and a compact encoding before 5v5 at that scale. Neither is built.
 
 ## Queued by the Owners
 

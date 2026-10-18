@@ -10,6 +10,7 @@ import type { AppConfig } from './config/configuration.js';
 import configuration from './config/configuration.js';
 import { validateEnv } from './config/env.validation.js';
 import { DatabaseModule } from './database/database.module.js';
+import { MatchLogModule } from './matchlog/matchlog.module.js';
 import { EventsModule } from './events/events.module.js';
 import { GameModule } from './game/game.module.js';
 import { HealthModule } from './health/health.module.js';
@@ -32,6 +33,7 @@ import { StaticModule } from './static/static.module.js';
         throttlerOptions(config),
     }),
     DatabaseModule,
+    MatchLogModule,
     SimulationModule,
     EventsModule,
     AuthModule,

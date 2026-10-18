@@ -6,4 +6,6 @@ coverage/
 # The JSON database is created at the first start
 data/db.json
 data/db.json.tmp
+# Write-ahead logs of running matches
+data/events/
 *.tsbuildinfo

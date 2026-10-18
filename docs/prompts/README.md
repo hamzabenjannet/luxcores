@@ -34,3 +34,5 @@ The live status of the repo stays in `docs/HANDOVER.md`. This folder keeps the h
 | `handover-2026-10-18-alignment.md` | Handover | State after the alignment: bots on the server, protocol changes, parity tests, what is verified and what is not |
 | `2026-10-18-m4-creeps.md` | Prompt | Request for the placement fix and M4 (creeps) |
 | `handover-2026-10-18-m4.md` | Handover | State after the placement fix and M4: changes, checks, decisions and open items |
+| `2026-10-18-architecture-answers.md` | Prompt | The owners' spacing, tick cap and Redis request, the architecture ideas, and their answers to my questions |
+| `handover-2026-10-18-architecture-a.md` | Handover | State after the sim changes, the Redis container and architecture phase A |

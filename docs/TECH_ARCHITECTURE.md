@@ -318,6 +318,10 @@ What stays useful from phase 1: the deterministic sim, the command schema, the h
 
 Server sim language: phase 2 uses the Rust core; Node loads it as WASM or as a native addon, so the server and Godot clients run identical rules.
 
+### 13.1.1 Durability and scale layers
+
+A running match has a write-ahead log (seed, every executed command, a state hash every 20 ticks, lifecycle events). The log is a replay, and the deterministic sim rebuilds a match from it after a crash or a restart. The server resumes such matches by itself. Optional services sit behind ports with in-process fallbacks (RabbitMQ per-match command queues, a Redis Stream buffer flushed to MongoDB, MongoDB as main store, the JSON file as the last fallback), so the server always runs alone. The phases and the capacity figures are in `docs/HANDOVER.md`, Server Architecture Plan.
+
 ### 13.2 Groundwork in phase 1 (low cost)
 
 - Keep `isVisibleToViewer()` in the renderer (section 6.2).

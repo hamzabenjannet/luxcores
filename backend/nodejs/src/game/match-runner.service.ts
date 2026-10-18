@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   Logger,
+  type OnApplicationBootstrap,
   type OnModuleDestroy,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -16,6 +17,8 @@ import {
   MatchStatus,
 } from '../matches/dto/match.dto.js';
 import { MatchesService } from '../matches/matches.service.js';
+import { EventLog } from '../matchlog/event-log.js';
+import type { LoggedPlayer } from '../matchlog/match-event.js';
 import { ReplaysService } from '../replays/replays.service.js';
 import { SimService } from '../simulation/sim.service.js';
 import type {
@@ -64,6 +67,8 @@ export interface CommandAck {
   accepted: boolean;
   tick?: number;
   reason?: string;
+  /** With a `seq` rejection: the sequence number the next command must use, so a rejoined client can continue. */
+  nextSeq?: number;
 }
 
 export interface StartedInfo {
@@ -89,6 +94,8 @@ interface Run {
   inbox: SimCommandEnvelope[];
   bots: SimBot[];
   lastSeq: Map<number, number>;
+  /** True when the log already ends with this match's `finished` event (a match that ended while the server was down). */
+  loggedEnd?: boolean;
   startedAt: number;
   timer?: NodeJS.Timeout;
   ending: boolean;
@@ -104,25 +111,35 @@ interface Run {
  * tick-based.
  */
 @Injectable()
-export class MatchRunnerService implements OnModuleDestroy {
+export class MatchRunnerService
+  implements OnModuleDestroy, OnApplicationBootstrap
+{
   private readonly logger = new Logger(MatchRunnerService.name);
   private readonly runs = new Map<string, Run>();
   private readonly emitter = new EventEmitter();
   private readonly tickMs: number;
   private readonly maxTicks: number;
   private readonly snapshotEvery: number;
+  private readonly onShutdown: 'resume' | 'end';
+  private readonly keepFinishedLogs: boolean;
+  private closing = false;
+  /** Settles when every match that was running at start-up has been rebuilt or given up. Tests wait on it. */
+  resumed: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly sim: SimService,
     private readonly matches: MatchesService,
     private readonly replays: ReplaysService,
     private readonly bus: EventBus,
+    private readonly log: EventLog,
     config: ConfigService<AppConfig, true>,
   ) {
     const game = config.get('game', { infer: true });
     // MATCH_MAX_TICKS wins; without it the data file decides, so one number serves the server and the tools.
     this.maxTicks = game.matchMaxTicks > 0 ? game.matchMaxTicks : this.sim.stalemateTicks;
     this.snapshotEvery = game.snapshotEveryTicks;
+    this.onShutdown = game.onShutdown;
+    this.keepFinishedLogs = config.get('eventLog', { infer: true }).keepFinished;
     this.tickMs = 1000 / this.sim.tickHz;
   }
 
@@ -208,6 +225,17 @@ export class MatchRunnerService implements OnModuleDestroy {
       this.runs.delete(match.id); // the match never started, so leave nothing behind
       throw err;
     }
+    this.log.append(match.id, {
+      type: 'started',
+      tick: 0,
+      data: {
+        seed: match.seed,
+        players: players as LoggedPlayer[],
+        specVersion: this.sim.specVersion,
+        dataHash: this.sim.dataHash,
+        mapgenVersion: this.sim.mapgenVersion,
+      },
+    });
     await this.publish('match.started', {
       matchId: match.id,
       seed: match.seed,
@@ -255,13 +283,25 @@ export class MatchRunnerService implements OnModuleDestroy {
     const player = run.players.find((p) => p.playerId === playerId);
     if (!player)
       return { accepted: false, reason: 'You are not in this match' };
-    if (seq <= (run.lastSeq.get(player.simId) ?? -1))
-      return { accepted: false, reason: 'seq must rise with every command' };
+    const last = run.lastSeq.get(player.simId) ?? -1;
+    if (seq <= last)
+      return {
+        accepted: false,
+        reason: 'seq must rise with every command',
+        nextSeq: last + 1,
+      };
     if (run.inbox.length >= MAX_INBOX)
       return { accepted: false, reason: 'Too many commands in this tick' };
     run.lastSeq.set(player.simId, seq);
     run.inbox.push({ tick: run.state.tick, playerId: player.simId, seq, cmd });
     return { accepted: true, tick: run.state.tick };
+  }
+
+  /** The sequence number a player's next command must use. 0 for a match that is not running. */
+  nextSeq(matchId: string, playerId: string): number {
+    const run = this.runs.get(matchId);
+    const player = run?.players.find((p) => p.playerId === playerId);
+    return player ? (run?.lastSeq.get(player.simId) ?? -1) + 1 : 0;
   }
 
   /** The current snapshot, or null when the match is not running. */
@@ -276,11 +316,121 @@ export class MatchRunnerService implements OnModuleDestroy {
    * later phases (`beforeApplicationShutdown` for the broker, `onApplicationShutdown` for the database).
    */
   async onModuleDestroy(): Promise<void> {
+    this.closing = true;
+    if (this.onShutdown === 'resume') {
+      // Leave the matches `running` in the database. Their logs hold everything, and the next start rebuilds them.
+      for (const run of this.runs.values()) clearTimeout(run.timer);
+      this.runs.clear();
+      await this.log.flush();
+      return;
+    }
     await Promise.all(
       [...this.runs.values()].map((run) =>
         this.finish(run, MatchEndReason.Stopped).catch(() => undefined),
       ),
     );
+  }
+
+  /** Rebuilds every match that the database lists as running. It runs in the background, after the server listens. */
+  onApplicationBootstrap(): void {
+    this.resumed = this.resumeAll().catch((err: Error) =>
+      this.logger.error(`Resuming matches failed: ${err.message}`),
+    );
+  }
+
+  private async resumeAll(): Promise<void> {
+    const running = await this.matches.running();
+    if (running.length > 0)
+      this.logger.log(`Resuming ${running.length} running match(es) from their logs`);
+    for (const match of running) {
+      if (this.closing) return;
+      try {
+        await this.resume(match);
+      } catch (err) {
+        this.logger.error(`Match ${match.id} cannot be resumed: ${(err as Error).message}`);
+        await this.abandon(match);
+      }
+    }
+  }
+
+  /**
+   * Rebuilds one match from its log and carries on. The match rewinds to the last event the log
+   * holds, which is at most about a second behind the crash, and clients rejoin by themselves.
+   */
+  private async resume(match: MatchDto): Promise<void> {
+    const events = await this.log.read(match.id);
+    const started = events.find((e) => e.type === 'started');
+    if (!started || started.type !== 'started')
+      throw new Error('its log has no start event');
+    const { seed, players } = started.data;
+    const finishedEvent = events.find((e) => e.type === 'finished');
+    const commands: SimCommandEnvelope[] = [];
+    const hashes: Record<number, string> = {};
+    const lastSeq = new Map<number, number>();
+    let target = 0;
+    for (const e of events) {
+      if (e.type === 'command') {
+        commands.push({ tick: e.tick, playerId: e.data.playerId, seq: e.data.seq, cmd: e.data.cmd });
+        target = Math.max(target, e.tick + 1);
+        const human = players.some((p) => p.kind === 'human' && p.simId === e.data.playerId);
+        if (human) lastSeq.set(e.data.playerId, Math.max(lastSeq.get(e.data.playerId) ?? -1, e.data.seq));
+      } else if (e.type === 'hash') {
+        hashes[e.tick] = e.data.hash;
+        target = Math.max(target, e.tick);
+      } else if (e.type === 'finished') {
+        target = Math.max(target, e.data.endedTick);
+      }
+    }
+    const bots = players
+      .filter((p) => p.kind === 'bot')
+      .map((p) => this.sim.createBot(p.simId, p.team, seed));
+    const { state, recorder } = await this.sim.rebuild({
+      seed,
+      players: players.map((p) => ({ id: p.simId, team: p.team, kind: p.kind })),
+      bots,
+      commands,
+      hashes,
+      targetTick: target,
+    });
+    if (this.closing) return;
+    const run: Run = {
+      matchId: match.id,
+      players: players as RunnerPlayer[],
+      state,
+      recorder,
+      inbox: [],
+      bots,
+      lastSeq,
+      startedAt: Date.now() - state.tick * this.tickMs,
+      ending: false,
+      loggedEnd: finishedEvent !== undefined,
+    };
+    this.runs.set(match.id, run);
+    await this.log.continueNumbering(match.id);
+    this.log.append(match.id, { type: 'resumed', tick: state.tick, data: { at: new Date().toISOString() } });
+    this.logger.log(`Match ${match.id} resumed at tick ${state.tick}`);
+    if (finishedEvent?.type === 'finished' || state.outcome || state.tick >= this.maxTicks) {
+      const stopped = finishedEvent?.type === 'finished' && finishedEvent.data.result.reason === MatchEndReason.Stopped;
+      await this.finish(run, stopped ? MatchEndReason.Stopped : undefined);
+      return;
+    }
+    this.schedule(run);
+  }
+
+  /** A running match with no usable log ends as a draw, so it does not stay `running` forever. */
+  private async abandon(match: MatchDto): Promise<void> {
+    const result: MatchResultDto = { winnerTeam: null, draw: true, reason: MatchEndReason.Stopped };
+    try {
+      await this.matches.markFinished(match.id, 0, result, undefined);
+      await this.publish('match.finished', {
+        matchId: match.id,
+        players: match.players.filter((p) => p.playerId).map((p) => ({ playerId: p.playerId as string, team: p.team })),
+        result,
+        endedTick: 0,
+      });
+    } catch (err) {
+      this.logger.error(`Closing match ${match.id} failed: ${(err as Error).message}`);
+    }
   }
 
   /** Arms the timer for the next due tick. Drift never builds up, because due times derive from the start time. */
@@ -306,13 +456,25 @@ export class MatchRunnerService implements OnModuleDestroy {
       ...run.inbox.splice(0).map((e) => ({ ...e, tick: state.tick })),
       ...run.bots.flatMap((bot) => bot.think(state)),
     ];
+    for (const e of envelopes) {
+      this.log.append(run.matchId, {
+        type: 'command',
+        tick: state.tick,
+        data: { playerId: e.playerId, seq: e.seq, cmd: e.cmd },
+      });
+    }
     this.sim.step(state, envelopes);
     run.recorder.record(state, envelopes);
+    const hashed = state.tick % this.sim.hashInterval === 0;
+    if (hashed) {
+      this.log.append(run.matchId, {
+        type: 'hash',
+        tick: state.tick,
+        data: { hash: this.sim.hash(state) },
+      });
+    }
     if (state.tick % this.snapshotEvery === 0) {
-      this.emitter.emit(
-        'snapshot',
-        this.snapshotOf(run, state.tick % this.sim.hashInterval === 0),
-      );
+      this.emitter.emit('snapshot', this.snapshotOf(run, hashed));
     }
     if (state.outcome || state.tick >= this.maxTicks) {
       this.finish(run).catch((err: Error) =>
@@ -330,6 +492,13 @@ export class MatchRunnerService implements OnModuleDestroy {
     this.runs.delete(run.matchId);
 
     const result = resultOf(run.state, forced);
+    if (!run.loggedEnd) {
+      this.log.append(run.matchId, {
+        type: 'finished',
+        tick: run.state.tick,
+        data: { result, endedTick: run.state.tick },
+      });
+    }
     let replayId: string | undefined;
     try {
       replayId = (
@@ -346,6 +515,14 @@ export class MatchRunnerService implements OnModuleDestroy {
       result,
       replayId,
     );
+    // The replay holds the match now, so the write-ahead log has done its job.
+    if (replayId && !this.keepFinishedLogs) {
+      await this.log
+        .purge(run.matchId)
+        .catch((err: Error) =>
+          this.logger.warn(`Removing the log of ${run.matchId} failed: ${err.message}`),
+        );
+    }
     await this.publish('match.finished', {
       matchId: run.matchId,
       players: run.players

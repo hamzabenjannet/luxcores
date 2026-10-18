@@ -26,6 +26,8 @@ services:
       ADMIN_API_KEY: ${ADMIN_API_KEY:?set ADMIN_API_KEY}
       CORS_ORIGIN: https://${DOMAIN:?set DOMAIN}
       TRUST_PROXY: '1' # one proxy (Caddy) sits in front, so the client address comes from X-Forwarded-For
+    # The write-ahead log of every running match lives here, so a restart or a redeploy resumes the matches.
+    volumes: [api-data:/app/backend/data]
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
@@ -93,6 +95,7 @@ services:
     depends_on: [api]
 
 volumes:
+  api-data:
   postgres-data:
   rabbitmq-data:
   redis-data:

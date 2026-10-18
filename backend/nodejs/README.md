@@ -47,6 +47,8 @@ To play against the server from a browser, open `http://localhost:3000/?server=&
 | `WS_AUTH_TIMEOUT_MS`, `WS_MAX_PAYLOAD_BYTES` | `5000`, `16384` | Plain WebSocket auth window and largest frame |
 | `LUXCORES_ROOT` | `../..` | Repo root with `src/sim`, `data/` and `index.html` |
 | `PUBLIC_DIR` | `public` | Backend static folder |
+| `MATCH_ON_SHUTDOWN` | `resume` | A graceful stop leaves running matches running, and the next start rebuilds them from their logs. `end` draws them at once |
+| `EVENT_LOG_DIR`, `EVENT_LOG_FLUSH_MS`, `EVENT_LOG_KEEP_FINISHED` | `events` next to the JSON database, `100`, `false` | Where the match logs live, how often they are written, and whether the log of a finished match stays (see Match Log and Resume) |
 | `MATCH_MAX_TICKS` | `match.stalemateTicks` in `data/balance.json` (10000) | An undecided match ends as a draw after this many ticks (about 8 minutes at 20 Hz). Set it higher for long test runs |
 | `SNAPSHOT_EVERY_TICKS` | `2` | Ticks between snapshots (10 per second) |
 
@@ -91,7 +93,7 @@ Each entity in a snapshot carries `id`, `kind`, `team`, `owner`, `x` and `z` (un
 
 `kind` codes come from `GET /api/game/spec` (`kinds`), so a client never hard-codes them. A projectile lives for one tick, and a snapshot every second tick shows only some of them. Draw an aim line from `targetId` instead of waiting for one.
 
-A `match:join` ack also carries `role`: `player`, or `spectator` for a watcher of a bot match. Spectators receive every event of the room and cannot send commands.
+A `match:join` ack also carries `role`: `player`, or `spectator` for a watcher of a bot match. Spectators receive every event of the room and cannot send commands. It carries `nextSeq` too, the sequence number that the player's next command must use. A client that rejoins (after a reload, a dropped connection or a server restart) continues the count there, and a command rejected for its `seq` carries the same `nextSeq`.
 
 ## REST Routes
 
@@ -212,6 +214,19 @@ Services talk to the abstract `DataStore`, so the driver is a configuration choi
 
 `docker-compose.yml` starts Postgres, MongoDB, RabbitMQ or Redis on demand through profiles, for example `docker compose --profile postgres up -d`. For a server, see `deploy/README.md`: a Dockerfile and a production stack with Caddy for TLS.
 
+## Match Log and Resume
+
+Every running match has a write-ahead log, one append-only NDJSON file per match (`src/matchlog`, `data/events/<matchId>.ndjson` by default). It holds the `started` event (seed, players, data hash), every command that the sim executed (humans and bots), the state hash every 20 ticks, a `resumed` marker after each restart and the `finished` event. The log is a replay, and because the sim is deterministic it is also enough to rebuild the match.
+
+- **Resume.** At start-up the server rebuilds every match that the database lists as `running`. It replays the log up to its last event, with the bots thinking on every tick so their own state ends up as it was, and it checks each logged hash. Clients rejoin on their own and carry on. The rebuild runs in the background, yields to the event loop every 200 ticks and does not delay listening.
+- **Graceful stop.** `MATCH_ON_SHUTDOWN=resume` (the default) leaves matches running for the next start. `end` draws them at once, as before.
+- **Crash.** The log lacks the last `EVENT_LOG_FLUSH_MS` (100 ms), and the last hash can be up to a second older than the crash. A resumed match rewinds to its last event, so players can lose roughly one to one and a half seconds of play.
+- **Refusal.** A match is ended as a draw (`stopped`) when its log has no start event or disagrees with the sim: another bot decision or another hash at some tick. That happens when the data files or the code changed since the match began.
+- **Cleanup.** After a match ends and its replay is saved, the log is deleted unless `EVENT_LOG_KEEP_FINISHED=true`.
+- **Production.** The Docker image keeps the logs in `/app/backend/data`, which the production Compose stack mounts as the `api-data` volume. Without a volume a redeploy cannot resume matches.
+
+Verified: unit and end-to-end tests for the log, the rebuild, a torn last line, a tampered hash and a missing log; a real `SIGKILL` of the server with a Chromium page that rejoins and keeps playing; the production image resuming a match across `docker stop` and `docker start` on a volume. The planned Redis and MongoDB layers will put this same log behind the same port; see `docs/HANDOVER.md`.
+
 ## Redis
 
 A Redis 7 container is in both Compose files (a `redis` profile for development, a password-protected service with append-only persistence in `deploy/`). The server does not use it yet: `REDIS_URL` is reserved for the event cache of the planned architecture change (`docs/prompts/handover-2026-10-18-m4.md`, open questions). Verified: the production service starts healthy, answers `PONG` to the password and refuses a client without it.
@@ -252,7 +267,7 @@ The image holds the compiled app, production dependencies, and the `src`, `data`
 
 ## Shutdown
 
-On SIGTERM the server ends in three phases, in this order: live matches end and save their replays and results, the RabbitMQ publisher closes, and the database closes. A match that ends this way counts as a draw with the reason `stopped`. The `docker stop` grace period of 20 seconds is far more than it needs. Regression tests cover the order, including one on a real broker that hangs when the order is wrong.
+With `MATCH_ON_SHUTDOWN=resume` (the default), SIGTERM flushes the match logs and leaves live matches running for the next start. The rest of this section describes `MATCH_ON_SHUTDOWN=end`. On SIGTERM the server ends in three phases, in this order: live matches end and save their replays and results, the RabbitMQ publisher closes, and the database closes. A match that ends this way counts as a draw with the reason `stopped`. The `docker stop` grace period of 20 seconds is far more than it needs. Regression tests cover the order, including one on a real broker that hangs when the order is wrong.
 
 ## Limits and Next Steps
 

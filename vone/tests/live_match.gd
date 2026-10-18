@@ -84,6 +84,13 @@ func _run() -> void:
 	_check("the recycle channel starts", await _until(func(): return _find(GameLogic.KIND_SOLAR, 0).filter(func(e): return int(e.recycle) > 0).size() > 0), true)
 	_check("the plant is recycled", await _until(func(): return _find(GameLogic.KIND_SOLAR, 0).size() == 0), true)
 	_check("the HUD shows both Cores and the clock", _main._world_label.text.contains("Core") and _main._world_label.text.contains("Enemy") and _main._world_label.text.contains(":"), true)
+	# A dropped connection: close the socket under the client. It must reconnect, rejoin the room and keep playing.
+	_main._backend._socket.close()
+	_check("the client reconnects after a drop", await _until(func(): return _main._backend._socket.get_ready_state() == WebSocketPeer.STATE_OPEN and not _main._backend._reconnecting), true)
+	var tick_after_drop: int = int(_main._current_snapshot.get("tick", 0))
+	_check("snapshots flow again after the rejoin", await _until(func(): return int(_main._current_snapshot.get("tick", 0)) > tick_after_drop + 10), true)
+	var wind_ack: Dictionary = await _main._backend.send_command({"t": "build", "building": "wind", "tileX": solar_tile.x + 3, "tileZ": solar_tile.y})
+	_check("a command after the rejoin is accepted: the count continued", wind_ack.get("accepted", false), true)
 	_main._leave_match()
 
 	# Part 1b: creeps. A fresh match against the bot: order groups, cancel, split, merge and send one.

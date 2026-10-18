@@ -1,6 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import {
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -70,6 +71,10 @@ class EnvironmentVariables {
   @IsOptional() @IsString() LUXCORES_ROOT?: string;
   @IsOptional() @IsString() PUBLIC_DIR?: string;
   @IsOptional() @IsInt() @Min(20) MATCH_MAX_TICKS?: number;
+  @IsOptional() @IsIn(['resume', 'end']) MATCH_ON_SHUTDOWN?: string;
+  @IsOptional() @IsString() EVENT_LOG_DIR?: string;
+  @IsOptional() @IsInt() @Min(10) @Max(5000) EVENT_LOG_FLUSH_MS?: number;
+  @IsOptional() @IsIn(['true', 'false']) EVENT_LOG_KEEP_FINISHED?: string;
   @IsOptional() @IsInt() @Min(1) @Max(20) SNAPSHOT_EVERY_TICKS?: number;
   @IsOptional() @IsInt() @Min(1) RATE_LIMIT_PER_MINUTE?: number;
   @IsOptional() @IsInt() @Min(1) RATE_LIMIT_AUTH_PER_MINUTE?: number;

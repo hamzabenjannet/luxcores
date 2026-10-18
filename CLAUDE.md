@@ -172,6 +172,7 @@ npm run lint && npm run typecheck
 - Give every route body and response a DTO with `@ApiProperty` and validation decorators, and cover each new route in an end-to-end test.
 - Services use the abstract `DataStore`, never a driver. Add a method to the contract and to all three adapters (`json`, `mongodb`, `postgres`), and extend `test/store-contract.spec.ts`.
 - `COMMAND_TYPES` in `src/game/command-types.ts` must list the sim commands. A test fails when the lists drift.
+- A running match is rebuilt from its write-ahead log (`src/matchlog`) after a restart. Anything that changes what the sim does for the same commands (a rule, the data files, a bot) makes older logs unresumable: such a match ends as a draw. Log new match events through `EventLog`, never straight to a file or a store, and keep `append` non-blocking.
 - Never commit `.env` or `data/db.json`. Secrets come from the environment. In production the server refuses to start without `JWT_SECRET` and `ADMIN_API_KEY`.
 - Before you finish a backend task, run `npm test` and `npm run test:e2e` in `backend/nodejs/`. The tests for MongoDB, PostgreSQL and RabbitMQ skip unless `TEST_MONGODB_URL`, `TEST_POSTGRES_URL` and `TEST_RABBITMQ_URL` are set (see the README); run them when you touch storage or events.
 

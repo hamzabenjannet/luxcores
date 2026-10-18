@@ -60,6 +60,15 @@ export class MatchesService {
     return match;
   }
 
+  /** Matches the database lists as running. At start-up these are the ones to resume. */
+  running(): Promise<MatchDto[]> {
+    return this.store.find<MatchDto>(
+      COLLECTIONS.matches,
+      { status: MatchStatus.Running } as Partial<MatchDto>,
+      { sortBy: 'createdAt', order: 'asc' },
+    );
+  }
+
   async list({
     limit,
     offset,

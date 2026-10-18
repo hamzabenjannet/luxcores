@@ -2,6 +2,12 @@
 
 Newest first. One entry per milestone or notable change. Add the commit hash and the verification, not just the intent.
 
+## 2026-10-18: Spacing, Tick Cap, Redis and Architecture Phase A
+
+- `4606040` Units never overlap (a collision bug let units walk through older buildings), group spacing, a melee gap and the 10000-tick stalemate cap. `122bf40` Redis in the Compose files. Then phase A of the architecture plan: the match log, automatic resume and rejoining clients.
+- Verified: a real `SIGKILL` and restart with a Chromium page that kept playing, the production image resuming across a container restart, 159 root tests, 67 backend end-to-end tests and 11 root end-to-end tests.
+- Next: phase B (MongoDB as main store with the JSON fallback). See `handover-2026-10-18-architecture-a.md`.
+
 ## 2026-10-18: M4 (Creeps) and the Placement Fix
 
 - Placement tests and the Godot snapping fix. `fa69b77` The M4 sim: barracks queues, groups, paths, the lane route and creep combat. Then the web client controls, and the Godot client controls (hashes in `git log`).

@@ -1,0 +1,15 @@
+# Spacing, Tick Cap, Redis and the Architecture Plan
+
+Session of 2026-10-18, after commit `337c122`. The texts are verbatim, in the order they were sent.
+
+> README.md.bak deleted, seperate the creeps group by some pixels or like a 1/2 tile to no clustur too much, makesure that all the units are not overlapping, the melee unit attack too is seperated by some pixels (this is to allow later for wepons placement and annimation), for botts lets cap tests run at most 10000 ticks if and end the match there if it is still stale (this value have to be ajustable to allow for more ticks for testing and longer test runs between bots or humans), the M4 added rules are approved. i will test in the browser in the mean while make the changes, add a redis ccache service container in the compose file, before advancing to the M5, we will make some implementation changes: use the rabbitmq container as the socket provider (via a queue exposure over socketio, with that each game have it's own queue), the que is the first data/communication layer, the server puches the commends and the events are pushed to the redis cache, then pushed to the mongo db collection (each match have it's own cllection), this change will remove the use of the json file DB, let's discuss thesee changes further and ask questions when unsuer before applying the architectual patch then we prepare to advance to the next ste with th M% milestone. propose a corse of actions and a stating point.
+
+Answers to the multiple-choice questions that followed:
+
+> Durability and crash resume, Horizontal scale, my thought is that we keep using the socket of the rabbitmq if it's not possible to let rabbitmq handls the io of the socket le'ts keep the node server interfacing it and jut push the events over to the rabbitmq queue if it is avaialble the node server should always be capable to work alone, it need to fall back to the json file db if nothing is avialable for storage or communication, like so we keep godot and web clients talk to a single socketio endpoint weather it's provided from the node server or rabbit mq, the server alyas faces the clients and behind it talk to the other services, the socket endpoint pusehs the messages over mq tronsport, the mongo db is the main db storage if available if not fallback to file json.
+
+Choices: events are "Commands, hashes and lifecycle"; Mongo layout is "One events collection, indexed by match"; for a developer machine and tests, "Keep the JSON file as a fallback".
+
+Then, in answer to four open questions:
+
+> 1. Resuming a match after a restart: automatic as recomanded. 2. i'm fine  with Redis streams (in fact i want the most adaptive integration for the lowest latency). 3.  Postgres adapter: lea it as is it will be used later for users profiles and relational stuff and teams matching and guilds (for now we just try to connect to it if not available we continue, anyways that layed is not yet well defined for the users managements). 4. rough target for simultaneous matches i think it would be 100 with a 5v5 teams (per node depending on the vps power). ask more questions if unsure.

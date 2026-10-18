@@ -1,4 +1,4 @@
-import { resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 export type DatabaseDriver = 'json' | 'mongodb' | 'postgres';
 
@@ -24,7 +24,11 @@ export interface AppConfig {
     repoRoot: string;
     matchMaxTicks: number;
     snapshotEveryTicks: number;
+    /** What a graceful shutdown does to live matches: `resume` keeps them for the next start, `end` draws them. */
+    onShutdown: 'resume' | 'end';
   };
+  /** The write-ahead log of every running match (see `src/matchlog`). */
+  eventLog: { dir: string; flushMs: number; keepFinished: boolean };
   static: { publicDir: string };
   rateLimit: { perMinute: number; authPerMinute: number };
   /** Reverse proxies in front of the app. The client address then comes from X-Forwarded-For. */
@@ -71,6 +75,13 @@ export default (): AppConfig => {
       // 0 means the default in data/balance.json (match.stalemateTicks); MATCH_MAX_TICKS overrides it.
       matchMaxTicks: int(env.MATCH_MAX_TICKS, 0),
       snapshotEveryTicks: int(env.SNAPSHOT_EVERY_TICKS, 2),
+      onShutdown: env.MATCH_ON_SHUTDOWN === 'end' ? 'end' : 'resume',
+    },
+    eventLog: {
+      // Next to the JSON database by default, so one data folder holds all server state.
+      dir: resolve(env.EVENT_LOG_DIR ?? join(dirname(resolve(env.JSON_DB_PATH ?? 'data/db.json')), 'events')),
+      flushMs: int(env.EVENT_LOG_FLUSH_MS, 100),
+      keepFinished: env.EVENT_LOG_KEEP_FINISHED === 'true',
     },
     static: { publicDir: resolve(env.PUBLIC_DIR ?? 'public') },
     rateLimit: {

@@ -25,6 +25,7 @@
  * @property {'lobby' | 'running' | 'finished'} status
  * @property {string | undefined} hash  state hash of the latest tick that carried one
  * @property {{ winnerTeam: number | null, draw: boolean, reason: string } | null} result
+ * @property {boolean} connected  false while the socket is down and the page is trying to rejoin the match
  */
 
 /**
@@ -80,7 +81,7 @@ export async function joinServerMatch({ server, name, matchId, vsBot = false, bo
   const map = await request(`${base}/api/game/maps/${match.seed}`);
 
   /** @type {Feed} */
-  const feed = { tick: 0, entities: [], groups: [], orders: [], teams: [], map, status: 'lobby', hash: undefined, result: null };
+  const feed = { tick: 0, entities: [], groups: [], orders: [], teams: [], map, status: 'lobby', hash: undefined, result: null, connected: true };
   /** @type {((snapshot: any) => void)[]} */
   const snapshotListeners = [];
   /** @type {(() => void)[]} */
@@ -119,7 +120,29 @@ export async function joinServerMatch({ server, name, matchId, vsBot = false, bo
   if (!joined.ok) throw new Error(`Cannot join the match room: ${joined.error}`);
   if (joined.snapshot) apply(joined.snapshot);
 
-  let seq = 0;
+  // The server numbers commands per player and tells us where we stand, so a page that rejoins a match
+  // (after a reload, a dropped connection or a server restart) continues the count instead of starting at 0.
+  let seq = joined.nextSeq ?? 0;
+
+  // The handler is set up after the first connect, so it runs on reconnects only.
+  // After a drop, Socket.IO reconnects by itself but the room is gone. Rejoin, and keep trying while a
+  // restarted server is still rebuilding the match from its log (the ack then holds no snapshot yet).
+  socket.on('disconnect', () => { feed.connected = false; });
+  socket.on('connect', async () => {
+    for (let attempt = 0; attempt < 60; attempt++) {
+      try {
+        const again = await socket.timeout(5000).emitWithAck('match:join', { matchId: match.id });
+        if (again.ok) {
+          seq = again.nextSeq ?? seq;
+          if (again.snapshot) { apply(again.snapshot); feed.connected = true; return; }
+          if (again.status !== 'running') { feed.connected = true; return; }
+        }
+      } catch {
+        // the server is not answering yet
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  });
   return {
     feed,
     viewerTeam: match.players.find((/** @type {any} */ p) => p.playerId === auth.player.id)?.team ?? 0,
@@ -132,7 +155,11 @@ export async function joinServerMatch({ server, name, matchId, vsBot = false, bo
     requestRecoveryCode: async () => (await request(`${base}/api/auth/recovery-code`, { token, method: 'POST' })).recoveryCode,
     matchId: match.id,
     start: async () => { await request(`${base}/api/matches/${match.id}/start`, { token, method: 'POST' }); },
-    sendCommand: (cmd) => socket.timeout(5000).emitWithAck('match:command', { matchId: match.id, seq: seq++, cmd }),
+    sendCommand: async (cmd) => {
+      const ack = await socket.timeout(5000).emitWithAck('match:command', { matchId: match.id, seq: seq++, cmd });
+      if (!ack.accepted && typeof ack.nextSeq === 'number') seq = ack.nextSeq; // the server's count wins; the player taps again
+      return ack;
+    },
     onSnapshot: (l) => { snapshotListeners.push(l); },
     onChange: (l) => { changeListeners.push(l); },
     firstSnapshot,

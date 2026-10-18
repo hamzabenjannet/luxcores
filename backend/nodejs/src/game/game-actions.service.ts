@@ -15,6 +15,8 @@ export type JoinAck =
       /** `spectator` can watch a bot match and cannot send commands. */
       role: 'player' | 'spectator';
       status: string;
+      /** The sequence number the player's next command must use, so a rejoined client continues where it stopped. */
+      nextSeq: number;
       tick: number | null;
       snapshot: MatchSnapshot | null;
     }
@@ -46,6 +48,7 @@ export class GameActions {
       ok: true,
       role: member ? 'player' : 'spectator',
       status: match.status,
+      nextSeq: this.runner.nextSeq(match.id, player.id),
       tick: snapshot?.tick ?? null,
       snapshot,
     };

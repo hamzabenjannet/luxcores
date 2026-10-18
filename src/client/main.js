@@ -164,5 +164,5 @@ startLoop((timeSec) => {
   $('hud-phase').textContent = isDay(view.tick(), data.balance.dayNight) ? '☀' : '☾';
   $('hud-core').textContent = `${myLabel} ${Math.floor(view.team(viewerTeam).coreLux / MILLI)}`;
   $('hud-enemy').textContent = `${otherLabel} ${Math.floor(view.team(1 - viewerTeam).coreLux / MILLI)}`;
-  $('hud-debug').textContent = `${session.role}  seed ${session.feed.map.usedSeed}  tick ${session.feed.tick}  hash ${session.feed.hash ?? ''}  ${session.feed.status}${codeLine}`;
+  $('hud-debug').textContent = `${session.role}  seed ${session.feed.map.usedSeed}  tick ${session.feed.tick}  hash ${session.feed.hash ?? ''}  ${session.feed.connected ? session.feed.status : 'RECONNECTING'}${codeLine}`;
 });

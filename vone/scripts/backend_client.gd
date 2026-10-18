@@ -21,6 +21,11 @@ var _sequence := 0
 var _next_frame_id := 1
 var _acknowledgements: Dictionary = {}
 var _map: Dictionary = {}
+var _socket_url := ""
+## True once a match connection has been open, so a later close counts as a drop and not as a start-up failure.
+var _was_open := false
+var _reconnecting := false
+var _leaving := false
 var _role := "player"
 var _spec: Dictionary = {}
 var _data: Dictionary = {}
@@ -32,6 +37,8 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if _socket.get_ready_state() == WebSocketPeer.STATE_CLOSED:
+		if _was_open and not _reconnecting and not _leaving and not _match_id.is_empty():
+			_reconnect()
 		return
 	_socket.poll()
 	while _socket.get_available_packet_count() > 0:
@@ -43,6 +50,8 @@ func _process(_delta: float) -> void:
 		_handle_frame(parsed)
 
 func connect_match(options: Dictionary) -> Dictionary:
+	_leaving = false
+	_was_open = false
 	_match_status = ""
 	_server = str(options.get("server", "")).strip_edges().trim_suffix("/")
 	if _server.is_empty():
@@ -105,8 +114,8 @@ func connect_match(options: Dictionary) -> Dictionary:
 		return map_response
 	_map = map_response.data
 
-	var socket_url := _server.replace("https://", "wss://").replace("http://", "ws://") + "/ws"
-	var socket_error := _socket.connect_to_url(socket_url)
+	_socket_url = _server.replace("https://", "wss://").replace("http://", "ws://") + "/ws"
+	var socket_error := _socket.connect_to_url(_socket_url)
 	if socket_error != OK:
 		return _failure("Could not open the match connection (error %d)." % socket_error)
 	var opened := await _wait_for_socket_open()
@@ -123,6 +132,8 @@ func connect_match(options: Dictionary) -> Dictionary:
 		_socket.close()
 		return _failure("Could not join the match room: " + str(join_ack.get("error", "unknown error")))
 	_role = str(join_ack.get("role", "player"))
+	_sequence = int(join_ack.get("nextSeq", 0))
+	_was_open = true
 	if join_ack.get("snapshot") is Dictionary:
 		snapshot_received.emit(join_ack.snapshot)
 
@@ -167,6 +178,9 @@ func send_command(command: Dictionary) -> Dictionary:
 	var acknowledgement := await _wait_for_ack(id)
 	if not acknowledgement.get("accepted", false):
 		message_received.emit("Command rejected: " + str(acknowledgement.get("reason", acknowledgement.get("error", "invalid command"))))
+		# The server's count wins; the player taps again.
+		if acknowledgement.has("nextSeq"):
+			_sequence = int(acknowledgement.nextSeq)
 	return acknowledgement
 
 func get_role() -> String:
@@ -187,7 +201,39 @@ func get_viewer_team() -> int:
 func get_match_id() -> String:
 	return _match_id
 
+## Reopens the match connection after a drop, for example a server restart: sign in again,
+## rejoin the room, and continue the command count where the server says. The server rebuilds a
+## running match from its log, so the join may find no snapshot for a few seconds.
+func _reconnect() -> void:
+	_reconnecting = true
+	message_received.emit("Connection lost. Reconnecting...")
+	for attempt in range(90):
+		if _leaving:
+			break
+		_socket = WebSocketPeer.new()
+		if _socket.connect_to_url(_socket_url) == OK and await _wait_for_socket_open():
+			var auth_ack := await _send_request("auth", {"token": _token})
+			if auth_ack.get("ok", false):
+				var join_ack := await _send_request("match:join", {"matchId": _match_id})
+				if join_ack.get("ok", false):
+					_sequence = int(join_ack.get("nextSeq", _sequence))
+					if join_ack.get("snapshot") is Dictionary:
+						snapshot_received.emit(join_ack.snapshot)
+						message_received.emit("Reconnected.")
+						_reconnecting = false
+						return
+					if str(join_ack.get("status", "")) != "running":
+						_reconnecting = false
+						return
+		_socket.close()
+		await get_tree().create_timer(1.0).timeout
+	_reconnecting = false
+	_was_open = false
+	message_received.emit("Could not reconnect to the match.")
+
 func disconnect_match() -> void:
+	_leaving = true
+	_was_open = false
 	if _socket.get_ready_state() != WebSocketPeer.STATE_CLOSED:
 		_socket.close()
 	_token = ""

@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 import type { AppConfig } from '../config/configuration.js';
 import type {
   BotApi,
+  SimCommandEnvelope,
   SimApi,
   SimBot,
   SimMapLayout,
@@ -16,6 +17,9 @@ import type {
   SimState,
   WorldViewApi,
 } from './sim.types.js';
+
+/** Ticks that a rebuild runs before it lets other work in. */
+const YIELD_EVERY = 200;
 
 /**
  * Loads the repo's deterministic simulation (`src/sim`) and the game data
@@ -132,6 +136,65 @@ export class SimService {
       think: (state) =>
         bot.think(this.worldViewApi.localWorldView(state, team)),
     };
+  }
+
+  /**
+   * Rebuilds a running match from its log: the same seed and players, the logged commands at their
+   * ticks, up to `targetTick`. The bots think on every tick as they did live, so their own state
+   * (build rotation, counters, random numbers) ends up exactly where it was. Throws when the sim
+   * disagrees with the log: a bot that would have issued other commands, or a state hash that
+   * differs. That means the data or the code changed since the match began, and the match
+   * cannot be resumed.
+   *
+   * It yields to the event loop every `YIELD_EVERY` ticks, so rebuilding a long match does not
+   * stall the matches that run.
+   */
+  async rebuild(opts: {
+    seed: number;
+    players: SimPlayer[];
+    bots: SimBot[];
+    commands: SimCommandEnvelope[];
+    hashes: Record<number, string>;
+    targetTick: number;
+  }): Promise<{ state: SimState; recorder: SimRecorder }> {
+    const { state, recorder } = this.createMatch(opts.seed, opts.players);
+    const byTick = new Map<number, SimCommandEnvelope[]>();
+    for (const e of opts.commands) {
+      const list = byTick.get(e.tick);
+      if (list) list.push(e);
+      else byTick.set(e.tick, [e]);
+    }
+    const botIds = new Set(
+      opts.players.filter((p) => p.kind === 'bot').map((p) => p.id),
+    );
+    const brief = (list: SimCommandEnvelope[]): string =>
+      JSON.stringify(
+        list
+          .map((e) => ({ p: e.playerId, s: e.seq, c: e.cmd }))
+          .sort((a, b) => a.p - b.p || a.s - b.s),
+      );
+    let sinceYield = 0;
+    while (state.tick < opts.targetTick && !state.outcome) {
+      const logged = byTick.get(state.tick) ?? [];
+      const regenerated = opts.bots.flatMap((bot) => bot.think(state));
+      const loggedBots = logged.filter((e) => botIds.has(e.playerId));
+      if (brief(regenerated) !== brief(loggedBots)) {
+        throw new Error(
+          `A bot would issue other commands at tick ${state.tick} than the log holds`,
+        );
+      }
+      this.step(state, logged);
+      recorder.record(state, logged);
+      const expected = opts.hashes[state.tick];
+      if (expected !== undefined && expected !== this.hash(state)) {
+        throw new Error(`The state hash differs from the log at tick ${state.tick}`);
+      }
+      if (++sinceYield >= YIELD_EVERY) {
+        sinceYield = 0;
+        await new Promise<void>((resolve) => setImmediate(resolve));
+      }
+    }
+    return { state, recorder };
   }
 
   step: SimApi['step'] = (state, envelopes) => this.api.step(state, envelopes);

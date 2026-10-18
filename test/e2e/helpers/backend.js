@@ -106,12 +106,14 @@ export const skip = !reachable
 
 /**
  * Starts the backend on a free port with a throwaway JSON database and waits until it answers.
+ * With `again`, it starts on the port and in the data folder of an earlier run, as a restarted server would.
  * @param {Record<string, string>} [extraEnv]
- * @returns {Promise<{ port: number, url: string, stop: () => Promise<void> }>}
+ * @param {{ port: number, dbDir: string }} [again]
+ * @returns {Promise<{ port: number, url: string, dbDir: string, stop: () => Promise<void>, crash: () => Promise<void> }>}
  */
-export async function startBackend(extraEnv = {}) {
-  const dbDir = mkdtempSync(join(tmpdir(), 'luxcores-net-'));
-  const port = process.env.BACKEND_PORT ? Number(process.env.BACKEND_PORT) : /** @type {number} */ (await freePort());
+export async function startBackend(extraEnv = {}, again) {
+  const dbDir = again?.dbDir ?? mkdtempSync(join(tmpdir(), 'luxcores-net-'));
+  const port = again?.port ?? (process.env.BACKEND_PORT ? Number(process.env.BACKEND_PORT) : /** @type {number} */ (await freePort()));
   let output = '';
   const backend = spawn(process.execPath, ['dist/main.js'], {
     cwd: BACKEND_DIR,
@@ -132,10 +134,17 @@ export async function startBackend(extraEnv = {}) {
   });
   backend.stdout.on('data', (d) => { output += d; });
   backend.stderr.on('data', (d) => { output += d; });
+  /** Kills the process the hard way, with no shutdown code and no flush, like a crash. The data folder stays. */
+  const crash = async () => {
+    backend.kill('SIGKILL');
+    await new Promise((r) => backend.once('exit', r));
+  };
   const stop = async () => {
-    backend.kill('SIGTERM');
-    await new Promise((r) => setTimeout(r, 300));
-    rmSync(dbDir, { recursive: true, force: true });
+    if (backend.exitCode === null) {
+      backend.kill('SIGTERM');
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    if (!again) rmSync(dbDir, { recursive: true, force: true });
   };
   try {
     await waitForBackend(backend, port, () => output);
@@ -143,7 +152,7 @@ export async function startBackend(extraEnv = {}) {
     await stop();
     throw err;
   }
-  return { port, url: `http://127.0.0.1:${port}`, stop };
+  return { port, url: `http://127.0.0.1:${port}`, dbDir, stop, crash };
 }
 
 /**
