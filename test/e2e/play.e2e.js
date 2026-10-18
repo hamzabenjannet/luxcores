@@ -108,6 +108,41 @@ test('the canvas follows the window and draws at the full pixel ratio on a deskt
   }, { MATCH_MAX_TICKS: '600' });
 });
 
+test('crowds are drawn as instances and units are drawn between snapshots', { timeout: 240_000, skip }, async () => {
+  await withBackend(async ({ errors, newContext, open }) => {
+    const page = await open(await newContext(), 'name=Crowd&match=new&botVsBot=1&autostart=1&seed=777');
+    const creeps = () => page.evaluate(() => /** @type {any} */ (window).__luxTest.entities().filter((/** @type {any} */ e) => e.kind === 9).length);
+    await until(page, () => /** @type {any} */ (window).__luxTest.entities().filter((/** @type {any} */ e) => e.kind === 9).length >= 8, undefined, 120_000);
+
+    // Every creep is an instance, and no creep has a mesh of its own. The blockers are instances as well.
+    const drawn = await page.evaluate(() => /** @type {any} */ (window).__luxTest.drawn());
+    assert.ok(drawn.creeps >= 8 && drawn.creeps <= (await creeps()) + 2, `${drawn.creeps} creep instances`);
+    assert.equal(drawn.blockers, 12, 'six blockers in each build zone');
+    assert.ok(drawn.single < 60, `${drawn.single} single meshes`);
+
+    // The drawn position lags the newest snapshot by about two ticks and stays between the last two snapshots. A software-rendered
+    // frame takes a few hundred milliseconds here, so this samples the wiring and the unit test of the interpolator counts the steps.
+    const samples = await page.evaluate(async () => {
+      const t = /** @type {any} */ (window).__luxTest;
+      /** @type {{ gap: number, moved: boolean }[]} */
+      const out = [];
+      for (let i = 0; i < 12; i++) {
+        const raw = t.entities().filter((/** @type {any} */ e) => e.kind === 9);
+        for (const e of t.interpolated()) {
+          if (e.kind !== 9) continue;
+          const latest = raw.find((/** @type {any} */ r) => r.id === e.id);
+          if (latest) out.push({ gap: Math.hypot(e.x - latest.x, e.z - latest.z), moved: e.x !== latest.x || e.z !== latest.z });
+        }
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      return out;
+    });
+    assert.ok(samples.some((x) => x.moved), 'some creep is drawn behind its newest position');
+    assert.ok(samples.every((x) => x.gap < 600), `a drawn creep is never far from its newest position: ${Math.max(...samples.map((x) => x.gap))}`);
+    assert.deepEqual(errors, [], 'the page must log no console or page errors');
+  }, { MATCH_MAX_TICKS: '2400' });
+});
+
 test('a human buys items at a barracks, receives them with the hero and uses them, through the controls', { timeout: 180_000, skip }, async () => {
   await withBackend(async ({ errors, newContext, open }) => {
     const page = await open(await newContext(), `name=Shopper&match=new&vsBot=1&autostart=1&seed=${SEED}`);
@@ -193,6 +228,29 @@ test('a human picks a hero at a barracks, shields it and aims its area ability, 
     // With a hero on the field the roster is greyed out and says why. The barracks stays selected, and a tap
     // on its tile would land under the panel anyway.
     await until(page, () => document.querySelector('.hero-note')?.textContent === 'Hero: Your hero is on the field.');
+
+    // Follow: the button locks the camera on the hero, and dragging the map unlocks it.
+    assert.equal(await page.evaluate(() => /** @type {any} */ (window).__luxTest.following()), false);
+    await page.click('.follow');
+    assert.equal(await page.evaluate(() => /** @type {any} */ (window).__luxTest.following()), true);
+    await until(page, () => document.querySelector('.follow')?.classList.contains('active') === true);
+    const here = await hero();
+    await page.evaluate((h) => /** @type {any} */ (window).__luxTest.send({ t: 'heroMove', x: h.x, z: h.z - 6000 }), here);
+    await until(page, (z) => {
+      const h = /** @type {any} */ (window).__luxTest.entities().find((/** @type {any} */ e) => e.kind === 10 && e.owner === 0);
+      return h && h.z <= z - 5500;
+    }, here.z, 30_000);
+    await new Promise((resolve) => setTimeout(resolve, 1000)); // the camera eases toward the hero
+    const at = await page.evaluate(() => {
+      const t = /** @type {any} */ (window).__luxTest;
+      const hero = t.entities().find((/** @type {any} */ e) => e.kind === 10 && e.owner === 0);
+      const p = t.screenOf(hero.x / 1000, hero.z / 1000);
+      return { x: p.x, y: p.y, w: innerWidth, h: innerHeight };
+    });
+    assert.ok(Math.abs(at.y - at.h / 2) < at.h * 0.25 && Math.abs(at.x - at.w / 2) < at.w * 0.25, `the camera kept the hero near the middle: ${JSON.stringify(at)}`);
+    await page.evaluate(() => /** @type {any} */ (window).__luxTest.pan(1, 0));
+    assert.equal(await page.evaluate(() => /** @type {any} */ (window).__luxTest.following()), false, 'dragging the map unlocks the camera');
+    await until(page, () => document.querySelector('.follow')?.classList.contains('active') === false);
 
     // Shield: one tap, cast on the hero itself.
     await page.click('.ability[data-slot="3"]');
@@ -315,8 +373,8 @@ test('a human orders creeps, then splits, merges and sends a group, through the 
     await page.waitForSelector('.queue-row');
     // Queue a group of 5 and three of 1 through the hook, in one go. The last one starts about 10 s later, so the panel can cancel it.
     const barracksId = await hook('t.entities().find((e) => e.kind === 6 && e.team === 0).id');
-    await hook(`t.send({ t: 'orderCreeps', barracksId: ${barracksId}, mix: ['melee', 'ranged', 'area', 'melee', 'ranged'] })`);
-    for (let i = 0; i < 3; i++) await hook(`t.send({ t: 'orderCreeps', barracksId: ${barracksId}, mix: ['melee'] })`);
+    // One round trip for all four, because a slow page makes each call to it take a second and the queue drains meanwhile.
+    await hook(`Promise.all([t.send({ t: 'orderCreeps', barracksId: ${barracksId}, mix: ['melee', 'ranged', 'area', 'melee', 'ranged'] }), ...[1, 2, 3].map(() => t.send({ t: 'orderCreeps', barracksId: ${barracksId}, mix: ['melee'] }))])`);
     // The first order (2 s) may already have left the queue by now, and a slow page sees fewer rows.
     await page.waitForFunction(() => document.querySelectorAll('.queue-row').length >= 3);
     const luxOf = async () => Number(((await page.textContent('#hud-core')) ?? '').replace(/\D/g, ''));

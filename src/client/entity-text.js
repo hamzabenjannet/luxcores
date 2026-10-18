@@ -66,6 +66,37 @@ export function entityText(e, hpFactor, heroNames = [], itemNames = []) {
 }
 
 /**
+ * One label per creep group instead of one per creep, so thirty creeps do not crowd the screen. The
+ * label sits at the centroid of the group and shows how many creeps it has and their lux together.
+ * Examples: "Creeps x5 50".
+ * @param {readonly { id: number, kind: number, team: number, x: number, z: number, hp: number, groupId?: number }[]} entities
+ * @param {{ core: number, default: number }} hpFactor
+ * @returns {{ groupId: number, team: number, x: number, z: number, text: string }[]} in group id order; x and z in units
+ */
+export function creepGroupLabels(entities, hpFactor) {
+  /** @type {Map<number, { team: number, n: number, x: number, z: number, hp: number }>} */
+  const groups = new Map();
+  for (const e of entities) {
+    if (e.kind !== KIND.CREEP || !e.groupId) continue;
+    const g = groups.get(e.groupId) ?? { team: e.team, n: 0, x: 0, z: 0, hp: 0 };
+    g.n++;
+    g.x += e.x;
+    g.z += e.z;
+    g.hp += e.hp;
+    groups.set(e.groupId, g);
+  }
+  return [...groups.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([groupId, g]) => ({
+      groupId,
+      team: g.team,
+      x: Math.trunc(g.x / g.n),
+      z: Math.trunc(g.z / g.n),
+      text: `Creeps x${g.n} ${luxOf({ kind: KIND.CREEP, hp: g.hp }, hpFactor)}`,
+    }));
+}
+
+/**
  * Whether the day half of the cycle is on (GDD 4.1). The match starts at dawn.
  * @param {number} tick
  * @param {{ dayTicks: number, nightTicks: number }} dayNight from data/balance.json

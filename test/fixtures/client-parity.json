@@ -3793,5 +3793,85 @@
         ]
       }
     }
+  ],
+  "creepGroupLabels": [
+    {
+      "name": "no creeps, no labels",
+      "entities": [
+        {
+          "kind": 1,
+          "hp": 94000,
+          "team": 0,
+          "x": 1,
+          "z": 1
+        }
+      ],
+      "expect": []
+    },
+    {
+      "name": "one label per group at the centroid, lux of the whole group",
+      "entities": [
+        {
+          "id": 10,
+          "kind": 9,
+          "team": 0,
+          "x": 40000,
+          "z": 70000,
+          "hp": 50000,
+          "groupId": 7
+        },
+        {
+          "id": 11,
+          "kind": 9,
+          "team": 0,
+          "x": 41000,
+          "z": 70000,
+          "hp": 50000,
+          "groupId": 7
+        },
+        {
+          "id": 12,
+          "kind": 9,
+          "team": 0,
+          "x": 42000,
+          "z": 72000,
+          "hp": 30000,
+          "groupId": 7
+        },
+        {
+          "id": 13,
+          "kind": 9,
+          "team": 1,
+          "x": 60000,
+          "z": 40000,
+          "hp": 50000,
+          "groupId": 3
+        },
+        {
+          "id": 14,
+          "kind": 10,
+          "team": 0,
+          "x": 1,
+          "z": 1,
+          "hp": 300000
+        }
+      ],
+      "expect": [
+        {
+          "groupId": 3,
+          "team": 1,
+          "x": 60000,
+          "z": 40000,
+          "text": "Creeps x1 5"
+        },
+        {
+          "groupId": 7,
+          "team": 0,
+          "x": 41000,
+          "z": 70666,
+          "text": "Creeps x3 13"
+        }
+      ]
+    }
   ]
 }

@@ -317,6 +317,34 @@ static func entity_text(entity: Dictionary, hp_factor: Dictionary, hero_names: A
 		parts.append("REC")
 	return " ".join(parts)
 
+## One label per creep group instead of one per creep (GDD 13.1): the centroid of the group, how many
+## creeps it has and their lux together. Returns [{groupId, team, x, z, text}] in group id order, x and z
+## in units. Example text: "Creeps x5 50".
+static func creep_group_labels(entities: Array, hp_factor: Dictionary) -> Array:
+	var groups := {}
+	for entity in entities:
+		var group_id := int(entity.get("groupId", 0))
+		if int(entity.get("kind", 0)) != KIND_CREEP or group_id == 0:
+			continue
+		if not groups.has(group_id):
+			groups[group_id] = {"team": int(entity.get("team", -1)), "n": 0, "x": 0, "z": 0, "hp": 0}
+		var g: Dictionary = groups[group_id]
+		g.n += 1
+		g.x += int(entity.get("x", 0))
+		g.z += int(entity.get("z", 0))
+		g.hp += int(entity.get("hp", 0))
+	var ids: Array = groups.keys()
+	ids.sort()
+	var out: Array = []
+	for group_id in ids:
+		var g: Dictionary = groups[group_id]
+		@warning_ignore("integer_division")
+		out.append({
+			"groupId": int(group_id), "team": g.team, "x": g.x / g.n, "z": g.z / g.n,
+			"text": "Creeps x%d %d" % [g.n, lux_of({"kind": KIND_CREEP, "hp": g.hp}, hp_factor)],
+		})
+	return out
+
 ## Whether the day half of the cycle is on (GDD 4.1). The match starts at dawn.
 static func is_day(tick: int, day_night: Dictionary) -> bool:
 	var day := int(day_night.get("dayTicks", 800))

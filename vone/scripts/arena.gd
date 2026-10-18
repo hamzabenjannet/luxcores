@@ -196,9 +196,12 @@ func _draw_entities(entities: Array) -> void:
 			draw_arc(center, radius + 3.0, 0.0, TAU, 20, Color("#fff2a8"), 1.5)
 		if int(entity.get("shieldHp", 0)) > 0:
 			draw_arc(center, radius + 5.2, 0.0, TAU, 20, Color("#6ae4ff"), 1.6)
-		var text := GameLogic.entity_text(entity, hp_factor, hero_names, item_names)
+		var text := GameLogic.entity_text(entity, hp_factor, hero_names, item_names) if kind != KIND_CREEP else ""
 		if not text.is_empty():
 			_draw_map_label(text, center, tint.lightened(0.18))
+	for group_label in GameLogic.creep_group_labels(snapshot.get("entities", []), hp_factor):
+		var label_tint := TEAM_BLUE if int(group_label.team) == 0 else TEAM_RED
+		_draw_map_label(String(group_label.text), _tile_center(float(group_label.x) / GameLogic.UNITS_PER_TILE - 0.5, float(group_label.z) / GameLogic.UNITS_PER_TILE - 0.5), label_tint.lightened(0.18))
 
 ## Waypoint paths: a line through the points and a dot on every point after the first.
 func _draw_paths() -> void:

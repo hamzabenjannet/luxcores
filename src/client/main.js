@@ -26,6 +26,7 @@ import { MILLI, SPEC_VERSION, TICK_HZ } from '../sim/index.js';
 import { startLoop } from './loop.js';
 import { networkWorldView } from '../shared/world-view.js';
 import { createScene } from './render/scene.js';
+import { createInterpolator } from './render/interpolation.js';
 import { attachPointer } from './input/pointer.js';
 import { joinServerMatch } from './net/server-session.js';
 import { createControls } from './ui/controls.js';
@@ -150,8 +151,13 @@ const controls = createControls({
   tickHz: TICK_HZ,
   data,
   send: (cmd) => session.sendCommand(cmd),
+  camera: { isFollowing: scene.isFollowing, setFollow: scene.setFollow },
 });
-Object.assign(luxTest, { screenOf: scene.screenOf, selectGroup: controls.selectGroup, tap: (x, z) => controls.tap({ x, z }) });
+// Units are drawn two ticks behind the newest snapshot and blended between the two around that moment.
+const interpolator = createInterpolator({ tickMs: 1000 / TICK_HZ });
+interpolator.push(view.tick(), view.entities(), performance.now());
+session.onSnapshot((s) => interpolator.push(s.tick, s.entities, performance.now()));
+Object.assign(luxTest, { drawn: scene.stats, following: scene.isFollowing, pan: scene.pan, interpolated: () => interpolator.at(performance.now()), screenOf: scene.screenOf, selectGroup: controls.selectGroup, tap: (x, z) => controls.tap({ x, z }) });
 attachPointer(canvas, { groundAt: scene.groundAt, pan: scene.pan, onTap: (ground) => controls.tap(ground) });
 
 const banner = $('banner');
@@ -183,7 +189,7 @@ function cell(tag, text, className = '') {
 }
 
 startLoop((timeSec) => {
-  scene.render(timeSec);
+  scene.render(timeSec, interpolator.at(performance.now()));
   controls.update();
   scene.setPaths(controls.overlay());
   const secs = Math.floor(view.tick() / TICK_HZ);

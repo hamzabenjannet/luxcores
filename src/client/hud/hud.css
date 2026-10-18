@@ -186,6 +186,8 @@ button:disabled { opacity: 0.4; }
 .hero-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; background: rgba(13, 18, 32, 0.92); border: 1px solid #2a3550; border-radius: 8px; padding: 6px 10px; }
 .hero-bar[hidden] { display: none; }
 .hero-name { font-weight: 600; min-width: 90px; font-variant-numeric: tabular-nums; }
+.follow { padding: 6px 10px; font-size: 13px; }
+.follow.active { border-color: var(--blue); background: #1b2c52; }
 .ability-row { display: flex; gap: 6px; flex: 1; }
 .ability { flex: 1; padding: 10px 4px; font-size: 13px; font-variant-numeric: tabular-nums; }
 .ability.poor { opacity: 0.45; }

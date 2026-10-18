@@ -133,6 +133,7 @@ export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0, hero
 
   /** @param {number} dxTiles @param {number} dzTiles */
   function pan(dxTiles, dzTiles) {
+    following = false; // a drag takes the camera back from the hero
     target.x = Math.min(W, Math.max(0, target.x + dxTiles));
     target.z = Math.min(H, Math.max(0, target.z + dzTiles));
   }
@@ -141,6 +142,8 @@ export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0, hero
   const ndc = new THREE.Vector2();
   const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   const hit = new THREE.Vector3();
+  let following = false;
+  let lastTime = 0;
 
   function placeCamera() {
     camera.position.copy(target).add(OFFSET);
@@ -173,24 +176,44 @@ export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0, hero
     return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height };
   }
 
-  /** @param {number} timeSec */
-  function render(timeSec) {
+  /**
+   * Draws one frame. `entities` is what to draw: the newest snapshot, or the interpolated one.
+   * @param {number} timeSec
+   * @param {readonly import('../../sim/state.js').Entity[]} [entities]
+   */
+  function render(timeSec, entities = view.entities()) {
     for (const c of cores) c.rotation.y = timeSec * 0.6;
-    labels.update(view.entities());
-    entityMeshes.update(view.entities());
+    labels.update(entities);
+    entityMeshes.update(entities);
+    if (following) {
+      const hero = entities.find((e) => e.kind === KIND.HERO && e.owner === viewerTeam && e.hp > 0);
+      if (hero) {
+        // Ease toward the hero, a little faster than it walks. The easing depends on the frame time, not on the frame count.
+        const k = 1 - Math.exp(-Math.min(0.1, Math.max(0, timeSec - lastTime)) * 8);
+        target.x += (hero.x / 1000 - target.x) * k;
+        target.z += (hero.z / 1000 - target.z) * k;
+      }
+    }
+    lastTime = timeSec;
     placeCamera();
     composer.render();
   }
 
-  return { render, pan, groundAt, screenOf, setPaths: overlay.update, camera, renderer };
+  return {
+    render, pan, groundAt, screenOf, setPaths: overlay.update, camera, renderer,
+    /** Whether the camera follows the viewer's hero. Dragging the map turns it off. @param {boolean} on */
+    setFollow(on) { following = on; },
+    isFollowing: () => following,
+    /** Counts of drawn things, for the tests. */
+    stats: () => entityMeshes.stats(),
+  };
 }
 
 /**
  * Placeholder shapes for the generated layout, so the generator can be checked
- * by eye on a phone. Lane tiles form a faint strip, vents are cyan discs, item
- * spawns are amber rings and blockers are grey boxes. Blockers are read once,
- * so a destroyed blocker stays on screen until M7 replaces this with instanced
- * entity rendering.
+ * by eye on a phone. Lane tiles form a faint strip, vents are cyan discs and item
+ * spawns are amber rings. Blockers are entities and are drawn with the others, so
+ * a destroyed blocker leaves the screen.
  * @param {THREE.Scene} scene
  * @param {import('../../shared/world-view.js').WorldView} view
  * @param {ReturnType<typeof createLabels>} labels
@@ -229,12 +252,4 @@ function addGeneratedLayout(scene, view, labels) {
     labels.addMarker('Item Spawn', s.tileX, s.tileZ, 0xffc24d);
   }
 
-  const box = new THREE.BoxGeometry(0.8, 0.8, 0.8);
-  const blockerMat = new THREE.MeshBasicMaterial({ color: 0x4a5060 });
-  for (const e of view.entities()) {
-    if (e.kind !== KIND.BLOCKER) continue;
-    const mesh = new THREE.Mesh(box, blockerMat);
-    mesh.position.set(e.x / 1000, 0.4, e.z / 1000);
-    scene.add(mesh);
-  }
 }

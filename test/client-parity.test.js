@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { KIND, SPEC_VERSION } from '../src/sim/index.js';
-import { entityText, isDay } from '../src/client/entity-text.js';
+import { creepGroupLabels, entityText, isDay } from '../src/client/entity-text.js';
 import { abilityStates, actionsFor, canAfford, endsBuildMode, groupActions, heroLuxChoices, heroPickState, immediateCast, immediateUse, itemStates, mixFor, queueLines, resolveTap, secondsText, shopStates } from '../src/client/ui/controls.js';
 import { matchSummary } from '../src/client/ui/summary.js';
 import { ROOT, loadData } from './helpers/load-data.js';
@@ -34,6 +34,10 @@ test('the fixture names the items of the data file', () => {
 
 test('entity text cases', () => {
   for (const c of fixture.entityText) assert.equal(entityText(c.entity, fixture.hpFactor, fixture.heroNames, fixture.itemNames), c.expect, JSON.stringify(c.entity));
+});
+
+test('creep group label cases', () => {
+  for (const c of fixture.creepGroupLabels) assert.deepEqual(creepGroupLabels(c.entities, fixture.hpFactor), c.expect, c.name);
 });
 
 test('seconds text cases', () => {

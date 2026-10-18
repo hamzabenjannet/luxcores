@@ -12,7 +12,7 @@
 
 import * as THREE from 'three';
 import { KIND } from '../../sim/index.js';
-import { entityText } from '../entity-text.js';
+import { creepGroupLabels, entityText } from '../entity-text.js';
 
 /** Tiles between an entity's center and the center of its label, along z. */
 const OFFSET_Z = { [KIND.CORE]: 1.9 };
@@ -85,7 +85,20 @@ export function createLabels(scene, hpFactor, teamColors, heroNames = [], itemNa
    * @param {readonly import('../../sim/state.js').Entity[]} entities */
   function update(entities) {
     const alive = new Set();
+    for (const g of creepGroupLabels(entities, hpFactor)) {
+      const key = -g.groupId; // creep groups share the label map with entities, under negative keys
+      alive.add(key);
+      let label = byEntity.get(key);
+      if (!label) {
+        label = makeLabel(g.text, teamColors[g.team] ?? 0xb8c0d4);
+        scene.add(label.sprite);
+        byEntity.set(key, label);
+      }
+      label.setText(g.text);
+      label.sprite.position.set(g.x / 1000, 0.3, g.z / 1000 + (OFFSET_Z[KIND.CREEP] ?? DEFAULT_OFFSET_Z));
+    }
     for (const e of entities) {
+      if (e.kind === KIND.CREEP) continue; // a creep is named by its group's label
       const text = entityText(e, hpFactor, heroNames, itemNames);
       if (text === null) continue; // projectiles and other nameless kinds
       alive.add(e.id);

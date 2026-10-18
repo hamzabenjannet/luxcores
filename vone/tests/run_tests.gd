@@ -45,6 +45,8 @@ func _init() -> void:
 	for c in fixture.entityText:
 		var expected := "" if c.expect == null else String(c.expect)
 		_check("entity text %s" % JSON.stringify(c.entity), GameLogic.entity_text(c.entity, fixture.hpFactor, hero_names, item_names), expected)
+	for c in fixture.creepGroupLabels:
+		_check("creep group labels: %s" % String(c.name), _normalize(GameLogic.creep_group_labels(c.entities, fixture.hpFactor)), _normalize(c.expect))
 	for c in fixture.secondsText:
 		_check("seconds text %s" % JSON.stringify(c), GameLogic.seconds_text(int(c.ticks), int(c.tickHz)), String(c.expect))
 	for c in fixture.abilityStates:

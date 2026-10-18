@@ -255,7 +255,23 @@ func _render_entities() -> void:
 		_entity_root.add_child(node)
 		_entities_by_id[id] = node
 		by_id[id] = entity
+	_render_creep_group_labels(entities)
 	_render_aim_lines(entities, by_id)
+
+## One label per creep group, above the group's centroid, instead of one label per creep.
+func _render_creep_group_labels(entities: Array) -> void:
+	for group_label in GameLogic.creep_group_labels(entities, _hp_factor):
+		var tint := TEAM_BLUE if int(group_label.team) == 0 else TEAM_RED
+		var label := Label3D.new()
+		label.text = String(group_label.text)
+		label.position = Vector3(
+			float(group_label.x) / GameLogic.UNITS_PER_TILE - float(_map_width) * 0.5, 2.3,
+			float(group_label.z) / GameLogic.UNITS_PER_TILE - float(_map_height) * 0.5)
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		label.font_size = 32
+		label.pixel_size = 0.01
+		label.modulate = tint.lightened(0.22)
+		_entity_root.add_child(label)
 
 func _make_entity(entity: Dictionary) -> Node3D:
 	var id := int(entity.get("id", -1))
@@ -283,7 +299,7 @@ func _make_entity(entity: Dictionary) -> Node3D:
 		_add_tower_marker(anchor, entity)
 	if id == _selected_entity_id:
 		_add_selection_marker(anchor, tint)
-	var label_text := GameLogic.entity_text(entity, _hp_factor, _hero_names, _item_names)
+	var label_text := GameLogic.entity_text(entity, _hp_factor, _hero_names, _item_names) if kind != GameLogic.KIND_CREEP else ""
 	if not label_text.is_empty():
 		var label := Label3D.new()
 		label.text = label_text

@@ -417,9 +417,10 @@ export function actionsFor(e, towerData) {
  *   tickHz: number,
  *   data: { buildings: any, balance: any, mapgen: any, heroes: any, abilities: any, items: any },
  *   send: (cmd: import('../../sim/commands.js').Command) => Promise<{ accepted: boolean, reason?: string }>,
+ *   camera?: { isFollowing: () => boolean, setFollow: (on: boolean) => void },
  * }} opts
  */
-export function createControls({ root, view, viewerTeam, spectator, tickHz, data, send }) {
+export function createControls({ root, view, viewerTeam, spectator, tickHz, data, send, camera }) {
   /** @type {string | null} */
   let building = null;
   let attack = 'ranged';
@@ -464,7 +465,14 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   const heroName = el('div', 'hero-name');
   const abilityRow = el('div', 'ability-row');
   const itemRow = el('div', 'ability-row item-row');
-  heroBar.append(heroName, abilityRow, itemRow);
+  // The camera follows the hero while this is on. Dragging the map turns it off.
+  const followButton = /** @type {HTMLButtonElement} */ (el('button', 'follow', 'Follow'));
+  followButton.addEventListener('click', () => {
+    camera?.setFollow(!camera.isFollowing());
+    render();
+  });
+  followButton.hidden = !camera;
+  heroBar.append(heroName, followButton, abilityRow, itemRow);
   /** @type {HTMLButtonElement[]} */
   const abilityButtons = ABILITY_SLOTS.map(({ slot, type, letter }) => {
     const b = /** @type {HTMLButtonElement} */ (el('button', 'ability', letter));
@@ -559,6 +567,7 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
       return;
     }
     heroBar.hidden = false;
+    followButton.classList.toggle('active', camera?.isFollowing() === true);
     const text = entityText(hero, data.balance.hpFactor, heroNames, itemNames) ?? 'Hero';
     if (heroName.textContent !== text) heroName.textContent = text;
     const states = abilityStates(hero, data.abilities, view.team(viewerTeam).coreLux, minLeft, tickHz);
