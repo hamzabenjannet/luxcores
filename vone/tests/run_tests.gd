@@ -1,0 +1,96 @@
+extends SceneTree
+## Headless checks of the pure game logic against the cases the web client also
+## runs (test/fixtures/client-parity.json). Run from the repo root:
+##
+##   Godot --headless --path vone --script res://tests/run_tests.gd
+##
+## The exit code is the number of failed checks, so 0 means every case passed.
+
+const GameLogic = preload("res://scripts/game_logic.gd")
+
+var _checks := 0
+var _failures := 0
+
+func _init() -> void:
+	var root := ProjectSettings.globalize_path("res://").path_join("..").simplify_path()
+	var fixture: Dictionary = _read_json(root.path_join("test/fixtures/client-parity.json"))
+	var data := {
+		"buildings": _read_json(root.path_join("data/buildings.json")),
+		"balance": _read_json(root.path_join("data/balance.json")),
+		"mapgen": _read_json(root.path_join("data/mapgen.json")),
+	}
+	if fixture.is_empty() or data.buildings.is_empty():
+		push_error("Could not read the fixture or the data files under %s" % root)
+		quit(1)
+		return
+
+	_check("kind codes match the fixture", _normalize({
+		"CORE": GameLogic.KIND_CORE, "SOLAR": GameLogic.KIND_SOLAR, "WIND": GameLogic.KIND_WIND,
+		"GEOTHERMAL": GameLogic.KIND_GEOTHERMAL, "NUCLEAR": GameLogic.KIND_NUCLEAR,
+		"BARRACKS": GameLogic.KIND_BARRACKS, "TOWER": GameLogic.KIND_TOWER, "BLOCKER": GameLogic.KIND_BLOCKER,
+		"CREEP": GameLogic.KIND_CREEP, "HERO": GameLogic.KIND_HERO, "PROJECTILE": GameLogic.KIND_PROJECTILE,
+		"GROUND_ITEM": GameLogic.KIND_GROUND_ITEM, "LOOT_BAG": GameLogic.KIND_LOOT_BAG,
+	}), _normalize(fixture.kinds))
+	_check("the fixture HP factor matches the balance data", _normalize(fixture.hpFactor), _normalize(data.balance.hpFactor))
+
+	for c in fixture.entityText:
+		var expected := "" if c.expect == null else String(c.expect)
+		_check("entity text %s" % JSON.stringify(c.entity), GameLogic.entity_text(c.entity, fixture.hpFactor), expected)
+	for c in fixture.isDay:
+		_check("day at tick %d" % int(c.tick), GameLogic.is_day(int(c.tick), fixture.dayNight), bool(c.expect))
+	for c in fixture.canAfford:
+		_check("can afford %s" % JSON.stringify(c), GameLogic.can_afford(int(c.coreLuxMilli), int(c.costLux), int(c.minLeftLux)), bool(c.expect))
+	for c in fixture.actionsFor:
+		_check("actions for %s" % JSON.stringify(c.entity), _normalize(GameLogic.actions_for(c.entity, data.buildings.tower)), _normalize(c.expect))
+	for c in fixture.resolveTap:
+		var ctx: Dictionary = c.ctx
+		var result := GameLogic.resolve_tap({
+			"ground": Vector2(float(ctx.ground[0]), float(ctx.ground[1])),
+			"entities": ctx.get("entities", []),
+			"viewer_team": int(ctx.viewerTeam),
+			"building": String(ctx.get("building", "")),
+			"attack": String(ctx.get("attack", "ranged")),
+			"core_lux_milli": int(ctx.get("coreLuxMilli", 100000)),
+			"data": data,
+			"vents": ctx.get("vents", []),
+		})
+		_check("tap: %s" % String(c.name), _normalize(result), _normalize(c.expect))
+
+	_check("the build zone of team 0 is rows 64 to 111", GameLogic.build_zone(data.mapgen, 0), Vector2i(64, 111))
+	_check("the build zone of team 1 is rows 0 to 47", GameLogic.build_zone(data.mapgen, 1), Vector2i(0, 47))
+
+	print("%d checks, %d failed" % [_checks, _failures])
+	quit(_failures)
+
+func _check(name: String, actual: Variant, expected: Variant) -> void:
+	_checks += 1
+	if typeof(actual) == TYPE_STRING or typeof(actual) == TYPE_BOOL or typeof(actual) == TYPE_VECTOR2I:
+		if actual == expected:
+			return
+	elif JSON.stringify(actual, "", true) == JSON.stringify(expected, "", true):
+		return
+	_failures += 1
+	printerr("FAIL %s\n  actual:   %s\n  expected: %s" % [name, JSON.stringify(actual) if typeof(actual) != TYPE_VECTOR2I else str(actual), JSON.stringify(expected) if typeof(expected) != TYPE_VECTOR2I else str(expected)])
+
+func _read_json(path: String) -> Dictionary:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {}
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	return parsed if parsed is Dictionary else {}
+
+## JSON numbers arrive as floats; whole ones become ints so 20.0 and 20 compare equal.
+func _normalize(value: Variant) -> Variant:
+	if value is Dictionary:
+		var out := {}
+		for key in value:
+			out[key] = _normalize(value[key])
+		return out
+	if value is Array:
+		var out: Array = []
+		for item in value:
+			out.append(_normalize(item))
+		return out
+	if value is float and is_equal_approx(value, round(value)):
+		return int(value)
+	return value

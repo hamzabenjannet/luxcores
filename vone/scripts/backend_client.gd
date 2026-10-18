@@ -5,6 +5,7 @@ signal match_status_changed(status: String, details: Dictionary)
 signal match_ended(result: Dictionary)
 signal message_received(message: String)
 
+const GameLogic = preload("res://scripts/game_logic.gd")
 const REQUEST_TIMEOUT_SECONDS := 10.0
 
 var _http: HTTPRequest
@@ -20,6 +21,9 @@ var _sequence := 0
 var _next_frame_id := 1
 var _acknowledgements: Dictionary = {}
 var _map: Dictionary = {}
+var _role := "player"
+var _spec: Dictionary = {}
+var _data: Dictionary = {}
 
 func _ready() -> void:
 	_http = HTTPRequest.new()
@@ -59,19 +63,31 @@ func connect_match(options: Dictionary) -> Dictionary:
 	if _token.is_empty() or _player_id.is_empty():
 		return _failure("The backend returned an incomplete sign-in response.")
 
+	var loaded := await _load_server_rules()
+	if not loaded.ok:
+		return loaded
+
 	var match_response: Dictionary
 	var requested_match := str(options.get("match_id", "")).strip_edges()
 	if requested_match.is_empty() or requested_match.to_lower() == "new":
 		var create_body := {
 			"name": _player_name + "'s match",
 			"vsBot": bool(options.get("vs_bot", false)),
+			"botVsBot": bool(options.get("bot_vs_bot", false)),
 		}
 		var seed := int(options.get("seed", 0))
 		if seed > 0:
 			create_body["seed"] = seed
 		match_response = await _request("/api/matches", HTTPClient.METHOD_POST, create_body, true)
 	else:
-		match_response = await _request("/api/matches/" + requested_match.uri_encode() + "/join", HTTPClient.METHOD_POST, {}, true)
+		# A bot match has no slot to take, so an existing one is watched instead of joined.
+		var existing := await _request("/api/matches/" + requested_match.uri_encode(), HTTPClient.METHOD_GET, {}, true)
+		if not existing.ok:
+			return existing
+		if bool(existing.data.get("botVsBot", false)):
+			match_response = existing
+		else:
+			match_response = await _request("/api/matches/" + requested_match.uri_encode() + "/join", HTTPClient.METHOD_POST, {}, true)
 	if not match_response.ok:
 		return match_response
 
@@ -106,6 +122,7 @@ func connect_match(options: Dictionary) -> Dictionary:
 	if not join_ack.get("ok", false):
 		_socket.close()
 		return _failure("Could not join the match room: " + str(join_ack.get("error", "unknown error")))
+	_role = str(join_ack.get("role", "player"))
 	if join_ack.get("snapshot") is Dictionary:
 		snapshot_received.emit(join_ack.snapshot)
 
@@ -123,6 +140,8 @@ func connect_match(options: Dictionary) -> Dictionary:
 		"map": _map,
 		"viewer_team": _viewer_team,
 		"player_name": _player_name,
+		"role": _role,
+		"data": _data,
 		"is_host": _player_id == str(match_data.get("hostId", "")),
 	}
 
@@ -134,10 +153,10 @@ func start_match() -> Dictionary:
 		message_received.emit("Match start requested.")
 	return response
 
-func send_command(command: Dictionary) -> void:
+func send_command(command: Dictionary) -> Dictionary:
 	if _socket.get_ready_state() != WebSocketPeer.STATE_OPEN:
 		message_received.emit("The match connection is closed. Rejoin the match.")
-		return
+		return {"accepted": false, "reason": "closed"}
 	var payload := {
 		"matchId": _match_id,
 		"seq": _sequence,
@@ -148,6 +167,16 @@ func send_command(command: Dictionary) -> void:
 	var acknowledgement := await _wait_for_ack(id)
 	if not acknowledgement.get("accepted", false):
 		message_received.emit("Command rejected: " + str(acknowledgement.get("reason", acknowledgement.get("error", "invalid command"))))
+	return acknowledgement
+
+func get_role() -> String:
+	return _role
+
+func get_data() -> Dictionary:
+	return _data
+
+func get_spec() -> Dictionary:
+	return _spec
 
 func get_map() -> Dictionary:
 	return _map
@@ -165,6 +194,23 @@ func disconnect_match() -> void:
 	_match_id = ""
 	_match_status = ""
 	_acknowledgements.clear()
+
+## Checks that this client implements the server's spec, then loads the data
+## files the server simulates with, so costs and upgrades never live in two places.
+func _load_server_rules() -> Dictionary:
+	var spec_response := await _request("/api/game/spec", HTTPClient.METHOD_GET)
+	if not spec_response.ok:
+		return spec_response
+	_spec = spec_response.data
+	if str(_spec.get("specVersion", "")) != GameLogic.SPEC_VERSION:
+		return _failure("This server simulates spec %s and this client implements spec %s." % [str(_spec.get("specVersion", "?")), GameLogic.SPEC_VERSION])
+	_data = {}
+	for key in ["buildings", "balance", "mapgen"]:
+		var file_response := await _request("/data/%s.json" % key, HTTPClient.METHOD_GET)
+		if not file_response.ok:
+			return file_response
+		_data[key] = file_response.data
+	return {"ok": true}
 
 func _sign_in(display_name: String) -> Dictionary:
 	var settings := ConfigFile.new()

@@ -2,17 +2,11 @@ extends Control
 
 const BackendClientScript = preload("res://scripts/backend_client.gd")
 const ArenaScript = preload("res://scripts/arena.gd")
+const GameLogic = preload("res://scripts/game_logic.gd")
 const TEAM_BLUE := Color("#3d8bff")
 const TEAM_RED := Color("#ff4d4d")
-const TOWER_ATTACK_TYPES := ["melee", "ranged", "area"]
-const BUILDING_COSTS_LUX := {
-	"solar": 20,
-	"wind": 20,
-	"geothermal": 40,
-	"nuclear": 80,
-	"barracks": 40,
-	"tower": 20,
-}
+## Start-menu modes, in the order of the selector.
+const MODES := ["Play against bot", "Watch bot against bot", "Host a match for two"]
 const DEFAULT_WINDOW_WIDTH := 600
 const DEFAULT_WINDOW_HEIGHT := 1200
 const PREVIOUS_DEFAULT_WINDOW_HEIGHT := 800
@@ -30,7 +24,7 @@ var _match_input: LineEdit
 var _resolution_width: SpinBox
 var _resolution_height: SpinBox
 var _seed_input: SpinBox
-var _bot_toggle: CheckButton
+var _mode_selector: OptionButton
 var _status_label: Label
 var _match_label: Label
 var _match_id_input: LineEdit
@@ -38,7 +32,12 @@ var _phase_label: Label
 var _world_label: Label
 var _build_description: Label
 var _start_button: Button
-var _recycle_button: Button
+var _palette: GridContainer
+var _palette_buttons := {}
+var _panel: VBoxContainer
+var _panel_title: Label
+var _panel_row: HBoxContainer
+var _panel_key := ""
 var _tower_attack_row: HBoxContainer
 var _tower_attack_selector: OptionButton
 var _arena: Control
@@ -49,6 +48,9 @@ var _current_match: Dictionary = {}
 var _current_map: Dictionary = {}
 var _viewer_team := 0
 var _is_host := false
+var _role := "player"
+var _data: Dictionary = {}
+var _tick_hz := 20
 
 func _ready() -> void:
 	_backend = BackendClientScript.new()
@@ -94,7 +96,7 @@ func _build_interface() -> void:
 	pages.add_child(_home)
 	_add_field(_home, "Backend URL", "http://127.0.0.1:3000", "_server_input")
 	_add_field(_home, "Player name", "Halo", "_name_input")
-	_add_field(_home, "Match ID (blank to host)", "", "_match_input")
+	_add_field(_home, "Match ID (blank to use the mode below)", "", "_match_input")
 	var resolution_row := HBoxContainer.new()
 	resolution_row.add_theme_constant_override("separation", 10)
 	_resolution_width = _make_resolution_input("W ", DEFAULT_WINDOW_WIDTH, MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH)
@@ -107,11 +109,13 @@ func _build_interface() -> void:
 	resolution_row.add_child(apply_resolution_button)
 	_home.add_child(resolution_row)
 	var match_options := HBoxContainer.new()
-	_bot_toggle = CheckButton.new()
-	_bot_toggle.text = "Play against bot"
-	_bot_toggle.button_pressed = true
-	_bot_toggle.add_theme_font_size_override("font_size", 18)
-	match_options.add_child(_bot_toggle)
+	_mode_selector = OptionButton.new()
+	for mode in MODES:
+		_mode_selector.add_item(mode)
+	_mode_selector.select(0)
+	_mode_selector.custom_minimum_size = Vector2(260, 52)
+	_mode_selector.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	match_options.add_child(_mode_selector)
 	_seed_input = SpinBox.new()
 	_seed_input.min_value = 0
 	_seed_input.max_value = 2147483647
@@ -180,22 +184,19 @@ func _build_interface() -> void:
 	_arena.custom_minimum_size = Vector2.ZERO
 	_arena.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_arena.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_arena.tile_pressed.connect(_on_tile_pressed)
-	_arena.entity_pressed.connect(_on_entity_pressed)
+	_arena.tapped.connect(_on_arena_tapped)
 	_game.add_child(_arena)
 
-	var action_grid := GridContainer.new()
-	action_grid.columns = 3
-	action_grid.add_theme_constant_override("h_separation", 10)
-	action_grid.add_theme_constant_override("v_separation", 10)
-	_game.add_child(action_grid)
-	for item in [
-		["Solar", "solar"], ["Wind", "wind"], ["Geothermal", "geothermal"],
-		["Nuclear", "nuclear"], ["Barracks", "barracks"], ["Tower", "tower"],
-	]:
-		var build_button := _make_button(item[0], Color("#24364a"))
-		build_button.pressed.connect(_select_building.bind(item[1]))
-		action_grid.add_child(build_button)
+	_palette = GridContainer.new()
+	_palette.columns = 3
+	_palette.add_theme_constant_override("h_separation", 10)
+	_palette.add_theme_constant_override("v_separation", 10)
+	_game.add_child(_palette)
+	for item in GameLogic.PALETTE:
+		var build_button := _make_button(item[1], Color("#24364a"))
+		build_button.pressed.connect(_select_building.bind(item[0]))
+		_palette.add_child(build_button)
+		_palette_buttons[item[0]] = build_button
 
 	_tower_attack_row = HBoxContainer.new()
 	_tower_attack_row.add_theme_constant_override("separation", 10)
@@ -204,7 +205,7 @@ func _build_interface() -> void:
 	tower_attack_label.add_theme_font_size_override("font_size", 18)
 	_tower_attack_row.add_child(tower_attack_label)
 	_tower_attack_selector = OptionButton.new()
-	for attack_type in TOWER_ATTACK_TYPES:
+	for attack_type in GameLogic.ATTACK_TYPES:
 		_tower_attack_selector.add_item(attack_type.capitalize())
 	_tower_attack_selector.select(0)
 	_tower_attack_selector.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -212,14 +213,23 @@ func _build_interface() -> void:
 	_tower_attack_row.visible = false
 	_game.add_child(_tower_attack_row)
 
+	# The selected building's actions: tower upgrades and recycle. The buttons are rebuilt
+	# only when the actions change, so a tap never lands on a button that was just replaced.
+	_panel = VBoxContainer.new()
+	_panel.visible = false
+	_panel.add_theme_constant_override("separation", 6)
+	_panel_title = Label.new()
+	_panel_title.add_theme_font_size_override("font_size", 18)
+	_panel.add_child(_panel_title)
+	_panel_row = HBoxContainer.new()
+	_panel_row.add_theme_constant_override("separation", 10)
+	_panel.add_child(_panel_row)
+	_game.add_child(_panel)
+
 	var game_controls := HBoxContainer.new()
 	_start_button = _make_button("START MATCH", Color("#287557"))
 	_start_button.pressed.connect(_start_match)
 	game_controls.add_child(_start_button)
-	_recycle_button = _make_button("RECYCLE SELECTED", Color("#75582b"))
-	_recycle_button.disabled = true
-	_recycle_button.pressed.connect(_recycle_selected)
-	game_controls.add_child(_recycle_button)
 	var leave_button := _make_button("LEAVE", Color("#52313b"))
 	leave_button.pressed.connect(_leave_match)
 	game_controls.add_child(leave_button)
@@ -356,7 +366,8 @@ func _connect_match() -> void:
 		"server": _server_input.text,
 		"name": _name_input.text,
 		"match_id": _match_input.text,
-		"vs_bot": _bot_toggle.button_pressed,
+		"vs_bot": _mode_selector.selected == 0,
+		"bot_vs_bot": _mode_selector.selected == 1,
 		"seed": int(_seed_input.value),
 	})
 	if not result.ok:
@@ -366,16 +377,22 @@ func _connect_match() -> void:
 	_current_map = result.map
 	_viewer_team = int(result.viewer_team)
 	_is_host = bool(result.get("is_host", false))
+	_role = str(result.get("role", "player"))
+	_data = result.data
+	_arena.set_balance(_data.balance)
+	_tick_hz = int(_backend.get_spec().get("tickHz", 20))
 	_match_id_input.text = _backend.get_match_id()
 	_home.visible = false
 	_game.visible = true
-	_match_label.text = "Team %d  •  %s" % [
+	var spectator := _role == "spectator"
+	_palette.visible = not spectator
+	_match_label.text = "WATCHING BOTS" if spectator else "Team %d  •  %s" % [
 		_viewer_team,
 		"HOST" if _is_host else "PLAYER",
 	]
 	_set_match_phase(str(_current_match.get("status", "lobby")))
 	_update_start_button()
-	_recycle_button.disabled = true
+	_refresh_palette()
 	if _is_host:
 		_set_status("Lobby connected. Start the match when ready.")
 	else:
@@ -404,13 +421,19 @@ func _start_match() -> void:
 	_set_status("Match running. Waiting for the first server snapshot...")
 
 func _select_building(building: String) -> void:
-	_building = building
+	# A second press on the same building puts it back.
+	_building = "" if _building == building else building
 	_selected_entity = -1
-	_recycle_button.disabled = true
-	_tower_attack_row.visible = building == "tower"
+	_tower_attack_row.visible = _building == "tower"
+	_build_description.visible = not _building.is_empty()
+	if _building.is_empty():
+		_arena.set_selection(_building, _selected_entity)
+		_refresh_palette()
+		_set_status("Build mode off.")
+		return
 	_build_description.text = _building_selection_description(building)
-	_build_description.visible = true
 	_arena.set_selection(_building, _selected_entity)
+	_refresh_palette()
 	_set_status("Selected " + building.capitalize() + ".")
 
 func _building_selection_description(building: String) -> String:
@@ -424,7 +447,7 @@ func _building_selection_description(building: String) -> String:
 			name = "Geothermal collector"
 	var description := "%s costs %d lux. Tap a free tile in your build zone." % [
 		name,
-		int(BUILDING_COSTS_LUX.get(building, 0)),
+		int(_data.buildings[building].costLux),
 	]
 	if building == "geothermal":
 		description += " It must be placed on a labeled vent."
@@ -432,55 +455,109 @@ func _building_selection_description(building: String) -> String:
 		description += " Choose its attack type above."
 	return description
 
-func _on_tile_pressed(tile_x: int, tile_z: int) -> void:
-	if _building.is_empty():
+## Every tap on the map goes through the shared rules in game_logic.gd, which the web client mirrors.
+func _on_arena_tapped(ground: Vector2) -> void:
+	if _role == "spectator" or _data.is_empty():
 		return
-	var command := {
-		"t": "build",
+	var result := GameLogic.resolve_tap({
+		"ground": ground,
+		"entities": _current_snapshot.get("entities", []),
+		"viewer_team": _viewer_team,
 		"building": _building,
-		"tileX": tile_x,
-		"tileZ": tile_z,
-	}
-	if _building == "tower":
-		command["attack"] = TOWER_ATTACK_TYPES[_tower_attack_selector.selected]
-	_backend.send_command(command)
-	_set_status("Build order sent. The server will validate placement and cost.")
-	_building = ""
-	_build_description.visible = false
-	_tower_attack_row.visible = false
-	_arena.set_selection(_building, _selected_entity)
-
-func _on_entity_pressed(entity_id: int) -> void:
-	_selected_entity = entity_id
-	_building = ""
-	_build_description.visible = false
-	_tower_attack_row.visible = false
-	_arena.set_selection(_building, _selected_entity)
-	_refresh_recycle_control()
-	_set_status("Selected entity " + str(entity_id) + ".")
-
-func _selected_building() -> Dictionary:
-	for entity in _current_snapshot.get("entities", []):
-		if int(entity.get("id", -1)) == _selected_entity and int(entity.get("team", -1)) == _viewer_team and int(entity.get("kind", 0)) >= 2 and int(entity.get("kind", 0)) <= 7:
-			return entity
-	return {}
-
-func _refresh_recycle_control() -> void:
-	var selected := _selected_building()
-	_recycle_button.disabled = selected.is_empty()
-	_recycle_button.text = "CANCEL RECYCLE" if int(selected.get("recycle", 0)) > 0 else "RECYCLE SELECTED"
-
-func _recycle_selected() -> void:
-	var selected := _selected_building()
-	if selected.is_empty():
-		_set_status("Select one of your buildings first.")
-		return
-	var cancelling := int(selected.get("recycle", 0)) > 0
-	_backend.send_command({
-		"t": "cancelRecycle" if cancelling else "recycle",
-		"buildingId": _selected_entity,
+		"attack": GameLogic.ATTACK_TYPES[_tower_attack_selector.selected],
+		"core_lux_milli": _viewer_core_lux_milli(),
+		"data": _data,
+		"vents": _current_map.get("vents", []),
 	})
-	_set_status("Recycle cancellation sent." if cancelling else "Recycle order sent.")
+	if result.has("command"):
+		var acknowledgement: Dictionary = await _backend.send_command(result.command)
+		if acknowledgement.get("accepted", false):
+			_set_status("Order sent. The server will validate it.")
+	elif result.has("message"):
+		_set_status(String(result.message))
+	elif result.has("select"):
+		_selected_entity = -1 if result.select == null else int(result.select)
+		if _selected_entity >= 0:
+			_building = ""
+			_build_description.visible = false
+			_tower_attack_row.visible = false
+			_set_status("Selected entity %d." % _selected_entity)
+	_arena.set_selection(_building, _selected_entity)
+	_refresh_palette()
+	_refresh_panel()
+
+func _viewer_core_lux_milli() -> int:
+	var teams: Array = _current_snapshot.get("teams", [])
+	if _viewer_team < teams.size():
+		return int(teams[_viewer_team].get("coreLux", 0))
+	return 0
+
+## Dims the palette entries the Core cannot pay for, and marks the active one.
+func _refresh_palette() -> void:
+	if _data.is_empty():
+		return
+	var lux := _viewer_core_lux_milli()
+	var min_left := int(_data.balance.core.minLeftAfterSpendLux)
+	for item in GameLogic.PALETTE:
+		var button: Button = _palette_buttons[item[0]]
+		var cost := int(_data.buildings[item[0]].costLux)
+		button.text = "%s  %d" % [item[1], cost]
+		var poor := not GameLogic.can_afford(lux, cost, min_left)
+		button.modulate = Color(1, 1, 1, 0.5 if poor else 1.0)
+		button.button_pressed = false
+		button.flat = _building != item[0]
+
+## Shows the selected own building with its actions. The buttons are rebuilt only when the actions change.
+func _refresh_panel() -> void:
+	var selected := {}
+	for entity in _current_snapshot.get("entities", []):
+		if int(entity.get("id", -1)) == _selected_entity and GameLogic.is_building_kind(int(entity.get("kind", 0))) and int(entity.get("owner", -1)) == _viewer_team:
+			selected = entity
+			break
+	if selected.is_empty():
+		_selected_entity = -1 if _selected_entity >= 0 and not _entity_exists(_selected_entity) else _selected_entity
+		_panel.visible = false
+		_panel_key = ""
+		return
+	_panel.visible = true
+	var title := GameLogic.entity_text(selected, _data.balance.hpFactor)
+	if int(selected.kind) == GameLogic.KIND_TOWER:
+		title += " (%s)" % GameLogic.ATTACK_NAMES.get(int(selected.get("attack", 0)), "?")
+	_panel_title.text = title
+	var lux := _viewer_core_lux_milli()
+	var min_left := int(_data.balance.core.minLeftAfterSpendLux)
+	var actions := GameLogic.actions_for(selected, _data.buildings.tower)
+	var key := str(selected.id)
+	for action in actions:
+		var poor: bool = action.has("costLux") and not GameLogic.can_afford(lux, int(action.costLux), min_left)
+		key += "|%s:%s" % [action.id, str(poor)]
+	if key == _panel_key:
+		return
+	_panel_key = key
+	for child in _panel_row.get_children():
+		_panel_row.remove_child(child)
+		child.queue_free()
+	for action in actions:
+		var label := String(action.label)
+		if action.has("costLux"):
+			label += "  %d" % int(action.costLux)
+		var button := _make_button(label, Color("#75582b") if action.id == "recycle" or action.id == "cancel" else Color("#2f4c75"))
+		button.custom_minimum_size = Vector2(0, 48)
+		if action.has("costLux") and not GameLogic.can_afford(lux, int(action.costLux), min_left):
+			button.modulate = Color(1, 1, 1, 0.5)
+		button.pressed.connect(_run_panel_action.bind(action.command))
+		_panel_row.add_child(button)
+
+func _entity_exists(entity_id: int) -> bool:
+	for entity in _current_snapshot.get("entities", []):
+		if int(entity.get("id", -1)) == entity_id:
+			return true
+	return false
+
+func _run_panel_action(command: Dictionary) -> void:
+	var acknowledgement: Dictionary = await _backend.send_command(command)
+	if acknowledgement.get("accepted", false):
+		_set_status("Order sent. The server will validate it.")
 
 func _on_snapshot(world_snapshot: Dictionary) -> void:
 	_current_snapshot = world_snapshot
@@ -490,7 +567,8 @@ func _on_snapshot(world_snapshot: Dictionary) -> void:
 		_update_start_button()
 	if is_instance_valid(_arena) and _game.visible:
 		_arena.set_world(_current_map, _current_snapshot, _viewer_team)
-		_refresh_recycle_control()
+		_refresh_palette()
+		_refresh_panel()
 	_update_world_label()
 
 func _on_match_status(status: String, details: Dictionary) -> void:
@@ -517,10 +595,13 @@ func _on_match_ended(result: Dictionary) -> void:
 	_set_match_phase("finished")
 	_update_start_button()
 	var winner: Variant = result.get("winnerTeam", null)
+	var reason := str(result.get("reason", ""))
 	if bool(result.get("draw", false)) or winner == null:
-		_set_status("Match ended in a draw.")
+		_set_status("Draw (%s)." % reason)
+	elif _role == "spectator":
+		_set_status("%s wins (%s)." % ["Blue" if int(winner) == 0 else "Red", reason])
 	else:
-		_set_status("Match ended. Team %s wins." % str(winner))
+		_set_status("%s (%s)." % ["Victory" if int(winner) == _viewer_team else "Defeat", reason])
 
 func _update_world_label() -> void:
 	if _current_snapshot.is_empty():
@@ -528,10 +609,19 @@ func _update_world_label() -> void:
 		return
 	var tick := int(_current_snapshot.get("tick", 0))
 	var teams: Array = _current_snapshot.get("teams", [])
-	var lux := 0.0
+	var mine := 0.0
+	var other := 0.0
 	if _viewer_team < teams.size():
-		lux = float(teams[_viewer_team].get("coreLux", 0)) / 1000.0
-	_world_label.text = "RUNNING · Tick %d  ·  Core %.1f lux" % [tick, lux]
+		mine = float(teams[_viewer_team].get("coreLux", 0)) / 1000.0
+	if 1 - _viewer_team < teams.size():
+		other = float(teams[1 - _viewer_team].get("coreLux", 0)) / 1000.0
+	var seconds := tick / _tick_hz
+	var day := GameLogic.is_day(tick, _data.balance.dayNight) if not _data.is_empty() else true
+	_world_label.text = "%s · %02d:%02d %s · %s %.0f · %s %.0f" % [
+		"RUNNING", seconds / 60, seconds % 60, "DAY" if day else "NIGHT",
+		"Blue" if _role == "spectator" else "Core", mine,
+		"Red" if _role == "spectator" else "Enemy", other,
+	]
 	_world_label.add_theme_color_override("font_color", TEAM_BLUE if _viewer_team == 0 else TEAM_RED)
 
 func _leave_match() -> void:

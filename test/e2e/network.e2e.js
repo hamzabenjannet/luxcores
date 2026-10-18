@@ -59,7 +59,7 @@ test('two browsers play a server match and receive the sim hashes', { timeout: 1
     await guest.screenshot({ path: join(SHOTS, 'network-guest.png') });
     assert.deepEqual(errors, [], 'the pages must log no console or page errors');
     console.log(`tick 20 hash ${referenceHash(20)} and tick 40 hash ${referenceHash(40)} reached both browsers; screenshots in ${SHOTS}`);
-  });
+  }, { MATCH_MAX_TICKS: '1200' }); // 60 s, so a slow machine does not end the match before the commands go in
 });
 
 test('a device signs in as the same player, and a recovery code moves the profile', { timeout: 120_000, skip }, async () => {

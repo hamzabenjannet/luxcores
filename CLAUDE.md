@@ -178,6 +178,14 @@ npm run lint && npm run typecheck
 
 `vone/` holds the Godot 4.6 project (`vone/project.godot`). It uses the GL Compatibility renderer so one project targets web, mobile and PC. Other agents build the game there from this MVP's logic and from playtest feedback. The GDD and `src/sim/` stay the executable reference for the rules. Do not commit `vone/.godot/`, the editor cache that `vone/.gitignore` excludes.
 
+The Godot client is a thin client of the backend, like the web client, and runs no rules of its own. Keep it at the same milestone as the web client:
+
+- Put every pure UI decision (label text, affordability, tap resolution, panel actions) in `vone/scripts/game_logic.gd`, and mirror it in `src/client/entity-text.js` and `src/client/ui/controls.js`.
+- Add a case to `test/fixtures/client-parity.json` for each change. `test/client-parity.test.js` runs the cases through JavaScript and `vone/tests/run_tests.gd` through GDScript, so a change in one client alone fails one run.
+- Read costs, upgrades and the build zone from the server's `data/*.json`, and entity kinds from `GET /api/game/spec`. Never hard-code a game number in a `.gd` file.
+- Keep `GameLogic.SPEC_VERSION` equal to the sim's `SPEC_VERSION`. A test fails when they differ.
+- Before you finish a Godot task, run the two headless tests in `vone/README.md` or `npm run test:e2e`.
+
 ## People
 
 - **Hamza BEN JANNET:** project owner. Decides rules, scope and architecture.

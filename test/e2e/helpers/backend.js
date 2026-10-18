@@ -105,23 +105,13 @@ export const skip = !reachable
     : false;
 
 /**
- * @typedef {Object} Env
- * @property {import('playwright-core').Browser} browser
- * @property {string[]} errors  console and page errors of every page opened with `open`
- * @property {() => Promise<import('playwright-core').BrowserContext>} newContext  a fresh browser profile, like a second phone
- * @property {(context: import('playwright-core').BrowserContext, query: string) => Promise<import('playwright-core').Page>} open  loads the game with ?test=1 and waits for the match to exist
- * @property {(path: string) => Promise<import('playwright-core').Page>} plain  loads a page of the backend with no waiting and no test hook
- */
-
-/**
- * Starts the backend and a browser, runs `body`, and cleans up.
- * @param {(env: Env) => Promise<void>} body
+ * Starts the backend on a free port with a throwaway JSON database and waits until it answers.
  * @param {Record<string, string>} [extraEnv]
+ * @returns {Promise<{ port: number, url: string, stop: () => Promise<void> }>}
  */
-export async function withBackend(body, extraEnv = {}) {
+export async function startBackend(extraEnv = {}) {
   const dbDir = mkdtempSync(join(tmpdir(), 'luxcores-net-'));
   const port = process.env.BACKEND_PORT ? Number(process.env.BACKEND_PORT) : /** @type {number} */ (await freePort());
-  const browserUrl = `http://${BROWSER_HOST}:${port}`;
   let output = '';
   const backend = spawn(process.execPath, ['dist/main.js'], {
     cwd: BACKEND_DIR,
@@ -142,11 +132,40 @@ export async function withBackend(body, extraEnv = {}) {
   });
   backend.stdout.on('data', (d) => { output += d; });
   backend.stderr.on('data', (d) => { output += d; });
+  const stop = async () => {
+    backend.kill('SIGTERM');
+    await new Promise((r) => setTimeout(r, 300));
+    rmSync(dbDir, { recursive: true, force: true });
+  };
+  try {
+    await waitForBackend(backend, port, () => output);
+  } catch (err) {
+    await stop();
+    throw err;
+  }
+  return { port, url: `http://127.0.0.1:${port}`, stop };
+}
 
+/**
+ * @typedef {Object} Env
+ * @property {import('playwright-core').Browser} browser
+ * @property {string[]} errors  console and page errors of every page opened with `open`
+ * @property {() => Promise<import('playwright-core').BrowserContext>} newContext  a fresh browser profile, like a second phone
+ * @property {(context: import('playwright-core').BrowserContext, query: string) => Promise<import('playwright-core').Page>} open  loads the game with ?test=1 and waits for the match to exist
+ * @property {(path: string) => Promise<import('playwright-core').Page>} plain  loads a page of the backend with no waiting and no test hook
+ */
+
+/**
+ * Starts the backend and a browser, runs `body`, and cleans up.
+ * @param {(env: Env) => Promise<void>} body
+ * @param {Record<string, string>} [extraEnv]
+ */
+export async function withBackend(body, extraEnv = {}) {
+  const backend = await startBackend(extraEnv);
+  const browserUrl = `http://${BROWSER_HOST}:${backend.port}`;
   /** @type {import('playwright-core').Browser | undefined} */
   let browser;
   try {
-    await waitForBackend(backend, port, () => output);
     browser = await chromium.connect(PW_WS_ENDPOINT);
     const live = browser;
     /** @type {string[]} */ const errors = [];
@@ -171,9 +190,7 @@ export async function withBackend(body, extraEnv = {}) {
     await body({ browser, errors, newContext, open, plain });
   } finally {
     await browser?.close();
-    backend.kill('SIGTERM');
-    await new Promise((r) => setTimeout(r, 300));
-    rmSync(dbDir, { recursive: true, force: true });
+    await backend.stop();
   }
 }
 

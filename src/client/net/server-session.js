@@ -67,10 +67,14 @@ export async function joinServerMatch({ server, name, matchId, vsBot = false, bo
 
   const auth = await signIn(base, name, recoveryCode);
   const token = auth.accessToken;
+  // An existing bot match has no slot to take, so the page watches it instead of joining.
+  const existing = matchId === 'new' ? null : await request(`${base}/api/matches/${matchId}`, { token });
   let match =
     matchId === 'new'
       ? await request(`${base}/api/matches`, { token, body: { name: `${name}'s match`, vsBot, botVsBot, ...(seed === undefined ? {} : { seed }) } })
-      : await request(`${base}/api/matches/${matchId}/join`, { token, method: 'POST' });
+      : existing.botVsBot
+        ? existing
+        : await request(`${base}/api/matches/${matchId}/join`, { token, method: 'POST' });
   const map = await request(`${base}/api/game/maps/${match.seed}`);
 
   /** @type {Feed} */

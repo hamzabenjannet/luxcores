@@ -9,7 +9,7 @@
   },
   "scripts": {
     "test": "node --test \"test/**/*.test.js\"",
-    "test:e2e": "node --test \"test/e2e/*.e2e.js\"",
+    "test:e2e": "node --test --test-concurrency=1 \"test/e2e/*.e2e.js\"",
     "headless": "node tools/run-headless.js",
     "gen:sin": "node tools/gen-sin-table.js",
     "lint:prose": "python3 tools/check_style.py",

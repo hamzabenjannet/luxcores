@@ -1,29 +1,34 @@
 extends Control
+## Draws the map and the server snapshot in 2D and reports taps. Decisions about
+## what a tap means live in game_logic.gd, shared with the tests.
 
-signal tile_pressed(tile_x: int, tile_z: int)
-signal entity_pressed(entity_id: int)
+## A tap on the map, in tile coordinates (fractions inside a tile). The main
+## script resolves it with GameLogic.resolve_tap.
+signal tapped(ground: Vector2)
 
+const GameLogic = preload("res://scripts/game_logic.gd")
 const TEAM_BLUE := Color("#3d8bff")
 const TEAM_RED := Color("#ff4d4d")
-const KIND_CORE := 1
-const KIND_BLOCKER := 8
-const KIND_CREEP := 9
-const KIND_HERO := 10
-const KIND_PROJECTILE := 11
-const KIND_GROUND_ITEM := 12
-const KIND_LOOT_BAG := 13
-const BUILDING_LABELS := {
-	2: "SOLAR",
-	3: "WIND",
-	4: "GEOTHERMAL",
-	5: "NUCLEAR",
-	6: "BARRACKS",
-	7: "TOWER",
-}
+const KIND_CORE := GameLogic.KIND_CORE
+const KIND_BLOCKER := GameLogic.KIND_BLOCKER
+const KIND_CREEP := GameLogic.KIND_CREEP
+const KIND_HERO := GameLogic.KIND_HERO
+const KIND_PROJECTILE := GameLogic.KIND_PROJECTILE
+const KIND_GROUND_ITEM := GameLogic.KIND_GROUND_ITEM
+const KIND_LOOT_BAG := GameLogic.KIND_LOOT_BAG
+## Cap color by tower attack code: melee orange, ranged cyan, area purple (the web client uses the same).
+const ATTACK_COLORS := {1: Color("#ff9f43"), 2: Color("#2de2e6"), 3: Color("#b26bff")}
+## A tap lands on the nearest entity within this many screen pixels, so a finger can hit a 6 px tile.
+const TOUCH_RADIUS_PIXELS := 18.0
 
+## Counts redraws; the headless live test checks that drawing ran without errors.
+var draw_count := 0
 var map_data: Dictionary = {}
 var snapshot: Dictionary = {}
 var viewer_team := 0
+var hp_factor := {"core": 1, "default": 10}
+## Ticks of the recycle channel, from the server's balance data (economy.recycleChannelTicks).
+var recycle_channel_ticks := 60
 var selected_building := ""
 var selected_entity_id := -1
 var _bounds := Rect2()
@@ -47,12 +52,23 @@ func set_world(layout: Dictionary, world_snapshot: Dictionary, team: int) -> voi
 	viewer_team = team
 	queue_redraw()
 
+## Takes the numbers the drawing needs from the server's balance data.
+func set_balance(balance: Dictionary) -> void:
+	hp_factor = balance.hpFactor
+	recycle_channel_ticks = int(balance.economy.recycleChannelTicks)
+	queue_redraw()
+
+## Screen pixels to tile coordinates, for the tap and the tests.
+func ground_at(position: Vector2) -> Vector2:
+	return (position - _bounds.position) / _tile_size
+
 func set_selection(building: String, entity_id := -1) -> void:
 	selected_building = building
 	selected_entity_id = entity_id
 	queue_redraw()
 
 func _draw() -> void:
+	draw_count += 1
 	draw_rect(Rect2(Vector2.ZERO, size), Color("#09111d"))
 	if map_data.is_empty():
 		draw_string(ThemeDB.fallback_font, Vector2(24, 40), "Waiting for the server map...", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("#b9c8dc"))
@@ -106,19 +122,36 @@ func _draw_markers(markers: Array, color: Color, radius_factor: float, label: St
 		_draw_map_label(label, position, color)
 
 func _draw_entities(entities: Array) -> void:
+	var by_id := {}
+	for entity in entities:
+		if entity is Dictionary:
+			by_id[int(entity.get("id", -1))] = entity
+	# Aim lines first, so shapes cover their ends. A projectile lives for one tick and a
+	# snapshot arrives every second tick, so the aim line is what shows every shot.
 	for entity in entities:
 		if not entity is Dictionary:
 			continue
 		var kind := int(entity.get("kind", 0))
-		if kind == KIND_PROJECTILE:
+		var target_id := int(entity.get("targetId", 0))
+		if target_id == 0 or (kind != GameLogic.KIND_TOWER and kind != KIND_HERO) or not by_id.has(target_id):
 			continue
-		var world_x := float(entity.get("x", 0)) / 1000.0
-		var world_z := float(entity.get("z", 0)) / 1000.0
-		var center := _tile_center(world_x, world_z)
+		var aim_tint := TEAM_BLUE if int(entity.get("team", -1)) == 0 else TEAM_RED
+		draw_line(_world_center(entity), _world_center(by_id[target_id]), Color(aim_tint.r, aim_tint.g, aim_tint.b, 0.8), maxf(1.0, _tile_size.x * 0.18), true)
+
+	for entity in entities:
+		if not entity is Dictionary:
+			continue
+		var kind := int(entity.get("kind", 0))
+		var center := _world_center(entity)
 		var team := int(entity.get("team", -1))
 		var tint := TEAM_BLUE if team == 0 else TEAM_RED
 		if team < 0:
 			tint = Color("#778493")
+		if kind == KIND_PROJECTILE:
+			var target: Dictionary = by_id.get(int(entity.get("targetId", 0)), {})
+			var at := center if target.is_empty() else center.lerp(_world_center(target), 0.5)
+			draw_circle(at, maxf(2.0, _tile_size.x * 0.22), Color.WHITE)
+			continue
 		var radius := maxf(2.2, _tile_size.x * 0.28)
 		if kind == KIND_CORE:
 			radius = maxf(4.0, _tile_size.x * 0.72)
@@ -135,19 +168,22 @@ func _draw_entities(entities: Array) -> void:
 			draw_circle(center, radius * 0.55, Color("#f5dc6b"))
 		else:
 			draw_rect(Rect2(center - Vector2(radius, radius), Vector2(radius * 2.0, radius * 2.0)), tint)
-
-		var id := int(entity.get("id", -1))
-		if id == selected_entity_id:
+		if kind == GameLogic.KIND_TOWER:
+			draw_circle(center + Vector2(0, -radius - 2.0), maxf(1.6, _tile_size.x * 0.2), ATTACK_COLORS.get(int(entity.get("attack", 0)), Color.WHITE))
+		if int(entity.get("stunTicks", 0)) > 0:
+			draw_arc(center, radius + 2.4, 0.0, TAU, 16, Color("#fff27a"), 1.6)
+		var recycle := int(entity.get("recycle", 0))
+		if recycle > 0:
+			var done := 1.0 - float(recycle) / recycle_channel_ticks
+			draw_arc(center, radius + 4.0, -PI / 2.0, -PI / 2.0 + TAU * done, 20, Color("#ffd76a"), 2.0)
+		if int(entity.get("id", -1)) == selected_entity_id:
 			draw_arc(center, radius + 3.0, 0.0, TAU, 20, Color("#fff2a8"), 1.5)
-		if kind == KIND_CORE or (kind >= 2 and kind <= 7) or kind == KIND_HERO:
-			var lux_value := int(entity.get("hp", 0)) / (10000 if kind != KIND_CORE else 1000)
-			draw_string(ThemeDB.fallback_font, center + Vector2(radius + 1.0, 3.0), str(lux_value), HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("#f0f5ff"))
-		if BUILDING_LABELS.has(kind):
-			_draw_map_label(BUILDING_LABELS[kind], center, tint.lightened(0.18))
-		elif kind == KIND_GROUND_ITEM:
-			_draw_map_label("ITEM", center, Color("#f7dc69"))
-		elif kind == KIND_LOOT_BAG:
-			_draw_map_label("LOOT BAG", center, Color("#f7dc69"))
+		var text := GameLogic.entity_text(entity, hp_factor)
+		if not text.is_empty():
+			_draw_map_label(text, center, tint.lightened(0.18))
+
+func _world_center(entity: Dictionary) -> Vector2:
+	return _tile_center(float(entity.get("x", 0)) / GameLogic.UNITS_PER_TILE - 0.5, float(entity.get("z", 0)) / GameLogic.UNITS_PER_TILE - 0.5)
 
 func _draw_map_label(text: String, center: Vector2, color: Color) -> void:
 	var font := ThemeDB.fallback_font
@@ -246,16 +282,13 @@ func _gui_input(event: InputEvent) -> void:
 func _handle_map_tap(position: Vector2) -> void:
 	if not _bounds.has_point(position):
 		return
-	var world_position := (position - _bounds.position) / _tile_size
-	var tile_x := int(floor(world_position.x))
-	var tile_z := int(floor(world_position.y))
-	var picked_id := _entity_at(position)
-	if picked_id >= 0:
-		selected_entity_id = picked_id
-		entity_pressed.emit(picked_id)
-		queue_redraw()
-	elif not selected_building.is_empty():
-		tile_pressed.emit(tile_x, tile_z)
+	var ground := ground_at(position)
+	# A finger is wider than a 6 px tile. Snap a tap near an entity onto it, so the shared
+	# tap rules see the entity at the pick radius they know.
+	var near := _entity_near(position)
+	if not near.is_empty():
+		ground = Vector2(float(near.get("x", 0)) / GameLogic.UNITS_PER_TILE, float(near.get("z", 0)) / GameLogic.UNITS_PER_TILE)
+	tapped.emit(ground)
 
 func _handle_zoom_control(position: Vector2) -> bool:
 	var origin := Vector2(size.x - 84, 8)
@@ -287,16 +320,17 @@ func _set_zoom(value: float) -> void:
 		_pan_offset = center - tile_under_center * next_tile_size - (size - map_size) * 0.5
 	queue_redraw()
 
-func _entity_at(position: Vector2) -> int:
-	var closest_id := -1
-	var closest_distance := INF
-	var hit_radius := maxf(18.0, _tile_size.x * 0.55)
+## The entity whose center is nearest to a screen point, within the touch radius, as
+## GameLogic.pick_entity would choose it. Empty when none is close.
+func _entity_near(position: Vector2) -> Dictionary:
+	var best := {}
+	var best_distance := INF
+	var hit_radius := maxf(TOUCH_RADIUS_PIXELS, _tile_size.x * 0.55)
 	for entity in snapshot.get("entities", []):
-		if not entity is Dictionary:
+		if not entity is Dictionary or int(entity.get("kind", 0)) == KIND_PROJECTILE:
 			continue
-		var center := _tile_center(float(entity.get("x", -1000)) / 1000.0, float(entity.get("z", -1000)) / 1000.0)
-		var distance := position.distance_squared_to(center)
-		if distance <= hit_radius * hit_radius and distance < closest_distance:
-			closest_id = int(entity.get("id", -1))
-			closest_distance = distance
-	return closest_id
+		var distance := position.distance_squared_to(_world_center(entity))
+		if distance <= hit_radius * hit_radius and distance < best_distance:
+			best = entity
+			best_distance = distance
+	return best
