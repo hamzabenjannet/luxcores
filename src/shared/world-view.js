@@ -15,7 +15,8 @@
  * @property {() => readonly import('../sim/state.js').Entity[]} entities
  * @property {() => import('../sim/state.js').StaticMap} map  generated lanes, vents and item spawns; never changes
  * @property {() => readonly import('../sim/state.js').Group[]} groups  creep groups with their paths
- * @property {() => readonly import('../sim/state.js').Order[]} orders  barracks queues, held groups included
+ * @property {() => readonly import('../sim/state.js').Order[]} orders  barracks queues, held groups and hero picks included
+ * @property {() => readonly import('../sim/state.js').Player[]} players  every player with the rotation lock and the pick cooldown of their hero
  * @property {(team: number) => { coreLux: number, pendingLux: number }} team  milli-lux
  * @property {(entity: import('../sim/state.js').Entity) => boolean} isVisibleToViewer  always true until fog of war ships
  */
@@ -32,6 +33,7 @@ export function localWorldView(state, _viewerTeam) {
     map: () => state.map,
     groups: () => state.groups,
     orders: () => state.orders,
+    players: () => state.players,
     team: (t) => ({ coreLux: state.teams[t].coreLux, pendingLux: state.teams[t].pendingLux }),
     isVisibleToViewer: () => true,
   };
@@ -50,6 +52,7 @@ export function networkWorldView(feed) {
     map: () => feed.map,
     groups: () => feed.groups,
     orders: () => feed.orders,
+    players: () => feed.players,
     team: (t) => ({ coreLux: feed.teams[t]?.coreLux ?? 0, pendingLux: feed.teams[t]?.pendingLux ?? 0 }),
     isVisibleToViewer: () => true,
   };

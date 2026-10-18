@@ -23,19 +23,34 @@ function botMatch(seed, ticks) {
   const views = players.map((p) => localWorldView(state, p.team));
   const issued = [];
   let refusedOrders = 0;
+  let refusedBuilds = 0;
+  let refusedUpgrades = 0;
+  let refusedHeroCommands = 0;
   let mostHeld = 0;
   let mostCreeps = 0;
   while (state.tick < ticks && !state.outcome) { // a victory freezes the state
     const cmds = bots.flatMap((bot, i) => bot.think(views[i]));
     issued.push(...cmds);
     const nextId = state.nextId;
+    const levels = new Map(state.entities.filter((e) => e.kind === KIND.TOWER).map((e) => [e.id, e.powerLevel + e.shellLevel]));
     step(state, cmds);
     // The bots act on different ticks, so a tick holds at most one command and its id is `nextId`.
-    for (const e of cmds) if (e.cmd.t === 'orderCreeps' && !state.orders.some((o) => o.id === nextId)) refusedOrders++;
+    for (const e of cmds) {
+      if (e.cmd.t === 'orderCreeps' && !state.orders.some((o) => o.id === nextId)) refusedOrders++;
+      if (e.cmd.t === 'pickHero' && !state.orders.some((o) => o.id === nextId && o.type === 2)) refusedHeroCommands++;
+      if (e.cmd.t === 'build' && !state.entities.some((x) => x.id === nextId)) refusedBuilds++;
+      if (e.cmd.t === 'upgrade') {
+        const tower = state.entities.find((x) => x.id === e.cmd.towerId);
+        if (!tower || tower.powerLevel + tower.shellLevel !== levels.get(tower.id) + 1) refusedUpgrades++;
+      }
+      const hero = state.entities.find((x) => x.kind === KIND.HERO && x.owner === e.playerId);
+      if (e.cmd.t === 'heroMove' && !(hero && hero.moveTargetX === e.cmd.x && hero.moveTargetZ === e.cmd.z)) refusedHeroCommands++;
+      if (e.cmd.t === 'heroAttack' && !(hero && hero.targetId === e.cmd.targetId)) refusedHeroCommands++;
+    }
     mostHeld = Math.max(mostHeld, state.orders.filter((o) => o.held).length);
     for (const team of [0, 1]) mostCreeps = Math.max(mostCreeps, state.entities.filter((e) => e.kind === KIND.CREEP && e.team === team).length);
   }
-  return { state, issued, refusedOrders, mostHeld, mostCreeps };
+  return { state, issued, refusedOrders, refusedBuilds, refusedUpgrades, refusedHeroCommands, mostHeld, mostCreeps };
 }
 
 test('a bot match is reproducible: the same seed gives the same hash and the same commands', () => {
@@ -50,14 +65,24 @@ test('different seeds give different matches', () => {
 });
 
 test('every command a bot issues is accepted by the sim', () => {
-  const { state, issued, refusedOrders } = botMatch(4, 6000);
+  const { issued, refusedOrders, refusedBuilds, refusedUpgrades, refusedHeroCommands } = botMatch(4, 6000);
   assert.equal(refusedOrders, 0, 'a refused creep order leaves no entry in the queue');
-  const builds = issued.filter((e) => e.cmd.t === 'build').length;
-  const upgrades = issued.filter((e) => e.cmd.t === 'upgrade').length;
-  const buildings = state.entities.filter((e) => e.kind >= KIND.SOLAR && e.kind <= KIND.TOWER);
-  assert.equal(buildings.length, builds, 'a refused build leaves no building');
-  const levels = buildings.reduce((sum, e) => sum + e.powerLevel + e.shellLevel, 0);
-  assert.equal(levels, upgrades, 'a refused upgrade leaves no level');
+  assert.equal(refusedBuilds, 0, 'a refused build leaves no building');
+  assert.equal(refusedUpgrades, 0, 'a refused upgrade leaves no level');
+  assert.equal(refusedHeroCommands, 0, 'a refused hero pick, move or attack changes nothing');
+  assert.ok(issued.some((e) => e.cmd.t === 'upgrade') && issued.some((e) => e.cmd.t === 'heroMove') && issued.some((e) => e.cmd.t === 'heroAttack'));
+});
+
+test('a bot picks heroes in roster order with half of its Core lux, one at a time, and casts no ability', () => {
+  const { issued, state } = botMatch(4, 6000);
+  for (const player of [0, 1]) {
+    const picks = issued.filter((e) => e.playerId === player && e.cmd.t === 'pickHero');
+    assert.ok(picks.length >= 2, `player ${player} picked ${picks.length} heroes`);
+    assert.deepEqual(picks.map((e) => e.cmd.heroId), picks.map((_, i) => i % 5), 'the roster in order');
+    for (const e of picks) assert.ok(e.cmd.lux >= 1, 'a whole number of lux');
+  }
+  assert.equal(issued.filter((e) => e.cmd.t === 'castAbility').length, 0, 'GDD 12.1: no abilities');
+  assert.ok(state.entities.some((e) => e.kind === KIND.HERO) || state.players.some((p) => p.heroCooldown > 0 || p.heroLock > 0));
 });
 
 test('a bot builds only in its own zone, off its lanes, and keeps the Core above the reserve', () => {

@@ -6,6 +6,7 @@
  */
 
 import { dist2, idiv, isqrt, TICK_HZ, UNITS_PER_TILE } from '../fixed.js';
+import { heroSpeed } from '../heroes.js';
 import { createGrid2DPhysics } from '../physics/grid2d.js';
 import { buildBlockedGrid } from '../physics/pathfinding.js';
 import { KIND } from '../state.js';
@@ -96,7 +97,7 @@ export function run(state) {
         const dz = targetZ - entity.z;
         const distance = isqrt(dx * dx + dz * dz);
         const speedPerSecond = entity.kind === KIND.HERO
-          ? state.config.balance.hero.moveMilliTilesPerSecond
+          ? heroSpeed(state, entity)
           : state.config.balance.creep.moveMilliTilesPerSecond;
         const speed = idiv(speedPerSecond, TICK_HZ);
         if (distance > 0) {

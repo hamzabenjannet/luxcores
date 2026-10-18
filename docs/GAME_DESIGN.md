@@ -2,11 +2,21 @@
 
 Working title. A strategy game mixing hero control (Dota 2), creep waypoint paths (Age of Empires) and base building with tower defense (Generals Zero Hour, Clash Royale). Everything in the world is made of light energy, measured in **lux**. Destroyed things dissolve into light; there is no blood or gore.
 
-Status: draft v0.9.7. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
+Status: draft v0.9.8. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
 
 ---
 
 ## 0. Changelog
+
+### v0.9.7 → v0.9.8
+
+Details that the hero milestone (M5) needed. They await the owners' approval; section 7.7 states each one.
+
+| Area | Change |
+|---|---|
+| Hero rules | Section 7.7 lists how picks, the rotation lock, the death cooldown, the four abilities and shields work in the sim |
+| Hero attack | A hero ordered to attack walks into reach of its target and stops there (section 11.1) |
+| Bot | The bot picks heroes and steers them as section 12.1 says (the first version of the bot had no hero) |
 
 ### v0.9.6 → v0.9.7
 
@@ -373,6 +383,21 @@ Ability template:
 - Pick up items and loot bags (walk over them, auto pickup).
 - Attack and destroy environment blockers.
 
+### 7.7 Rules as Implemented (M5, awaiting approval)
+
+The sections above left these details open. `src/sim/heroes.js` and the hero systems follow them.
+
+- **Picking.** `pickHero` names the roster hero, the whole lux to allocate and the barracks. It is refused when the hero is locked, the death cooldown runs, the player already has a hero or a hero order, the barracks is not theirs or is recycling, or the lux would leave the Core under 1. The pick pays at once and queues like a creep order. `cancelQueue` refunds a hero order in full, and a barracks that dies with the order in its queue loses the lux.
+- **Rotation lock.** A hero is locked when it spawns, not when it is ordered, so a cancelled or lost pick counts for nothing. The fifth distinct hero resets the lock, which makes the sixth pick free again. Each player has a rotation of their own.
+- **Spawn.** The hero stands on the nearest free tile around the barracks, with `lux × 10` HP, the roster's primary attack type and its own move speed if the roster entry has one (Aurora, 4 tiles per second).
+- **Death.** A hero that dies (in combat, by entropy or by a meltdown) starts the 5 second cooldown in that tick. Its allocated lux is gone.
+- **Casting.** `castAbility` takes a slot (0 melee, 1 ranged, 2 area, 3 shield). It is refused for a stunned hero, during the slot's cooldown, for a bad target, or when the cost would leave the Core under 1 lux. A refused cast costs nothing. An accepted one pays at once, resolves in the same tick and starts the cooldown, which counts the tick of the cast (100 ticks in all).
+- **Melee.** It hits the hero's current attack target, so the player attacks first. The target must be within contact distance. A hero with a dash (Corona, 3 tiles) closes the gap along the line to the target and then strikes. The stun is guaranteed.
+- **Ranged.** It hits `targetId` at once, no projectile, if the target is within range, measured between centers. It has no knockback.
+- **Area.** It hits every enemy unit, building and Lumen Core within the radius of a point that lies within range of the hero, and never a neutral blocker or an own building. A cast over empty ground still costs.
+- **Shield.** One shield per target: a new cast replaces the old one. It covers an own or allied hero, an own building or an own creep, and never the Lumen Core or an enemy. It absorbs damage from every attack and ability, a tick of damage as one sum, and the rest of a blow goes to HP. Entropy and the meltdown ignore it.
+- **Towers.** An ability that hits a hero makes the enemy towers in reach of the caster switch to the caster (section 5.0).
+
 ## 8. Items
 
 ### 8.1 Rules
@@ -492,6 +517,8 @@ Placement constraints for vents and blockers:
 The map is larger than the screen. The camera follows the selected hero while it moves; a drag pans freely and stops follow.
 
 ### 11.1 Gestures
+
+A hero told to attack a target walks until the target is in reach, hits it, and stands still when it dies.
 
 | Gesture | Context | Action |
 |---|---|---|

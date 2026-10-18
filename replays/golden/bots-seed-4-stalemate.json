@@ -67,17 +67,79 @@
       "playerId": 0,
       "seq": 2,
       "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 15,
-        "tileZ": 65,
-        "attack": "ranged"
+        "t": "pickHero",
+        "heroId": 0,
+        "lux": 20,
+        "barracksId": 17
       }
     },
     {
       "tick": 47,
       "playerId": 1,
       "seq": 2,
+      "cmd": {
+        "t": "pickHero",
+        "heroId": 0,
+        "lux": 20,
+        "barracksId": 18
+      }
+    },
+    {
+      "tick": 143,
+      "playerId": 0,
+      "seq": 3,
+      "cmd": {
+        "t": "heroMove",
+        "x": 41500,
+        "z": 92500
+      }
+    },
+    {
+      "tick": 150,
+      "playerId": 1,
+      "seq": 3,
+      "cmd": {
+        "t": "heroMove",
+        "x": 54500,
+        "z": 19500
+      }
+    },
+    {
+      "tick": 213,
+      "playerId": 0,
+      "seq": 4,
+      "cmd": {
+        "t": "heroMove",
+        "x": 29500,
+        "z": 88500
+      }
+    },
+    {
+      "tick": 220,
+      "playerId": 1,
+      "seq": 4,
+      "cmd": {
+        "t": "heroMove",
+        "x": 66500,
+        "z": 23500
+      }
+    },
+    {
+      "tick": 240,
+      "playerId": 0,
+      "seq": 5,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 15,
+        "tileZ": 64,
+        "attack": "ranged"
+      }
+    },
+    {
+      "tick": 247,
+      "playerId": 1,
+      "seq": 5,
       "cmd": {
         "t": "build",
         "building": "tower",
@@ -87,9 +149,69 @@
       }
     },
     {
-      "tick": 300,
+      "tick": 303,
       "playerId": 0,
-      "seq": 3,
+      "seq": 6,
+      "cmd": {
+        "t": "heroMove",
+        "x": 17500,
+        "z": 82500
+      }
+    },
+    {
+      "tick": 310,
+      "playerId": 1,
+      "seq": 6,
+      "cmd": {
+        "t": "heroMove",
+        "x": 78500,
+        "z": 29500
+      }
+    },
+    {
+      "tick": 393,
+      "playerId": 0,
+      "seq": 7,
+      "cmd": {
+        "t": "heroMove",
+        "x": 18500,
+        "z": 72500
+      }
+    },
+    {
+      "tick": 410,
+      "playerId": 1,
+      "seq": 7,
+      "cmd": {
+        "t": "heroMove",
+        "x": 77500,
+        "z": 39500
+      }
+    },
+    {
+      "tick": 453,
+      "playerId": 0,
+      "seq": 8,
+      "cmd": {
+        "t": "heroMove",
+        "x": 16500,
+        "z": 56500
+      }
+    },
+    {
+      "tick": 480,
+      "playerId": 1,
+      "seq": 8,
+      "cmd": {
+        "t": "heroMove",
+        "x": 79500,
+        "z": 55500
+      }
+    },
+    {
+      "tick": 500,
+      "playerId": 0,
+      "seq": 9,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 17,
@@ -103,9 +225,9 @@
       }
     },
     {
-      "tick": 307,
+      "tick": 507,
       "playerId": 1,
-      "seq": 3,
+      "seq": 9,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 18,
@@ -119,20 +241,69 @@
       }
     },
     {
-      "tick": 500,
+      "tick": 563,
       "playerId": 0,
-      "seq": 4,
+      "seq": 10,
       "cmd": {
-        "t": "build",
-        "building": "wind",
-        "tileX": 45,
-        "tileZ": 97
+        "t": "heroMove",
+        "x": 15500,
+        "z": 55500
       }
     },
     {
-      "tick": 507,
+      "tick": 573,
+      "playerId": 0,
+      "seq": 11,
+      "cmd": {
+        "t": "heroMove",
+        "x": 17500,
+        "z": 39500
+      }
+    },
+    {
+      "tick": 590,
       "playerId": 1,
-      "seq": 4,
+      "seq": 10,
+      "cmd": {
+        "t": "heroMove",
+        "x": 80500,
+        "z": 56500
+      }
+    },
+    {
+      "tick": 600,
+      "playerId": 1,
+      "seq": 11,
+      "cmd": {
+        "t": "heroMove",
+        "x": 78500,
+        "z": 72500
+      }
+    },
+    {
+      "tick": 603,
+      "playerId": 0,
+      "seq": 12,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 24
+      }
+    },
+    {
+      "tick": 700,
+      "playerId": 0,
+      "seq": 13,
+      "cmd": {
+        "t": "build",
+        "building": "wind",
+        "tileX": 49,
+        "tileZ": 99
+      }
+    },
+    {
+      "tick": 707,
+      "playerId": 1,
+      "seq": 12,
       "cmd": {
         "t": "build",
         "building": "wind",
@@ -141,21 +312,47 @@
       }
     },
     {
-      "tick": 640,
-      "playerId": 0,
-      "seq": 5,
+      "tick": 710,
+      "playerId": 1,
+      "seq": 13,
       "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 46,
-        "tileZ": 64,
-        "attack": "area"
+        "t": "heroMove",
+        "x": 79500,
+        "z": 82500
       }
     },
     {
-      "tick": 667,
+      "tick": 780,
       "playerId": 1,
-      "seq": 5,
+      "seq": 14,
+      "cmd": {
+        "t": "heroMove",
+        "x": 67500,
+        "z": 88500
+      }
+    },
+    {
+      "tick": 800,
+      "playerId": 1,
+      "seq": 15,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 30
+      }
+    },
+    {
+      "tick": 820,
+      "playerId": 1,
+      "seq": 16,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 29
+      }
+    },
+    {
+      "tick": 827,
+      "playerId": 1,
+      "seq": 17,
       "cmd": {
         "t": "build",
         "building": "tower",
@@ -165,25 +362,39 @@
       }
     },
     {
-      "tick": 800,
+      "tick": 840,
       "playerId": 0,
-      "seq": 6,
+      "seq": 14,
       "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
+        "t": "build",
+        "building": "tower",
+        "tileX": 47,
+        "tileZ": 65,
+        "attack": "area"
       }
     },
     {
-      "tick": 967,
+      "tick": 870,
       "playerId": 1,
-      "seq": 6,
+      "seq": 18,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 32
+      }
+    },
+    {
+      "tick": 910,
+      "playerId": 1,
+      "seq": 19,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 28
+      }
+    },
+    {
+      "tick": 1007,
+      "playerId": 1,
+      "seq": 20,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 18,
@@ -197,20 +408,107 @@
       }
     },
     {
-      "tick": 1140,
-      "playerId": 0,
-      "seq": 7,
+      "tick": 1027,
+      "playerId": 1,
+      "seq": 21,
       "cmd": {
-        "t": "build",
-        "building": "geothermal",
-        "tileX": 85,
-        "tileZ": 76
+        "t": "pickHero",
+        "heroId": 1,
+        "lux": 11,
+        "barracksId": 18
       }
     },
     {
-      "tick": 1287,
+      "tick": 1040,
+      "playerId": 0,
+      "seq": 15,
+      "cmd": {
+        "t": "pickHero",
+        "heroId": 1,
+        "lux": 18,
+        "barracksId": 17
+      }
+    },
+    {
+      "tick": 1143,
+      "playerId": 0,
+      "seq": 16,
+      "cmd": {
+        "t": "heroMove",
+        "x": 41500,
+        "z": 92500
+      }
+    },
+    {
+      "tick": 1150,
       "playerId": 1,
-      "seq": 7,
+      "seq": 22,
+      "cmd": {
+        "t": "heroMove",
+        "x": 54500,
+        "z": 19500
+      }
+    },
+    {
+      "tick": 1213,
+      "playerId": 0,
+      "seq": 17,
+      "cmd": {
+        "t": "heroMove",
+        "x": 29500,
+        "z": 88500
+      }
+    },
+    {
+      "tick": 1220,
+      "playerId": 1,
+      "seq": 23,
+      "cmd": {
+        "t": "heroMove",
+        "x": 66500,
+        "z": 23500
+      }
+    },
+    {
+      "tick": 1260,
+      "playerId": 0,
+      "seq": 18,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "ranged",
+          "area",
+          "melee",
+          "melee",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 1303,
+      "playerId": 0,
+      "seq": 19,
+      "cmd": {
+        "t": "heroMove",
+        "x": 17500,
+        "z": 82500
+      }
+    },
+    {
+      "tick": 1320,
+      "playerId": 1,
+      "seq": 24,
+      "cmd": {
+        "t": "heroMove",
+        "x": 78500,
+        "z": 29500
+      }
+    },
+    {
+      "tick": 1367,
+      "playerId": 1,
+      "seq": 25,
       "cmd": {
         "t": "build",
         "building": "geothermal",
@@ -219,49 +517,72 @@
       }
     },
     {
-      "tick": 1300,
+      "tick": 1403,
       "playerId": 0,
-      "seq": 8,
+      "seq": 20,
       "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 81,
-        "tileZ": 64,
-        "attack": "melee"
+        "t": "heroMove",
+        "x": 18500,
+        "z": 72500
       }
     },
     {
-      "tick": 1367,
+      "tick": 1420,
       "playerId": 1,
-      "seq": 8,
+      "seq": 26,
       "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 81,
-        "tileZ": 47,
-        "attack": "melee"
+        "t": "heroMove",
+        "x": 77500,
+        "z": 39500
       }
     },
     {
-      "tick": 1400,
+      "tick": 1440,
       "playerId": 0,
-      "seq": 9,
+      "seq": 21,
       "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
+        "t": "build",
+        "building": "geothermal",
+        "tileX": 85,
+        "tileZ": 76
       }
     },
     {
       "tick": 1447,
       "playerId": 1,
-      "seq": 9,
+      "seq": 27,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 80,
+        "tileZ": 47,
+        "attack": "melee"
+      }
+    },
+    {
+      "tick": 1463,
+      "playerId": 0,
+      "seq": 22,
+      "cmd": {
+        "t": "heroMove",
+        "x": 16500,
+        "z": 56500
+      }
+    },
+    {
+      "tick": 1490,
+      "playerId": 1,
+      "seq": 28,
+      "cmd": {
+        "t": "heroMove",
+        "x": 79500,
+        "z": 55500
+      }
+    },
+    {
+      "tick": 1507,
+      "playerId": 1,
+      "seq": 29,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 18,
@@ -275,20 +596,41 @@
       }
     },
     {
-      "tick": 1480,
+      "tick": 1540,
       "playerId": 0,
-      "seq": 10,
+      "seq": 23,
       "cmd": {
         "t": "build",
-        "building": "solar",
-        "tileX": 47,
-        "tileZ": 99
+        "building": "tower",
+        "tileX": 81,
+        "tileZ": 65,
+        "attack": "melee"
       }
     },
     {
-      "tick": 1507,
+      "tick": 1573,
+      "playerId": 0,
+      "seq": 24,
+      "cmd": {
+        "t": "heroMove",
+        "x": 15500,
+        "z": 55500
+      }
+    },
+    {
+      "tick": 1583,
+      "playerId": 0,
+      "seq": 25,
+      "cmd": {
+        "t": "heroMove",
+        "x": 17500,
+        "z": 39500
+      }
+    },
+    {
+      "tick": 1587,
       "playerId": 1,
-      "seq": 10,
+      "seq": 30,
       "cmd": {
         "t": "build",
         "building": "solar",
@@ -297,21 +639,113 @@
       }
     },
     {
-      "tick": 1547,
+      "tick": 1600,
       "playerId": 1,
-      "seq": 11,
+      "seq": 31,
+      "cmd": {
+        "t": "heroMove",
+        "x": 80500,
+        "z": 56500
+      }
+    },
+    {
+      "tick": 1603,
+      "playerId": 0,
+      "seq": 26,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 24
+      }
+    },
+    {
+      "tick": 1610,
+      "playerId": 1,
+      "seq": 32,
+      "cmd": {
+        "t": "heroMove",
+        "x": 78500,
+        "z": 72500
+      }
+    },
+    {
+      "tick": 1620,
+      "playerId": 0,
+      "seq": 27,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 1640,
+      "playerId": 1,
+      "seq": 33,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 99
+      }
+    },
+    {
+      "tick": 1647,
+      "playerId": 1,
+      "seq": 34,
       "cmd": {
         "t": "build",
         "building": "tower",
         "tileX": 18,
-        "tileZ": 47,
+        "tileZ": 46,
         "attack": "ranged"
       }
     },
     {
-      "tick": 1560,
+      "tick": 1680,
       "playerId": 0,
-      "seq": 11,
+      "seq": 28,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 50,
+        "tileZ": 93
+      }
+    },
+    {
+      "tick": 1707,
+      "playerId": 1,
+      "seq": 35,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "ranged",
+          "area",
+          "melee",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 1747,
+      "playerId": 1,
+      "seq": 36,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 45,
+        "tileZ": 12
+      }
+    },
+    {
+      "tick": 1760,
+      "playerId": 0,
+      "seq": 29,
       "cmd": {
         "t": "build",
         "building": "tower",
@@ -321,9 +755,21 @@
       }
     },
     {
-      "tick": 1620,
+      "tick": 1787,
+      "playerId": 1,
+      "seq": 37,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 50,
+        "tileZ": 47,
+        "attack": "area"
+      }
+    },
+    {
+      "tick": 1820,
       "playerId": 0,
-      "seq": 12,
+      "seq": 30,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 17,
@@ -337,9 +783,266 @@
       }
     },
     {
-      "tick": 1627,
+      "tick": 1847,
       "playerId": 1,
-      "seq": 12,
+      "seq": 38,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "melee",
+          "ranged",
+          "area"
+        ]
+      }
+    },
+    {
+      "tick": 1860,
+      "playerId": 0,
+      "seq": 31,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 45,
+        "tileZ": 97
+      }
+    },
+    {
+      "tick": 1867,
+      "playerId": 1,
+      "seq": 39,
+      "cmd": {
+        "t": "pickHero",
+        "heroId": 2,
+        "lux": 18,
+        "barracksId": 18
+      }
+    },
+    {
+      "tick": 1893,
+      "playerId": 0,
+      "seq": 32,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 118
+      }
+    },
+    {
+      "tick": 1920,
+      "playerId": 0,
+      "seq": 33,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 46,
+        "tileZ": 64,
+        "attack": "area"
+      }
+    },
+    {
+      "tick": 1927,
+      "playerId": 1,
+      "seq": 40,
+      "cmd": {
+        "t": "build",
+        "building": "wind",
+        "tileX": 49,
+        "tileZ": 12
+      }
+    },
+    {
+      "tick": 1947,
+      "playerId": 1,
+      "seq": 41,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 49,
+        "tileZ": 47,
+        "attack": "area"
+      }
+    },
+    {
+      "tick": 1960,
+      "playerId": 0,
+      "seq": 34,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "melee",
+          "ranged",
+          "area"
+        ]
+      }
+    },
+    {
+      "tick": 1990,
+      "playerId": 1,
+      "seq": 42,
+      "cmd": {
+        "t": "heroMove",
+        "x": 54500,
+        "z": 19500
+      }
+    },
+    {
+      "tick": 2000,
+      "playerId": 0,
+      "seq": 35,
+      "cmd": {
+        "t": "build",
+        "building": "wind",
+        "tileX": 51,
+        "tileZ": 98
+      }
+    },
+    {
+      "tick": 2007,
+      "playerId": 1,
+      "seq": 43,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "ranged",
+          "area",
+          "melee",
+          "melee",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 2020,
+      "playerId": 0,
+      "seq": 36,
+      "cmd": {
+        "t": "pickHero",
+        "heroId": 2,
+        "lux": 15,
+        "barracksId": 17
+      }
+    },
+    {
+      "tick": 2070,
+      "playerId": 1,
+      "seq": 44,
+      "cmd": {
+        "t": "heroMove",
+        "x": 66500,
+        "z": 23500
+      }
+    },
+    {
+      "tick": 2100,
+      "playerId": 0,
+      "seq": 37,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 46,
+        "tileZ": 65,
+        "attack": "area"
+      }
+    },
+    {
+      "tick": 2123,
+      "playerId": 0,
+      "seq": 38,
+      "cmd": {
+        "t": "heroMove",
+        "x": 41500,
+        "z": 92500
+      }
+    },
+    {
+      "tick": 2170,
+      "playerId": 1,
+      "seq": 45,
+      "cmd": {
+        "t": "heroMove",
+        "x": 78500,
+        "z": 29500
+      }
+    },
+    {
+      "tick": 2180,
+      "playerId": 0,
+      "seq": 39,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "melee",
+          "ranged",
+          "area"
+        ]
+      }
+    },
+    {
+      "tick": 2187,
+      "playerId": 1,
+      "seq": 46,
+      "cmd": {
+        "t": "build",
+        "building": "geothermal",
+        "tileX": 95,
+        "tileZ": 2
+      }
+    },
+    {
+      "tick": 2193,
+      "playerId": 0,
+      "seq": 40,
+      "cmd": {
+        "t": "heroMove",
+        "x": 29500,
+        "z": 88500
+      }
+    },
+    {
+      "tick": 2247,
+      "playerId": 1,
+      "seq": 47,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 80,
+        "tileZ": 46,
+        "attack": "melee"
+      }
+    },
+    {
+      "tick": 2280,
+      "playerId": 1,
+      "seq": 48,
+      "cmd": {
+        "t": "heroMove",
+        "x": 77500,
+        "z": 39500
+      }
+    },
+    {
+      "tick": 2283,
+      "playerId": 0,
+      "seq": 41,
+      "cmd": {
+        "t": "heroMove",
+        "x": 17500,
+        "z": 82500
+      }
+    },
+    {
+      "tick": 2307,
+      "playerId": 1,
+      "seq": 49,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 18,
@@ -353,20 +1056,91 @@
       }
     },
     {
-      "tick": 1660,
-      "playerId": 0,
-      "seq": 13,
+      "tick": 2340,
+      "playerId": 1,
+      "seq": 50,
       "cmd": {
-        "t": "build",
-        "building": "solar",
-        "tileX": 49,
-        "tileZ": 99
+        "t": "heroMove",
+        "x": 79500,
+        "z": 55500
       }
     },
     {
-      "tick": 1667,
+      "tick": 2367,
       "playerId": 1,
-      "seq": 13,
+      "seq": 51,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 44,
+        "tileZ": 13
+      }
+    },
+    {
+      "tick": 2373,
+      "playerId": 0,
+      "seq": 42,
+      "cmd": {
+        "t": "heroMove",
+        "x": 18500,
+        "z": 72500
+      }
+    },
+    {
+      "tick": 2400,
+      "playerId": 0,
+      "seq": 43,
+      "cmd": {
+        "t": "build",
+        "building": "geothermal",
+        "tileX": 0,
+        "tileZ": 109
+      }
+    },
+    {
+      "tick": 2407,
+      "playerId": 1,
+      "seq": 52,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 18,
+        "tileZ": 47,
+        "attack": "ranged"
+      }
+    },
+    {
+      "tick": 2430,
+      "playerId": 1,
+      "seq": 53,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 123
+      }
+    },
+    {
+      "tick": 2433,
+      "playerId": 0,
+      "seq": 44,
+      "cmd": {
+        "t": "heroMove",
+        "x": 16500,
+        "z": 56500
+      }
+    },
+    {
+      "tick": 2460,
+      "playerId": 1,
+      "seq": 54,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 179
+      }
+    },
+    {
+      "tick": 2467,
+      "playerId": 1,
+      "seq": 55,
       "cmd": {
         "t": "build",
         "building": "solar",
@@ -375,9 +1149,305 @@
       }
     },
     {
-      "tick": 1720,
+      "tick": 2470,
+      "playerId": 1,
+      "seq": 56,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 178
+      }
+    },
+    {
+      "tick": 2480,
       "playerId": 0,
-      "seq": 14,
+      "seq": 45,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 81,
+        "tileZ": 65,
+        "attack": "melee"
+      }
+    },
+    {
+      "tick": 2480,
+      "playerId": 1,
+      "seq": 57,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 179
+      }
+    },
+    {
+      "tick": 2487,
+      "playerId": 1,
+      "seq": 58,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 48,
+        "tileZ": 46,
+        "attack": "area"
+      }
+    },
+    {
+      "tick": 2500,
+      "playerId": 1,
+      "seq": 59,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 180
+      }
+    },
+    {
+      "tick": 2510,
+      "playerId": 1,
+      "seq": 60,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 182
+      }
+    },
+    {
+      "tick": 2520,
+      "playerId": 0,
+      "seq": 46,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "ranged",
+          "area",
+          "melee",
+          "melee",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 2527,
+      "playerId": 1,
+      "seq": 61,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 2540,
+      "playerId": 0,
+      "seq": 47,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 47,
+        "tileZ": 99
+      }
+    },
+    {
+      "tick": 2543,
+      "playerId": 0,
+      "seq": 48,
+      "cmd": {
+        "t": "heroMove",
+        "x": 15500,
+        "z": 55500
+      }
+    },
+    {
+      "tick": 2547,
+      "playerId": 1,
+      "seq": 62,
+      "cmd": {
+        "t": "build",
+        "building": "wind",
+        "tileX": 47,
+        "tileZ": 11
+      }
+    },
+    {
+      "tick": 2550,
+      "playerId": 1,
+      "seq": 63,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 181
+      }
+    },
+    {
+      "tick": 2553,
+      "playerId": 0,
+      "seq": 49,
+      "cmd": {
+        "t": "heroMove",
+        "x": 17500,
+        "z": 39500
+      }
+    },
+    {
+      "tick": 2567,
+      "playerId": 1,
+      "seq": 64,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 54,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2570,
+      "playerId": 1,
+      "seq": 65,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 204
+      }
+    },
+    {
+      "tick": 2573,
+      "playerId": 0,
+      "seq": 50,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 262
+      }
+    },
+    {
+      "tick": 2580,
+      "playerId": 0,
+      "seq": 51,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 15,
+        "tileZ": 65,
+        "attack": "ranged"
+      }
+    },
+    {
+      "tick": 2587,
+      "playerId": 1,
+      "seq": 66,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 97,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2600,
+      "playerId": 1,
+      "seq": 67,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 205
+      }
+    },
+    {
+      "tick": 2607,
+      "playerId": 1,
+      "seq": 68,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 118,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2620,
+      "playerId": 0,
+      "seq": 52,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "area",
+          "melee",
+          "melee",
+          "melee",
+          "ranged"
+        ]
+      }
+    },
+    {
+      "tick": 2620,
+      "playerId": 1,
+      "seq": 69,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 206
+      }
+    },
+    {
+      "tick": 2627,
+      "playerId": 1,
+      "seq": 70,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 164,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2630,
+      "playerId": 1,
+      "seq": 71,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 208
+      }
+    },
+    {
+      "tick": 2640,
+      "playerId": 0,
+      "seq": 53,
+      "cmd": {
+        "t": "build",
+        "building": "solar",
+        "tileX": 50,
+        "tileZ": 99
+      }
+    },
+    {
+      "tick": 2647,
+      "playerId": 1,
+      "seq": 72,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 198,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2660,
+      "playerId": 1,
+      "seq": 73,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 207
+      }
+    },
+    {
+      "tick": 2667,
+      "playerId": 1,
+      "seq": 74,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 238,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2680,
+      "playerId": 0,
+      "seq": 54,
       "cmd": {
         "t": "build",
         "building": "tower",
@@ -387,21 +1457,29 @@
       }
     },
     {
-      "tick": 1727,
+      "tick": 2680,
       "playerId": 1,
-      "seq": 14,
+      "seq": 75,
       "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 50,
-        "tileZ": 47,
-        "attack": "area"
+        "t": "heroMove",
+        "x": 79500,
+        "z": 55500
       }
     },
     {
-      "tick": 1760,
+      "tick": 2687,
+      "playerId": 1,
+      "seq": 76,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 262,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2700,
       "playerId": 0,
-      "seq": 15,
+      "seq": 55,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 17,
@@ -415,9 +1493,60 @@
       }
     },
     {
-      "tick": 1767,
+      "tick": 2707,
       "playerId": 1,
-      "seq": 15,
+      "seq": 77,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 278,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2710,
+      "playerId": 1,
+      "seq": 78,
+      "cmd": {
+        "t": "heroMove",
+        "x": 80500,
+        "z": 56500
+      }
+    },
+    {
+      "tick": 2720,
+      "playerId": 0,
+      "seq": 56,
+      "cmd": {
+        "t": "build",
+        "building": "wind",
+        "tileX": 45,
+        "tileZ": 98
+      }
+    },
+    {
+      "tick": 2720,
+      "playerId": 1,
+      "seq": 79,
+      "cmd": {
+        "t": "heroMove",
+        "x": 78500,
+        "z": 72500
+      }
+    },
+    {
+      "tick": 2727,
+      "playerId": 1,
+      "seq": 80,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 54,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2747,
+      "playerId": 1,
+      "seq": 81,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 18,
@@ -431,55 +1560,18 @@
       }
     },
     {
-      "tick": 1800,
-      "playerId": 0,
-      "seq": 16,
-      "cmd": {
-        "t": "build",
-        "building": "wind",
-        "tileX": 50,
-        "tileZ": 93
-      }
-    },
-    {
-      "tick": 1807,
+      "tick": 2750,
       "playerId": 1,
-      "seq": 16,
+      "seq": 82,
       "cmd": {
-        "t": "build",
-        "building": "wind",
-        "tileX": 44,
-        "tileZ": 13
+        "t": "heroAttack",
+        "targetId": 231
       }
     },
     {
-      "tick": 1840,
+      "tick": 2760,
       "playerId": 0,
-      "seq": 17,
-      "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 82,
-        "tileZ": 65,
-        "attack": "melee"
-      }
-    },
-    {
-      "tick": 1847,
-      "playerId": 1,
-      "seq": 17,
-      "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 82,
-        "tileZ": 47,
-        "attack": "melee"
-      }
-    },
-    {
-      "tick": 1880,
-      "playerId": 0,
-      "seq": 18,
+      "seq": 57,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 17,
@@ -493,9 +1585,3132 @@
       }
     },
     {
-      "tick": 1887,
+      "tick": 2767,
       "playerId": 1,
-      "seq": 18,
+      "seq": 83,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 97,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2780,
+      "playerId": 0,
+      "seq": 58,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 23,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2787,
+      "playerId": 1,
+      "seq": 84,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 118,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2800,
+      "playerId": 0,
+      "seq": 59,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 56,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2807,
+      "playerId": 1,
+      "seq": 85,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 164,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2820,
+      "playerId": 0,
+      "seq": 60,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 158,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2820,
+      "playerId": 1,
+      "seq": 86,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 230
+      }
+    },
+    {
+      "tick": 2827,
+      "playerId": 1,
+      "seq": 87,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 198,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2840,
+      "playerId": 0,
+      "seq": 61,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 196,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2840,
+      "playerId": 1,
+      "seq": 88,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 232
+      }
+    },
+    {
+      "tick": 2847,
+      "playerId": 1,
+      "seq": 89,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 238,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2850,
+      "playerId": 1,
+      "seq": 90,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 234
+      }
+    },
+    {
+      "tick": 2860,
+      "playerId": 0,
+      "seq": 62,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 221,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2867,
+      "playerId": 1,
+      "seq": 91,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 262,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2880,
+      "playerId": 0,
+      "seq": 63,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 276,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2887,
+      "playerId": 1,
+      "seq": 92,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 278,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2900,
+      "playerId": 0,
+      "seq": 64,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 310,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2907,
+      "playerId": 1,
+      "seq": 93,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 54,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2920,
+      "playerId": 0,
+      "seq": 65,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 2927,
+      "playerId": 1,
+      "seq": 94,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 97,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2940,
+      "playerId": 0,
+      "seq": 66,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 335,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 2947,
+      "playerId": 1,
+      "seq": 95,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 2960,
+      "playerId": 0,
+      "seq": 67,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 23,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2967,
+      "playerId": 1,
+      "seq": 96,
+      "cmd": {
+        "t": "pickHero",
+        "heroId": 3,
+        "lux": 80,
+        "barracksId": 18
+      }
+    },
+    {
+      "tick": 2980,
+      "playerId": 0,
+      "seq": 68,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 56,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 2987,
+      "playerId": 1,
+      "seq": 97,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 118,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3000,
+      "playerId": 0,
+      "seq": 69,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 158,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3007,
+      "playerId": 1,
+      "seq": 98,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 164,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3020,
+      "playerId": 0,
+      "seq": 70,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 196,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3027,
+      "playerId": 1,
+      "seq": 99,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 198,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3040,
+      "playerId": 0,
+      "seq": 71,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 221,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3047,
+      "playerId": 1,
+      "seq": 100,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 238,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3060,
+      "playerId": 0,
+      "seq": 72,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 276,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3067,
+      "playerId": 1,
+      "seq": 101,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 262,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3080,
+      "playerId": 0,
+      "seq": 73,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 310,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3087,
+      "playerId": 1,
+      "seq": 102,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 278,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3090,
+      "playerId": 1,
+      "seq": 103,
+      "cmd": {
+        "t": "heroMove",
+        "x": 54500,
+        "z": 19500
+      }
+    },
+    {
+      "tick": 3100,
+      "playerId": 0,
+      "seq": 74,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 335,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3107,
+      "playerId": 1,
+      "seq": 104,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 54,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3120,
+      "playerId": 0,
+      "seq": 75,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 23,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3127,
+      "playerId": 1,
+      "seq": 105,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 3140,
+      "playerId": 0,
+      "seq": 76,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 56,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3140,
+      "playerId": 1,
+      "seq": 106,
+      "cmd": {
+        "t": "heroMove",
+        "x": 66500,
+        "z": 23500
+      }
+    },
+    {
+      "tick": 3147,
+      "playerId": 1,
+      "seq": 107,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 97,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3160,
+      "playerId": 0,
+      "seq": 77,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 158,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3167,
+      "playerId": 1,
+      "seq": 108,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 118,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3180,
+      "playerId": 0,
+      "seq": 78,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 196,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3187,
+      "playerId": 1,
+      "seq": 109,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 164,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3200,
+      "playerId": 0,
+      "seq": 79,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 221,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3207,
+      "playerId": 1,
+      "seq": 110,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 198,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3220,
+      "playerId": 0,
+      "seq": 80,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 276,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3220,
+      "playerId": 1,
+      "seq": 111,
+      "cmd": {
+        "t": "heroMove",
+        "x": 78500,
+        "z": 29500
+      }
+    },
+    {
+      "tick": 3227,
+      "playerId": 1,
+      "seq": 112,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 238,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3240,
+      "playerId": 0,
+      "seq": 81,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 310,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3247,
+      "playerId": 1,
+      "seq": 113,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 262,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3260,
+      "playerId": 0,
+      "seq": 82,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 335,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3267,
+      "playerId": 1,
+      "seq": 114,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 3280,
+      "playerId": 0,
+      "seq": 83,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 23,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3290,
+      "playerId": 1,
+      "seq": 115,
+      "cmd": {
+        "t": "heroMove",
+        "x": 77500,
+        "z": 39500
+      }
+    },
+    {
+      "tick": 3300,
+      "playerId": 0,
+      "seq": 84,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 56,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3307,
+      "playerId": 1,
+      "seq": 116,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 278,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3320,
+      "playerId": 0,
+      "seq": 85,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 158,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3340,
+      "playerId": 0,
+      "seq": 86,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 196,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3340,
+      "playerId": 1,
+      "seq": 117,
+      "cmd": {
+        "t": "heroMove",
+        "x": 79500,
+        "z": 55500
+      }
+    },
+    {
+      "tick": 3360,
+      "playerId": 0,
+      "seq": 87,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 221,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3380,
+      "playerId": 0,
+      "seq": 88,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 276,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3387,
+      "playerId": 1,
+      "seq": 118,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 3400,
+      "playerId": 0,
+      "seq": 89,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 310,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3410,
+      "playerId": 1,
+      "seq": 119,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 342
+      }
+    },
+    {
+      "tick": 3420,
+      "playerId": 0,
+      "seq": 90,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 335,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3427,
+      "playerId": 1,
+      "seq": 120,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 54,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3450,
+      "playerId": 1,
+      "seq": 121,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 341
+      }
+    },
+    {
+      "tick": 3460,
+      "playerId": 0,
+      "seq": 91,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 3470,
+      "playerId": 1,
+      "seq": 122,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 329
+      }
+    },
+    {
+      "tick": 3490,
+      "playerId": 1,
+      "seq": 123,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 330
+      }
+    },
+    {
+      "tick": 3507,
+      "playerId": 1,
+      "seq": 124,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 97,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3510,
+      "playerId": 1,
+      "seq": 125,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 345
+      }
+    },
+    {
+      "tick": 3520,
+      "playerId": 1,
+      "seq": 126,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 360
+      }
+    },
+    {
+      "tick": 3540,
+      "playerId": 0,
+      "seq": 92,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "melee",
+          "ranged",
+          "area"
+        ]
+      }
+    },
+    {
+      "tick": 3540,
+      "playerId": 1,
+      "seq": 127,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 361
+      }
+    },
+    {
+      "tick": 3550,
+      "playerId": 1,
+      "seq": 128,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 344
+      }
+    },
+    {
+      "tick": 3570,
+      "playerId": 1,
+      "seq": 129,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 328
+      }
+    },
+    {
+      "tick": 3580,
+      "playerId": 0,
+      "seq": 93,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 23,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3587,
+      "playerId": 1,
+      "seq": 130,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 118,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3590,
+      "playerId": 1,
+      "seq": 131,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 364
+      }
+    },
+    {
+      "tick": 3620,
+      "playerId": 0,
+      "seq": 94,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "melee",
+          "ranged",
+          "area"
+        ]
+      }
+    },
+    {
+      "tick": 3620,
+      "playerId": 1,
+      "seq": 132,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 332
+      }
+    },
+    {
+      "tick": 3640,
+      "playerId": 1,
+      "seq": 133,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 362
+      }
+    },
+    {
+      "tick": 3650,
+      "playerId": 1,
+      "seq": 134,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 389
+      }
+    },
+    {
+      "tick": 3660,
+      "playerId": 0,
+      "seq": 95,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 3660,
+      "playerId": 1,
+      "seq": 135,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 388
+      }
+    },
+    {
+      "tick": 3667,
+      "playerId": 1,
+      "seq": 136,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 3670,
+      "playerId": 1,
+      "seq": 137,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 296
+      }
+    },
+    {
+      "tick": 3680,
+      "playerId": 1,
+      "seq": 138,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 392
+      }
+    },
+    {
+      "tick": 3687,
+      "playerId": 1,
+      "seq": 139,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 164,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3700,
+      "playerId": 0,
+      "seq": 96,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 56,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3710,
+      "playerId": 1,
+      "seq": 140,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 390
+      }
+    },
+    {
+      "tick": 3727,
+      "playerId": 1,
+      "seq": 141,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 198,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3740,
+      "playerId": 0,
+      "seq": 97,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 158,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3760,
+      "playerId": 0,
+      "seq": 98,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 3760,
+      "playerId": 1,
+      "seq": 142,
+      "cmd": {
+        "t": "heroMove",
+        "x": 79500,
+        "z": 55500
+      }
+    },
+    {
+      "tick": 3787,
+      "playerId": 1,
+      "seq": 143,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 238,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3800,
+      "playerId": 0,
+      "seq": 99,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 196,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3800,
+      "playerId": 1,
+      "seq": 144,
+      "cmd": {
+        "t": "heroMove",
+        "x": 80500,
+        "z": 56500
+      }
+    },
+    {
+      "tick": 3810,
+      "playerId": 1,
+      "seq": 145,
+      "cmd": {
+        "t": "heroMove",
+        "x": 78500,
+        "z": 72500
+      }
+    },
+    {
+      "tick": 3827,
+      "playerId": 1,
+      "seq": 146,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 262,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3830,
+      "playerId": 1,
+      "seq": 147,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 276
+      }
+    },
+    {
+      "tick": 3860,
+      "playerId": 0,
+      "seq": 100,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 221,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3867,
+      "playerId": 1,
+      "seq": 148,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 278,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3900,
+      "playerId": 0,
+      "seq": 101,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 276,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3907,
+      "playerId": 1,
+      "seq": 149,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 54,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3940,
+      "playerId": 0,
+      "seq": 102,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 310,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3947,
+      "playerId": 1,
+      "seq": 150,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 97,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 3980,
+      "playerId": 0,
+      "seq": 103,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 335,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 3987,
+      "playerId": 1,
+      "seq": 151,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 118,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 4020,
+      "playerId": 0,
+      "seq": 104,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 23,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 4027,
+      "playerId": 1,
+      "seq": 152,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 164,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 4030,
+      "playerId": 1,
+      "seq": 153,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 498
+      }
+    },
+    {
+      "tick": 4040,
+      "playerId": 0,
+      "seq": 105,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 45,
+        "tileZ": 64,
+        "attack": "area"
+      }
+    },
+    {
+      "tick": 4040,
+      "playerId": 1,
+      "seq": 154,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 497
+      }
+    },
+    {
+      "tick": 4050,
+      "playerId": 1,
+      "seq": 155,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 501
+      }
+    },
+    {
+      "tick": 4060,
+      "playerId": 0,
+      "seq": 106,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 627,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 4067,
+      "playerId": 1,
+      "seq": 156,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 198,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 4080,
+      "playerId": 0,
+      "seq": 107,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 627,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 4080,
+      "playerId": 1,
+      "seq": 157,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 500
+      }
+    },
+    {
+      "tick": 4090,
+      "playerId": 1,
+      "seq": 158,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 529
+      }
+    },
+    {
+      "tick": 4100,
+      "playerId": 0,
+      "seq": 108,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 627,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 4107,
+      "playerId": 1,
+      "seq": 159,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 238,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 4120,
+      "playerId": 0,
+      "seq": 109,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 627,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 4127,
+      "playerId": 1,
+      "seq": 160,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 4130,
+      "playerId": 1,
+      "seq": 161,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 528
+      }
+    },
+    {
+      "tick": 4140,
+      "playerId": 0,
+      "seq": 110,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 4150,
+      "playerId": 1,
+      "seq": 162,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 527
+      }
+    },
+    {
+      "tick": 4160,
+      "playerId": 1,
+      "seq": 163,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 563
+      }
+    },
+    {
+      "tick": 4180,
+      "playerId": 0,
+      "seq": 111,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 627,
+        "track": "power"
+      }
+    },
+    {
+      "tick": 4180,
+      "playerId": 1,
+      "seq": 164,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 564
+      }
+    },
+    {
+      "tick": 4187,
+      "playerId": 1,
+      "seq": 165,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 262,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 4190,
+      "playerId": 1,
+      "seq": 166,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 563
+      }
+    },
+    {
+      "tick": 4210,
+      "playerId": 1,
+      "seq": 167,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 562
+      }
+    },
+    {
+      "tick": 4220,
+      "playerId": 0,
+      "seq": 112,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "melee",
+          "ranged",
+          "area"
+        ]
+      }
+    },
+    {
+      "tick": 4220,
+      "playerId": 1,
+      "seq": 168,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 564
+      }
+    },
+    {
+      "tick": 4227,
+      "playerId": 1,
+      "seq": 169,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 278,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 4240,
+      "playerId": 0,
+      "seq": 113,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 56,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 4240,
+      "playerId": 1,
+      "seq": 170,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 576
+      }
+    },
+    {
+      "tick": 4247,
+      "playerId": 1,
+      "seq": 171,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "melee",
+          "ranged",
+          "area"
+        ]
+      }
+    },
+    {
+      "tick": 4250,
+      "playerId": 1,
+      "seq": 172,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 577
+      }
+    },
+    {
+      "tick": 4280,
+      "playerId": 0,
+      "seq": 114,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 4280,
+      "playerId": 1,
+      "seq": 173,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 566
+      }
+    },
+    {
+      "tick": 4300,
+      "playerId": 0,
+      "seq": 115,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 158,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 4300,
+      "playerId": 1,
+      "seq": 174,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 579
+      }
+    },
+    {
+      "tick": 4327,
+      "playerId": 1,
+      "seq": 175,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 4330,
+      "playerId": 1,
+      "seq": 176,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 598
+      }
+    },
+    {
+      "tick": 4340,
+      "playerId": 0,
+      "seq": 116,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 196,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 4360,
+      "playerId": 1,
+      "seq": 177,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 601
+      }
+    },
+    {
+      "tick": 4380,
+      "playerId": 0,
+      "seq": 117,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 221,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 4420,
+      "playerId": 0,
+      "seq": 118,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 4440,
+      "playerId": 1,
+      "seq": 178,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 600
+      }
+    },
+    {
+      "tick": 4447,
+      "playerId": 1,
+      "seq": 179,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 4500,
+      "playerId": 0,
+      "seq": 119,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 310,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 4510,
+      "playerId": 1,
+      "seq": 180,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 578
+      }
+    },
+    {
+      "tick": 4560,
+      "playerId": 1,
+      "seq": 181,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 599
+      }
+    },
+    {
+      "tick": 4570,
+      "playerId": 1,
+      "seq": 182,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 578
+      }
+    },
+    {
+      "tick": 4580,
+      "playerId": 1,
+      "seq": 183,
+      "cmd": {
+        "t": "heroMove",
+        "x": 78500,
+        "z": 72500
+      }
+    },
+    {
+      "tick": 4600,
+      "playerId": 0,
+      "seq": 120,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 4610,
+      "playerId": 1,
+      "seq": 184,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 675
+      }
+    },
+    {
+      "tick": 4650,
+      "playerId": 1,
+      "seq": 185,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 676
+      }
+    },
+    {
+      "tick": 4660,
+      "playerId": 1,
+      "seq": 186,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 679
+      }
+    },
+    {
+      "tick": 4690,
+      "playerId": 1,
+      "seq": 187,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 678
+      }
+    },
+    {
+      "tick": 4700,
+      "playerId": 0,
+      "seq": 121,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 335,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 4720,
+      "playerId": 1,
+      "seq": 188,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 713
+      }
+    },
+    {
+      "tick": 4740,
+      "playerId": 1,
+      "seq": 189,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 715
+      }
+    },
+    {
+      "tick": 4760,
+      "playerId": 1,
+      "seq": 190,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 713
+      }
+    },
+    {
+      "tick": 4770,
+      "playerId": 1,
+      "seq": 191,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 715
+      }
+    },
+    {
+      "tick": 4780,
+      "playerId": 1,
+      "seq": 192,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 713
+      }
+    },
+    {
+      "tick": 4800,
+      "playerId": 0,
+      "seq": 122,
+      "cmd": {
+        "t": "upgrade",
+        "towerId": 627,
+        "track": "shell"
+      }
+    },
+    {
+      "tick": 4807,
+      "playerId": 1,
+      "seq": 193,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 4887,
+      "playerId": 1,
+      "seq": 194,
+      "cmd": {
+        "t": "pickHero",
+        "heroId": 4,
+        "lux": 166,
+        "barracksId": 18
+      }
+    },
+    {
+      "tick": 4900,
+      "playerId": 0,
+      "seq": 123,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 4990,
+      "playerId": 1,
+      "seq": 195,
+      "cmd": {
+        "t": "heroMove",
+        "x": 54500,
+        "z": 19500
+      }
+    },
+    {
+      "tick": 5027,
+      "playerId": 1,
+      "seq": 196,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 5040,
+      "playerId": 0,
+      "seq": 124,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 5060,
+      "playerId": 1,
+      "seq": 197,
+      "cmd": {
+        "t": "heroMove",
+        "x": 66500,
+        "z": 23500
+      }
+    },
+    {
+      "tick": 5127,
+      "playerId": 1,
+      "seq": 198,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 5160,
+      "playerId": 1,
+      "seq": 199,
+      "cmd": {
+        "t": "heroMove",
+        "x": 78500,
+        "z": 29500
+      }
+    },
+    {
+      "tick": 5207,
+      "playerId": 1,
+      "seq": 200,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 5260,
+      "playerId": 0,
+      "seq": 125,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 5260,
+      "playerId": 1,
+      "seq": 201,
+      "cmd": {
+        "t": "heroMove",
+        "x": 77500,
+        "z": 39500
+      }
+    },
+    {
+      "tick": 5307,
+      "playerId": 1,
+      "seq": 202,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 5320,
+      "playerId": 1,
+      "seq": 203,
+      "cmd": {
+        "t": "heroMove",
+        "x": 79500,
+        "z": 55500
+      }
+    },
+    {
+      "tick": 5380,
+      "playerId": 1,
+      "seq": 204,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 716
+      }
+    },
+    {
+      "tick": 5430,
+      "playerId": 1,
+      "seq": 205,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 845
+      }
+    },
+    {
+      "tick": 5440,
+      "playerId": 1,
+      "seq": 206,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 849
+      }
+    },
+    {
+      "tick": 5460,
+      "playerId": 1,
+      "seq": 207,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 846
+      }
+    },
+    {
+      "tick": 5490,
+      "playerId": 1,
+      "seq": 208,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 752
+      }
+    },
+    {
+      "tick": 5500,
+      "playerId": 0,
+      "seq": 126,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 5510,
+      "playerId": 1,
+      "seq": 209,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 803
+      }
+    },
+    {
+      "tick": 5520,
+      "playerId": 1,
+      "seq": 210,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 848
+      }
+    },
+    {
+      "tick": 5540,
+      "playerId": 1,
+      "seq": 211,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 847
+      }
+    },
+    {
+      "tick": 5560,
+      "playerId": 1,
+      "seq": 212,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 677
+      }
+    },
+    {
+      "tick": 5580,
+      "playerId": 0,
+      "seq": 127,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 5580,
+      "playerId": 1,
+      "seq": 213,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 900
+      }
+    },
+    {
+      "tick": 5600,
+      "playerId": 1,
+      "seq": 214,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 904
+      }
+    },
+    {
+      "tick": 5640,
+      "playerId": 1,
+      "seq": 215,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 901
+      }
+    },
+    {
+      "tick": 5660,
+      "playerId": 1,
+      "seq": 216,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 903
+      }
+    },
+    {
+      "tick": 5700,
+      "playerId": 1,
+      "seq": 217,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 949
+      }
+    },
+    {
+      "tick": 5710,
+      "playerId": 1,
+      "seq": 218,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 950
+      }
+    },
+    {
+      "tick": 5750,
+      "playerId": 1,
+      "seq": 219,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 949
+      }
+    },
+    {
+      "tick": 5760,
+      "playerId": 0,
+      "seq": 128,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "melee",
+          "ranged",
+          "area"
+        ]
+      }
+    },
+    {
+      "tick": 5760,
+      "playerId": 1,
+      "seq": 220,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 953
+      }
+    },
+    {
+      "tick": 5770,
+      "playerId": 1,
+      "seq": 221,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 902
+      }
+    },
+    {
+      "tick": 5790,
+      "playerId": 1,
+      "seq": 222,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 951
+      }
+    },
+    {
+      "tick": 5830,
+      "playerId": 1,
+      "seq": 223,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1038
+      }
+    },
+    {
+      "tick": 5840,
+      "playerId": 0,
+      "seq": 129,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 5890,
+      "playerId": 1,
+      "seq": 224,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1041
+      }
+    },
+    {
+      "tick": 5900,
+      "playerId": 1,
+      "seq": 225,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1037
+      }
+    },
+    {
+      "tick": 5907,
+      "playerId": 1,
+      "seq": 226,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 5910,
+      "playerId": 1,
+      "seq": 227,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1041
+      }
+    },
+    {
+      "tick": 5940,
+      "playerId": 1,
+      "seq": 228,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1039
+      }
+    },
+    {
+      "tick": 5980,
+      "playerId": 0,
+      "seq": 130,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 5980,
+      "playerId": 1,
+      "seq": 229,
+      "cmd": {
+        "t": "heroMove",
+        "x": 79500,
+        "z": 55500
+      }
+    },
+    {
+      "tick": 6030,
+      "playerId": 1,
+      "seq": 230,
+      "cmd": {
+        "t": "heroMove",
+        "x": 78500,
+        "z": 72500
+      }
+    },
+    {
+      "tick": 6090,
+      "playerId": 1,
+      "seq": 231,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1090
+      }
+    },
+    {
+      "tick": 6100,
+      "playerId": 1,
+      "seq": 232,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1106
+      }
+    },
+    {
+      "tick": 6120,
+      "playerId": 0,
+      "seq": 131,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "melee",
+          "ranged",
+          "area"
+        ]
+      }
+    },
+    {
+      "tick": 6120,
+      "playerId": 1,
+      "seq": 233,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1107
+      }
+    },
+    {
+      "tick": 6130,
+      "playerId": 1,
+      "seq": 234,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1110
+      }
+    },
+    {
+      "tick": 6140,
+      "playerId": 1,
+      "seq": 235,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1109
+      }
+    },
+    {
+      "tick": 6160,
+      "playerId": 1,
+      "seq": 236,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1108
+      }
+    },
+    {
+      "tick": 6180,
+      "playerId": 0,
+      "seq": 132,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 6180,
+      "playerId": 1,
+      "seq": 237,
+      "cmd": {
+        "t": "heroMove",
+        "x": 79500,
+        "z": 82500
+      }
+    },
+    {
+      "tick": 6190,
+      "playerId": 1,
+      "seq": 238,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1143
+      }
+    },
+    {
+      "tick": 6200,
+      "playerId": 1,
+      "seq": 239,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1142
+      }
+    },
+    {
+      "tick": 6227,
+      "playerId": 1,
+      "seq": 240,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 6230,
+      "playerId": 1,
+      "seq": 241,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1144
+      }
+    },
+    {
+      "tick": 6250,
+      "playerId": 1,
+      "seq": 242,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1146
+      }
+    },
+    {
+      "tick": 6270,
+      "playerId": 1,
+      "seq": 243,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1156
+      }
+    },
+    {
+      "tick": 6290,
+      "playerId": 1,
+      "seq": 244,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1160
+      }
+    },
+    {
+      "tick": 6300,
+      "playerId": 0,
+      "seq": 133,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "melee",
+          "ranged",
+          "area"
+        ]
+      }
+    },
+    {
+      "tick": 6310,
+      "playerId": 1,
+      "seq": 245,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1159
+      }
+    },
+    {
+      "tick": 6340,
+      "playerId": 0,
+      "seq": 134,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 6340,
+      "playerId": 1,
+      "seq": 246,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1190
+      }
+    },
+    {
+      "tick": 6350,
+      "playerId": 1,
+      "seq": 247,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1187
+      }
+    },
+    {
+      "tick": 6360,
+      "playerId": 1,
+      "seq": 248,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1190
+      }
+    },
+    {
+      "tick": 6370,
+      "playerId": 1,
+      "seq": 249,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1188
+      }
+    },
+    {
+      "tick": 6390,
+      "playerId": 1,
+      "seq": 250,
+      "cmd": {
+        "t": "heroMove",
+        "x": 79500,
+        "z": 82500
+      }
+    },
+    {
+      "tick": 6400,
+      "playerId": 0,
+      "seq": 135,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 6440,
+      "playerId": 1,
+      "seq": 251,
+      "cmd": {
+        "t": "heroMove",
+        "x": 67500,
+        "z": 88500
+      }
+    },
+    {
+      "tick": 6450,
+      "playerId": 1,
+      "seq": 252,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1228
+      }
+    },
+    {
+      "tick": 6480,
+      "playerId": 1,
+      "seq": 253,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1227
+      }
+    },
+    {
+      "tick": 6490,
+      "playerId": 1,
+      "seq": 254,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1226
+      }
+    },
+    {
+      "tick": 6500,
+      "playerId": 1,
+      "seq": 255,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1229
+      }
+    },
+    {
+      "tick": 6530,
+      "playerId": 1,
+      "seq": 256,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1243
+      }
+    },
+    {
+      "tick": 6540,
+      "playerId": 0,
+      "seq": 136,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 6550,
+      "playerId": 1,
+      "seq": 257,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1242
+      }
+    },
+    {
+      "tick": 6560,
+      "playerId": 1,
+      "seq": 258,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1246
+      }
+    },
+    {
+      "tick": 6570,
+      "playerId": 1,
+      "seq": 259,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1244
+      }
+    },
+    {
+      "tick": 6590,
+      "playerId": 1,
+      "seq": 260,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1245
+      }
+    },
+    {
+      "tick": 6600,
+      "playerId": 0,
+      "seq": 137,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 6600,
+      "playerId": 1,
+      "seq": 261,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1294
+      }
+    },
+    {
+      "tick": 6607,
+      "playerId": 1,
+      "seq": 262,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 6620,
+      "playerId": 1,
+      "seq": 263,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1292
+      }
+    },
+    {
+      "tick": 6650,
+      "playerId": 1,
+      "seq": 264,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1311
+      }
+    },
+    {
+      "tick": 6670,
+      "playerId": 1,
+      "seq": 265,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1310
+      }
+    },
+    {
+      "tick": 6680,
+      "playerId": 0,
+      "seq": 138,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 6680,
+      "playerId": 1,
+      "seq": 266,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1314
+      }
+    },
+    {
+      "tick": 6690,
+      "playerId": 1,
+      "seq": 267,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1322
+      }
+    },
+    {
+      "tick": 6710,
+      "playerId": 1,
+      "seq": 268,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1321
+      }
+    },
+    {
+      "tick": 6720,
+      "playerId": 1,
+      "seq": 269,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1295
+      }
+    },
+    {
+      "tick": 6730,
+      "playerId": 1,
+      "seq": 270,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1325
+      }
+    },
+    {
+      "tick": 6740,
+      "playerId": 0,
+      "seq": 139,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "melee",
+          "ranged",
+          "area"
+        ]
+      }
+    },
+    {
+      "tick": 6740,
+      "playerId": 1,
+      "seq": 271,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1313
+      }
+    },
+    {
+      "tick": 6760,
+      "playerId": 1,
+      "seq": 272,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1324
+      }
+    },
+    {
+      "tick": 6780,
+      "playerId": 1,
+      "seq": 273,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1312
+      }
+    },
+    {
+      "tick": 6800,
+      "playerId": 1,
+      "seq": 274,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1370
+      }
+    },
+    {
+      "tick": 6820,
+      "playerId": 0,
+      "seq": 140,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 6820,
+      "playerId": 1,
+      "seq": 275,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1367
+      }
+    },
+    {
+      "tick": 6830,
+      "playerId": 1,
+      "seq": 276,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1370
+      }
+    },
+    {
+      "tick": 6840,
+      "playerId": 1,
+      "seq": 277,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1366
+      }
+    },
+    {
+      "tick": 6850,
+      "playerId": 1,
+      "seq": 278,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1396
+      }
+    },
+    {
+      "tick": 6870,
+      "playerId": 1,
+      "seq": 279,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1393
+      }
+    },
+    {
+      "tick": 6880,
+      "playerId": 0,
+      "seq": 141,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 6880,
+      "playerId": 1,
+      "seq": 280,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1396
+      }
+    },
+    {
+      "tick": 6890,
+      "playerId": 1,
+      "seq": 281,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1392
+      }
+    },
+    {
+      "tick": 6900,
+      "playerId": 1,
+      "seq": 282,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1395
+      }
+    },
+    {
+      "tick": 6920,
+      "playerId": 1,
+      "seq": 283,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1441
+      }
+    },
+    {
+      "tick": 6940,
+      "playerId": 1,
+      "seq": 284,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1438
+      }
+    },
+    {
+      "tick": 6960,
+      "playerId": 0,
+      "seq": 142,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "area",
+          "melee",
+          "melee",
+          "melee",
+          "ranged"
+        ]
+      }
+    },
+    {
+      "tick": 6960,
+      "playerId": 1,
+      "seq": 285,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1465
+      }
+    },
+    {
+      "tick": 6990,
+      "playerId": 1,
+      "seq": 286,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1463
+      }
+    },
+    {
+      "tick": 7000,
+      "playerId": 0,
+      "seq": 143,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 7000,
+      "playerId": 1,
+      "seq": 287,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1464
+      }
+    },
+    {
+      "tick": 7100,
+      "playerId": 0,
+      "seq": 144,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 7107,
+      "playerId": 1,
+      "seq": 288,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 7127,
+      "playerId": 1,
+      "seq": 289,
+      "cmd": {
+        "t": "pickHero",
+        "heroId": 0,
+        "lux": 866,
+        "barracksId": 18
+      }
+    },
+    {
+      "tick": 7227,
+      "playerId": 1,
+      "seq": 290,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 18,
@@ -509,43 +4724,19 @@
       }
     },
     {
-      "tick": 1940,
-      "playerId": 0,
-      "seq": 19,
-      "cmd": {
-        "t": "build",
-        "building": "geothermal",
-        "tileX": 0,
-        "tileZ": 109
-      }
-    },
-    {
-      "tick": 1960,
-      "playerId": 0,
-      "seq": 20,
-      "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 14,
-        "tileZ": 65,
-        "attack": "ranged"
-      }
-    },
-    {
-      "tick": 1967,
+      "tick": 7250,
       "playerId": 1,
-      "seq": 19,
+      "seq": 291,
       "cmd": {
-        "t": "build",
-        "building": "geothermal",
-        "tileX": 95,
-        "tileZ": 2
+        "t": "heroMove",
+        "x": 54500,
+        "z": 19500
       }
     },
     {
-      "tick": 2000,
+      "tick": 7320,
       "playerId": 0,
-      "seq": 21,
+      "seq": 145,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 17,
@@ -559,32 +4750,19 @@
       }
     },
     {
-      "tick": 2007,
+      "tick": 7330,
       "playerId": 1,
-      "seq": 20,
+      "seq": 292,
       "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 18,
-        "tileZ": 46,
-        "attack": "ranged"
+        "t": "heroMove",
+        "x": 66500,
+        "z": 23500
       }
     },
     {
-      "tick": 2040,
-      "playerId": 0,
-      "seq": 22,
-      "cmd": {
-        "t": "build",
-        "building": "solar",
-        "tileX": 46,
-        "tileZ": 99
-      }
-    },
-    {
-      "tick": 2047,
+      "tick": 7347,
       "playerId": 1,
-      "seq": 21,
+      "seq": 293,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 18,
@@ -598,2008 +4776,66 @@
       }
     },
     {
-      "tick": 2080,
-      "playerId": 0,
-      "seq": 23,
-      "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 45,
-        "tileZ": 64,
-        "attack": "area"
-      }
-    },
-    {
-      "tick": 2127,
-      "playerId": 1,
-      "seq": 22,
-      "cmd": {
-        "t": "build",
-        "building": "solar",
-        "tileX": 45,
-        "tileZ": 12
-      }
-    },
-    {
-      "tick": 2140,
-      "playerId": 0,
-      "seq": 24,
-      "cmd": {
-        "t": "build",
-        "building": "solar",
-        "tileX": 51,
-        "tileZ": 98
-      }
-    },
-    {
-      "tick": 2187,
-      "playerId": 1,
-      "seq": 23,
-      "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 49,
-        "tileZ": 46,
-        "attack": "area"
-      }
-    },
-    {
-      "tick": 2240,
-      "playerId": 0,
-      "seq": 25,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 2247,
-      "playerId": 1,
-      "seq": 24,
-      "cmd": {
-        "t": "build",
-        "building": "solar",
-        "tileX": 45,
-        "tileZ": 18
-      }
-    },
-    {
-      "tick": 2300,
-      "playerId": 0,
-      "seq": 26,
-      "cmd": {
-        "t": "build",
-        "building": "wind",
-        "tileX": 45,
-        "tileZ": 98
-      }
-    },
-    {
-      "tick": 2307,
-      "playerId": 1,
-      "seq": 25,
-      "cmd": {
-        "t": "build",
-        "building": "wind",
-        "tileX": 50,
-        "tileZ": 13
-      }
-    },
-    {
-      "tick": 2327,
-      "playerId": 1,
-      "seq": 26,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 20,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2340,
-      "playerId": 0,
-      "seq": 27,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 19,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2360,
-      "playerId": 0,
-      "seq": 28,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 37,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2367,
-      "playerId": 1,
-      "seq": 27,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 38,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2380,
-      "playerId": 0,
-      "seq": 29,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 68,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2387,
-      "playerId": 1,
-      "seq": 28,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 71,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2400,
-      "playerId": 0,
-      "seq": 30,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 90,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2407,
-      "playerId": 1,
-      "seq": 29,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 88,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2447,
-      "playerId": 1,
-      "seq": 30,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 2460,
-      "playerId": 0,
-      "seq": 31,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "melee",
-          "ranged",
-          "area"
-        ]
-      }
-    },
-    {
-      "tick": 2467,
-      "playerId": 1,
-      "seq": 31,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 118,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2480,
-      "playerId": 0,
-      "seq": 32,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 117,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2487,
-      "playerId": 1,
-      "seq": 32,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 138,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2500,
-      "playerId": 0,
-      "seq": 33,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 136,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2507,
-      "playerId": 1,
-      "seq": 33,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 164,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2520,
-      "playerId": 0,
-      "seq": 34,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 159,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2527,
-      "playerId": 1,
-      "seq": 34,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 192,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2540,
-      "playerId": 0,
-      "seq": 35,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 173,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2547,
-      "playerId": 1,
-      "seq": 35,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 20,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2560,
-      "playerId": 0,
-      "seq": 36,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 2567,
-      "playerId": 1,
-      "seq": 36,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 38,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2580,
-      "playerId": 0,
-      "seq": 37,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 19,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2587,
-      "playerId": 1,
-      "seq": 37,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 2600,
-      "playerId": 0,
-      "seq": 38,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 37,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2607,
-      "playerId": 1,
-      "seq": 38,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 71,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2620,
-      "playerId": 0,
-      "seq": 39,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 68,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2627,
-      "playerId": 1,
-      "seq": 39,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 88,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2640,
-      "playerId": 0,
-      "seq": 40,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 90,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2647,
-      "playerId": 1,
-      "seq": 40,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 118,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2660,
-      "playerId": 0,
-      "seq": 41,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 117,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2667,
-      "playerId": 1,
-      "seq": 41,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 138,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2680,
-      "playerId": 0,
-      "seq": 42,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "melee",
-          "ranged",
-          "area"
-        ]
-      }
-    },
-    {
-      "tick": 2687,
-      "playerId": 1,
-      "seq": 42,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 164,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2700,
-      "playerId": 0,
-      "seq": 43,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 136,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2707,
-      "playerId": 1,
-      "seq": 43,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 192,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2720,
-      "playerId": 0,
-      "seq": 44,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 159,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2727,
-      "playerId": 1,
-      "seq": 44,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 20,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2740,
-      "playerId": 0,
-      "seq": 45,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 173,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2747,
-      "playerId": 1,
-      "seq": 45,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 38,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2760,
-      "playerId": 0,
-      "seq": 46,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 19,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2767,
-      "playerId": 1,
-      "seq": 46,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 71,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2780,
-      "playerId": 0,
-      "seq": 47,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 2787,
-      "playerId": 1,
-      "seq": 47,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 88,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2800,
-      "playerId": 0,
-      "seq": 48,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 37,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2807,
-      "playerId": 1,
-      "seq": 48,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 118,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2820,
-      "playerId": 0,
-      "seq": 49,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 68,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2827,
-      "playerId": 1,
-      "seq": 49,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 2840,
-      "playerId": 0,
-      "seq": 50,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 90,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2847,
-      "playerId": 1,
-      "seq": 50,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 138,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2860,
-      "playerId": 0,
-      "seq": 51,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 117,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2867,
-      "playerId": 1,
-      "seq": 51,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 164,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2880,
-      "playerId": 0,
-      "seq": 52,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 136,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2887,
-      "playerId": 1,
-      "seq": 52,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 192,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2900,
-      "playerId": 0,
-      "seq": 53,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 159,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2907,
-      "playerId": 1,
-      "seq": 53,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 20,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2920,
-      "playerId": 0,
-      "seq": 54,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 173,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2927,
-      "playerId": 1,
-      "seq": 54,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 2940,
-      "playerId": 0,
-      "seq": 55,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 19,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2947,
-      "playerId": 1,
-      "seq": 55,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 38,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2960,
-      "playerId": 0,
-      "seq": 56,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 2967,
-      "playerId": 1,
-      "seq": 56,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 71,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2980,
-      "playerId": 0,
-      "seq": 57,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 37,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2987,
-      "playerId": 1,
-      "seq": 57,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 88,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3000,
-      "playerId": 0,
-      "seq": 58,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 68,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3007,
-      "playerId": 1,
-      "seq": 58,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 118,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3020,
-      "playerId": 0,
-      "seq": 59,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 90,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3027,
-      "playerId": 1,
-      "seq": 59,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 138,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3040,
-      "playerId": 0,
-      "seq": 60,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 117,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3047,
-      "playerId": 1,
-      "seq": 60,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 164,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3060,
-      "playerId": 0,
-      "seq": 61,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 136,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3067,
-      "playerId": 1,
-      "seq": 61,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 192,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3080,
-      "playerId": 0,
-      "seq": 62,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 159,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3087,
-      "playerId": 1,
-      "seq": 62,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 3100,
-      "playerId": 0,
-      "seq": 63,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 173,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3107,
-      "playerId": 1,
-      "seq": 63,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 20,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3120,
-      "playerId": 0,
-      "seq": 64,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 19,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3127,
-      "playerId": 1,
-      "seq": 64,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 38,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3140,
-      "playerId": 0,
-      "seq": 65,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 37,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3167,
-      "playerId": 1,
-      "seq": 65,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 71,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3180,
-      "playerId": 0,
-      "seq": 66,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 68,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3207,
-      "playerId": 1,
-      "seq": 66,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 88,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3220,
-      "playerId": 0,
-      "seq": 67,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 90,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3247,
-      "playerId": 1,
-      "seq": 67,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 118,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3280,
-      "playerId": 0,
-      "seq": 68,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 117,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3287,
-      "playerId": 1,
-      "seq": 68,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 3340,
-      "playerId": 0,
-      "seq": 69,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "melee",
-          "ranged",
-          "area"
-        ]
-      }
-    },
-    {
-      "tick": 3347,
-      "playerId": 1,
-      "seq": 69,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 138,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3427,
-      "playerId": 1,
-      "seq": 70,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 3440,
-      "playerId": 0,
-      "seq": 70,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 136,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3500,
-      "playerId": 0,
-      "seq": 71,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 3507,
-      "playerId": 1,
-      "seq": 71,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 164,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3600,
-      "playerId": 0,
-      "seq": 72,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 3627,
-      "playerId": 1,
-      "seq": 72,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 3660,
-      "playerId": 0,
-      "seq": 73,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 159,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3667,
-      "playerId": 1,
-      "seq": 73,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 192,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3700,
-      "playerId": 0,
-      "seq": 74,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 3707,
-      "playerId": 1,
-      "seq": 74,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 20,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3740,
-      "playerId": 0,
-      "seq": 75,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 173,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3747,
-      "playerId": 1,
-      "seq": 75,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 38,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3787,
-      "playerId": 1,
-      "seq": 76,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 71,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3800,
-      "playerId": 0,
-      "seq": 76,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 19,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3827,
-      "playerId": 1,
-      "seq": 77,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 88,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3840,
-      "playerId": 0,
-      "seq": 77,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 3860,
-      "playerId": 0,
-      "seq": 78,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 37,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3867,
-      "playerId": 1,
-      "seq": 78,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 118,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3907,
-      "playerId": 1,
-      "seq": 79,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 138,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3920,
-      "playerId": 0,
-      "seq": 79,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 68,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3947,
-      "playerId": 1,
-      "seq": 80,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 3960,
-      "playerId": 0,
-      "seq": 80,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 90,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3987,
-      "playerId": 1,
-      "seq": 81,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 164,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 4000,
-      "playerId": 0,
-      "seq": 81,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 117,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 4027,
-      "playerId": 1,
-      "seq": 82,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 192,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 4040,
-      "playerId": 0,
-      "seq": 82,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 136,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 4080,
-      "playerId": 0,
-      "seq": 83,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 159,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 4100,
-      "playerId": 0,
-      "seq": 84,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 4107,
-      "playerId": 1,
-      "seq": 83,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 4140,
-      "playerId": 0,
-      "seq": 85,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 173,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 4247,
-      "playerId": 1,
-      "seq": 84,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 4300,
-      "playerId": 0,
-      "seq": 86,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 4387,
-      "playerId": 1,
-      "seq": 85,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 4507,
-      "playerId": 1,
-      "seq": 86,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 4600,
-      "playerId": 0,
-      "seq": 87,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 4707,
-      "playerId": 1,
-      "seq": 87,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 4760,
-      "playerId": 0,
-      "seq": 88,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "melee",
-          "ranged",
-          "area"
-        ]
-      }
-    },
-    {
-      "tick": 4820,
-      "playerId": 0,
-      "seq": 89,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 4980,
-      "playerId": 0,
-      "seq": 90,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 5047,
-      "playerId": 1,
-      "seq": 88,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 5120,
-      "playerId": 0,
-      "seq": 91,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 5287,
-      "playerId": 1,
-      "seq": 89,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 5360,
-      "playerId": 0,
-      "seq": 92,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 5387,
-      "playerId": 1,
-      "seq": 90,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 5507,
-      "playerId": 1,
-      "seq": 91,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 5520,
-      "playerId": 0,
-      "seq": 93,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 5647,
-      "playerId": 1,
-      "seq": 92,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 5840,
-      "playerId": 0,
-      "seq": 94,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 5867,
-      "playerId": 1,
-      "seq": 93,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 5960,
-      "playerId": 0,
-      "seq": 95,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "melee",
-          "ranged",
-          "area"
-        ]
-      }
-    },
-    {
-      "tick": 6020,
-      "playerId": 0,
-      "seq": 96,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 6160,
-      "playerId": 0,
-      "seq": 97,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 6280,
-      "playerId": 0,
-      "seq": 98,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 6287,
-      "playerId": 1,
-      "seq": 94,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 6387,
-      "playerId": 1,
-      "seq": 95,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 6467,
-      "playerId": 1,
-      "seq": 96,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 6547,
-      "playerId": 1,
-      "seq": 97,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 6747,
-      "playerId": 1,
-      "seq": 98,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 6760,
-      "playerId": 0,
-      "seq": 99,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 6860,
-      "playerId": 0,
-      "seq": 100,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 6960,
-      "playerId": 0,
-      "seq": 101,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "melee",
-          "ranged",
-          "area"
-        ]
-      }
-    },
-    {
-      "tick": 7020,
-      "playerId": 0,
-      "seq": 102,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "melee",
-          "ranged",
-          "area"
-        ]
-      }
-    },
-    {
-      "tick": 7100,
-      "playerId": 0,
-      "seq": 103,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 7267,
-      "playerId": 1,
-      "seq": 99,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 7367,
-      "playerId": 1,
-      "seq": 100,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 7427,
+      "tick": 7440,
       "playerId": 1,
-      "seq": 101,
+      "seq": 294,
       "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
+        "t": "heroMove",
+        "x": 78500,
+        "z": 29500
       }
     },
     {
-      "tick": 7487,
+      "tick": 7550,
       "playerId": 1,
-      "seq": 102,
+      "seq": 295,
       "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
+        "t": "heroMove",
+        "x": 77500,
+        "z": 39500
       }
     },
     {
       "tick": 7580,
       "playerId": 0,
-      "seq": 104,
+      "seq": 146,
+      "cmd": {
+        "t": "build",
+        "building": "wind",
+        "tileX": 46,
+        "tileZ": 99
+      }
+    },
+    {
+      "tick": 7587,
+      "playerId": 1,
+      "seq": 296,
       "cmd": {
         "t": "orderCreeps",
-        "barracksId": 17,
+        "barracksId": 18,
         "mix": [
           "melee",
           "melee",
+          "melee",
           "ranged",
-          "area",
-          "melee"
+          "area"
         ]
       }
     },
     {
-      "tick": 7627,
+      "tick": 7630,
       "playerId": 1,
-      "seq": 103,
+      "seq": 297,
+      "cmd": {
+        "t": "heroMove",
+        "x": 79500,
+        "z": 55500
+      }
+    },
+    {
+      "tick": 7647,
+      "playerId": 1,
+      "seq": 298,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 18,
@@ -2613,9 +4849,56 @@
       }
     },
     {
-      "tick": 7780,
+      "tick": 7740,
+      "playerId": 1,
+      "seq": 299,
+      "cmd": {
+        "t": "heroMove",
+        "x": 80500,
+        "z": 56500
+      }
+    },
+    {
+      "tick": 7750,
+      "playerId": 1,
+      "seq": 300,
+      "cmd": {
+        "t": "heroMove",
+        "x": 78500,
+        "z": 72500
+      }
+    },
+    {
+      "tick": 7760,
+      "playerId": 1,
+      "seq": 301,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1595
+      }
+    },
+    {
+      "tick": 7790,
+      "playerId": 1,
+      "seq": 302,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1574
+      }
+    },
+    {
+      "tick": 7810,
+      "playerId": 1,
+      "seq": 303,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1575
+      }
+    },
+    {
+      "tick": 7860,
       "playerId": 0,
-      "seq": 105,
+      "seq": 147,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 17,
@@ -2629,57 +4912,63 @@
       }
     },
     {
-      "tick": 7900,
-      "playerId": 0,
-      "seq": 106,
+      "tick": 7860,
+      "playerId": 1,
+      "seq": 304,
       "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "melee",
-          "ranged",
-          "area"
-        ]
+        "t": "heroAttack",
+        "targetId": 1574
       }
     },
     {
-      "tick": 7907,
+      "tick": 7870,
       "playerId": 1,
-      "seq": 104,
+      "seq": 305,
       "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 48,
-        "tileZ": 46,
-        "attack": "area"
+        "t": "heroAttack",
+        "targetId": 1599
       }
     },
     {
-      "tick": 7927,
+      "tick": 7910,
       "playerId": 1,
-      "seq": 105,
+      "seq": 306,
       "cmd": {
-        "t": "upgrade",
-        "towerId": 1503,
-        "track": "power"
+        "t": "heroAttack",
+        "targetId": 1574
       }
     },
     {
-      "tick": 7947,
+      "tick": 7920,
       "playerId": 1,
-      "seq": 106,
+      "seq": 307,
       "cmd": {
-        "t": "upgrade",
-        "towerId": 1503,
-        "track": "shell"
+        "t": "heroAttack",
+        "targetId": 1645
+      }
+    },
+    {
+      "tick": 7940,
+      "playerId": 1,
+      "seq": 308,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1646
+      }
+    },
+    {
+      "tick": 7950,
+      "playerId": 1,
+      "seq": 309,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1649
       }
     },
     {
       "tick": 7960,
       "playerId": 0,
-      "seq": 107,
+      "seq": 148,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 17,
@@ -2693,138 +4982,30 @@
       }
     },
     {
-      "tick": 7967,
+      "tick": 7970,
       "playerId": 1,
-      "seq": 107,
+      "seq": 310,
       "cmd": {
-        "t": "upgrade",
-        "towerId": 1503,
-        "track": "power"
+        "t": "heroAttack",
+        "targetId": 1534
       }
     },
     {
-      "tick": 7987,
+      "tick": 8010,
       "playerId": 1,
-      "seq": 108,
+      "seq": 311,
       "cmd": {
-        "t": "upgrade",
-        "towerId": 1503,
-        "track": "shell"
+        "t": "heroAttack",
+        "targetId": 1730
       }
     },
     {
-      "tick": 8007,
-      "playerId": 1,
-      "seq": 109,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 1503,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 8027,
-      "playerId": 1,
-      "seq": 110,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 1503,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 8040,
+      "tick": 8060,
       "playerId": 0,
-      "seq": 108,
+      "seq": 149,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 8207,
-      "playerId": 1,
-      "seq": 111,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 8300,
-      "playerId": 0,
-      "seq": 109,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 8327,
-      "playerId": 1,
-      "seq": 112,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 8380,
-      "playerId": 0,
-      "seq": 110,
-      "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 51,
-        "tileZ": 64,
-        "attack": "area"
-      }
-    },
-    {
-      "tick": 8400,
-      "playerId": 0,
-      "seq": 111,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 1617,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 8407,
-      "playerId": 1,
-      "seq": 113,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
         "mix": [
           "melee",
           "melee",
@@ -2835,91 +5016,160 @@
       }
     },
     {
-      "tick": 8420,
-      "playerId": 0,
-      "seq": 112,
+      "tick": 8060,
+      "playerId": 1,
+      "seq": 312,
       "cmd": {
-        "t": "upgrade",
-        "towerId": 1617,
-        "track": "shell"
+        "t": "heroAttack",
+        "targetId": 1733
+      }
+    },
+    {
+      "tick": 8070,
+      "playerId": 1,
+      "seq": 313,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1501
+      }
+    },
+    {
+      "tick": 8090,
+      "playerId": 1,
+      "seq": 314,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1648
+      }
+    },
+    {
+      "tick": 8110,
+      "playerId": 1,
+      "seq": 315,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1533
+      }
+    },
+    {
+      "tick": 8120,
+      "playerId": 0,
+      "seq": 150,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "area",
+          "melee",
+          "melee",
+          "melee",
+          "ranged"
+        ]
+      }
+    },
+    {
+      "tick": 8140,
+      "playerId": 1,
+      "seq": 316,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1731
+      }
+    },
+    {
+      "tick": 8170,
+      "playerId": 1,
+      "seq": 317,
+      "cmd": {
+        "t": "heroMove",
+        "x": 78500,
+        "z": 72500
+      }
+    },
+    {
+      "tick": 8180,
+      "playerId": 0,
+      "seq": 151,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 8270,
+      "playerId": 1,
+      "seq": 318,
+      "cmd": {
+        "t": "heroMove",
+        "x": 79500,
+        "z": 82500
+      }
+    },
+    {
+      "tick": 8280,
+      "playerId": 1,
+      "seq": 319,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1847
+      }
+    },
+    {
+      "tick": 8290,
+      "playerId": 1,
+      "seq": 320,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1846
+      }
+    },
+    {
+      "tick": 8340,
+      "playerId": 1,
+      "seq": 321,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1847
+      }
+    },
+    {
+      "tick": 8360,
+      "playerId": 1,
+      "seq": 322,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1850
+      }
+    },
+    {
+      "tick": 8400,
+      "playerId": 1,
+      "seq": 323,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1887
+      }
+    },
+    {
+      "tick": 8420,
+      "playerId": 1,
+      "seq": 324,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1886
       }
     },
     {
       "tick": 8440,
       "playerId": 0,
-      "seq": 113,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 1617,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 8460,
-      "playerId": 0,
-      "seq": 114,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 1617,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 8480,
-      "playerId": 0,
-      "seq": 115,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 1617,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 8487,
-      "playerId": 1,
-      "seq": 114,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 8500,
-      "playerId": 0,
-      "seq": 116,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 1617,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 8587,
-      "playerId": 1,
-      "seq": 115,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 8700,
-      "playerId": 0,
-      "seq": 117,
+      "seq": 152,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 17,
@@ -2933,9 +5183,104 @@
       }
     },
     {
-      "tick": 8860,
+      "tick": 8440,
+      "playerId": 1,
+      "seq": 325,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1849
+      }
+    },
+    {
+      "tick": 8480,
+      "playerId": 1,
+      "seq": 326,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1936
+      }
+    },
+    {
+      "tick": 8490,
+      "playerId": 1,
+      "seq": 327,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1934
+      }
+    },
+    {
+      "tick": 8500,
+      "playerId": 1,
+      "seq": 328,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1936
+      }
+    },
+    {
+      "tick": 8510,
+      "playerId": 1,
+      "seq": 329,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1848
+      }
+    },
+    {
+      "tick": 8520,
       "playerId": 0,
-      "seq": 118,
+      "seq": 153,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 8530,
+      "playerId": 1,
+      "seq": 330,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1890
+      }
+    },
+    {
+      "tick": 8540,
+      "playerId": 1,
+      "seq": 331,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1889
+      }
+    },
+    {
+      "tick": 8547,
+      "playerId": 1,
+      "seq": 332,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 8580,
+      "playerId": 0,
+      "seq": 154,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 17,
@@ -2949,9 +5294,87 @@
       }
     },
     {
-      "tick": 8940,
+      "tick": 8580,
+      "playerId": 1,
+      "seq": 333,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1937
+      }
+    },
+    {
+      "tick": 8640,
       "playerId": 0,
-      "seq": 119,
+      "seq": 155,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "area",
+          "melee",
+          "melee",
+          "melee",
+          "ranged"
+        ]
+      }
+    },
+    {
+      "tick": 8640,
+      "playerId": 1,
+      "seq": 334,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1959
+      }
+    },
+    {
+      "tick": 8647,
+      "playerId": 1,
+      "seq": 335,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 8660,
+      "playerId": 1,
+      "seq": 336,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1966
+      }
+    },
+    {
+      "tick": 8680,
+      "playerId": 1,
+      "seq": 337,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1965
+      }
+    },
+    {
+      "tick": 8690,
+      "playerId": 1,
+      "seq": 338,
+      "cmd": {
+        "t": "heroMove",
+        "x": 79500,
+        "z": 82500
+      }
+    },
+    {
+      "tick": 8700,
+      "playerId": 0,
+      "seq": 156,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 17,
@@ -2962,28 +5385,352 @@
           "area",
           "melee"
         ]
+      }
+    },
+    {
+      "tick": 8720,
+      "playerId": 1,
+      "seq": 339,
+      "cmd": {
+        "t": "heroMove",
+        "x": 67500,
+        "z": 88500
+      }
+    },
+    {
+      "tick": 8740,
+      "playerId": 1,
+      "seq": 340,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2006
+      }
+    },
+    {
+      "tick": 8750,
+      "playerId": 1,
+      "seq": 341,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2005
+      }
+    },
+    {
+      "tick": 8780,
+      "playerId": 1,
+      "seq": 342,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2004
+      }
+    },
+    {
+      "tick": 8800,
+      "playerId": 1,
+      "seq": 343,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2008
+      }
+    },
+    {
+      "tick": 8820,
+      "playerId": 1,
+      "seq": 344,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2006
+      }
+    },
+    {
+      "tick": 8830,
+      "playerId": 1,
+      "seq": 345,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2034
+      }
+    },
+    {
+      "tick": 8840,
+      "playerId": 0,
+      "seq": 157,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 8850,
+      "playerId": 1,
+      "seq": 346,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2031
+      }
+    },
+    {
+      "tick": 8860,
+      "playerId": 1,
+      "seq": 347,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2034
+      }
+    },
+    {
+      "tick": 8870,
+      "playerId": 1,
+      "seq": 348,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2066
+      }
+    },
+    {
+      "tick": 8890,
+      "playerId": 1,
+      "seq": 349,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2065
+      }
+    },
+    {
+      "tick": 8900,
+      "playerId": 0,
+      "seq": 158,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 8900,
+      "playerId": 1,
+      "seq": 350,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2064
+      }
+    },
+    {
+      "tick": 8910,
+      "playerId": 1,
+      "seq": 351,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2065
+      }
+    },
+    {
+      "tick": 8920,
+      "playerId": 1,
+      "seq": 352,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2092
+      }
+    },
+    {
+      "tick": 8930,
+      "playerId": 1,
+      "seq": 353,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2032
+      }
+    },
+    {
+      "tick": 8947,
+      "playerId": 1,
+      "seq": 354,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 8960,
+      "playerId": 0,
+      "seq": 159,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 8960,
+      "playerId": 1,
+      "seq": 355,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2093
+      }
+    },
+    {
+      "tick": 8970,
+      "playerId": 1,
+      "seq": 356,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2090
+      }
+    },
+    {
+      "tick": 8990,
+      "playerId": 1,
+      "seq": 357,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2107
+      }
+    },
+    {
+      "tick": 9010,
+      "playerId": 1,
+      "seq": 358,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2110
       }
     },
     {
       "tick": 9020,
       "playerId": 0,
-      "seq": 120,
+      "seq": 160,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 17,
         "mix": [
           "melee",
           "melee",
+          "melee",
           "ranged",
-          "area",
-          "melee"
+          "area"
         ]
       }
     },
     {
-      "tick": 9120,
+      "tick": 9020,
+      "playerId": 1,
+      "seq": 359,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2067
+      }
+    },
+    {
+      "tick": 9030,
+      "playerId": 1,
+      "seq": 360,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2094
+      }
+    },
+    {
+      "tick": 9070,
+      "playerId": 1,
+      "seq": 361,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2108
+      }
+    },
+    {
+      "tick": 9080,
+      "playerId": 1,
+      "seq": 362,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2156
+      }
+    },
+    {
+      "tick": 9090,
+      "playerId": 1,
+      "seq": 363,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2153
+      }
+    },
+    {
+      "tick": 9100,
       "playerId": 0,
-      "seq": 121,
+      "seq": 161,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "melee",
+          "ranged",
+          "area"
+        ]
+      }
+    },
+    {
+      "tick": 9110,
+      "playerId": 1,
+      "seq": 364,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2152
+      }
+    },
+    {
+      "tick": 9130,
+      "playerId": 1,
+      "seq": 365,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2154
+      }
+    },
+    {
+      "tick": 9140,
+      "playerId": 1,
+      "seq": 366,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2186
+      }
+    },
+    {
+      "tick": 9160,
+      "playerId": 0,
+      "seq": 162,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 17,
@@ -2997,105 +5744,305 @@
       }
     },
     {
-      "tick": 9247,
+      "tick": 9160,
       "playerId": 1,
-      "seq": 116,
+      "seq": 367,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2183
+      }
+    },
+    {
+      "tick": 9170,
+      "playerId": 1,
+      "seq": 368,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2182
+      }
+    },
+    {
+      "tick": 9180,
+      "playerId": 1,
+      "seq": 369,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2155
+      }
+    },
+    {
+      "tick": 9190,
+      "playerId": 1,
+      "seq": 370,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2225
+      }
+    },
+    {
+      "tick": 9200,
+      "playerId": 1,
+      "seq": 371,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2185
+      }
+    },
+    {
+      "tick": 9220,
+      "playerId": 0,
+      "seq": 163,
       "cmd": {
         "t": "orderCreeps",
-        "barracksId": 18,
+        "barracksId": 17,
         "mix": [
           "melee",
           "melee",
+          "melee",
           "ranged",
-          "area",
-          "melee"
+          "area"
         ]
       }
     },
     {
-      "tick": 9367,
+      "tick": 9220,
       "playerId": 1,
-      "seq": 117,
+      "seq": 372,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2221
+      }
+    },
+    {
+      "tick": 9240,
+      "playerId": 1,
+      "seq": 373,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2251
+      }
+    },
+    {
+      "tick": 9270,
+      "playerId": 1,
+      "seq": 374,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2250
+      }
+    },
+    {
+      "tick": 9280,
+      "playerId": 0,
+      "seq": 164,
       "cmd": {
         "t": "orderCreeps",
-        "barracksId": 18,
+        "barracksId": 17,
         "mix": [
           "melee",
           "melee",
+          "melee",
           "ranged",
-          "area",
-          "melee"
+          "area"
         ]
+      }
+    },
+    {
+      "tick": 9280,
+      "playerId": 1,
+      "seq": 375,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2224
+      }
+    },
+    {
+      "tick": 9300,
+      "playerId": 1,
+      "seq": 376,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2285
+      }
+    },
+    {
+      "tick": 9320,
+      "playerId": 1,
+      "seq": 377,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2284
+      }
+    },
+    {
+      "tick": 9330,
+      "playerId": 1,
+      "seq": 378,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2283
+      }
+    },
+    {
+      "tick": 9340,
+      "playerId": 0,
+      "seq": 165,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "melee",
+          "ranged",
+          "area"
+        ]
+      }
+    },
+    {
+      "tick": 9340,
+      "playerId": 1,
+      "seq": 379,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2253
+      }
+    },
+    {
+      "tick": 9360,
+      "playerId": 1,
+      "seq": 380,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2287
+      }
+    },
+    {
+      "tick": 9380,
+      "playerId": 1,
+      "seq": 381,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2312
+      }
+    },
+    {
+      "tick": 9390,
+      "playerId": 1,
+      "seq": 382,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2315
       }
     },
     {
       "tick": 9400,
       "playerId": 0,
-      "seq": 122,
+      "seq": 166,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 17,
         "mix": [
           "melee",
           "melee",
+          "melee",
           "ranged",
-          "area",
-          "melee"
+          "area"
         ]
       }
     },
     {
-      "tick": 9467,
+      "tick": 9410,
       "playerId": 1,
-      "seq": 118,
+      "seq": 383,
       "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
+        "t": "heroAttack",
+        "targetId": 2286
       }
     },
     {
-      "tick": 9527,
+      "tick": 9420,
       "playerId": 1,
-      "seq": 119,
+      "seq": 384,
       "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
+        "t": "heroAttack",
+        "targetId": 2341
       }
     },
     {
-      "tick": 9587,
+      "tick": 9430,
       "playerId": 1,
-      "seq": 120,
+      "seq": 385,
       "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
+        "t": "heroAttack",
+        "targetId": 2286
       }
     },
     {
-      "tick": 9800,
+      "tick": 9440,
+      "playerId": 1,
+      "seq": 386,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2341
+      }
+    },
+    {
+      "tick": 9450,
+      "playerId": 1,
+      "seq": 387,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2342
+      }
+    },
+    {
+      "tick": 9460,
       "playerId": 0,
-      "seq": 123,
+      "seq": 167,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "area",
+          "melee",
+          "melee",
+          "melee",
+          "ranged"
+        ]
+      }
+    },
+    {
+      "tick": 9460,
+      "playerId": 1,
+      "seq": 388,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2371
+      }
+    },
+    {
+      "tick": 9480,
+      "playerId": 1,
+      "seq": 389,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2343
+      }
+    },
+    {
+      "tick": 9490,
+      "playerId": 1,
+      "seq": 390,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2369
+      }
+    },
+    {
+      "tick": 9500,
+      "playerId": 0,
+      "seq": 168,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 17,
@@ -3109,64 +6056,213 @@
       }
     },
     {
-      "tick": 9887,
+      "tick": 9500,
       "playerId": 1,
-      "seq": 121,
+      "seq": 391,
       "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 49,
-        "tileZ": 47,
-        "attack": "area"
+        "t": "heroAttack",
+        "targetId": 2343
       }
     },
     {
-      "tick": 9907,
+      "tick": 9520,
       "playerId": 1,
-      "seq": 122,
+      "seq": 392,
       "cmd": {
-        "t": "upgrade",
-        "towerId": 1935,
-        "track": "power"
+        "t": "heroAttack",
+        "targetId": 2400
       }
     },
     {
-      "tick": 9927,
+      "tick": 9530,
       "playerId": 1,
-      "seq": 123,
+      "seq": 393,
       "cmd": {
-        "t": "upgrade",
-        "towerId": 1935,
-        "track": "shell"
+        "t": "heroAttack",
+        "targetId": 2399
       }
     },
     {
-      "tick": 9947,
+      "tick": 9550,
       "playerId": 1,
-      "seq": 124,
+      "seq": 394,
       "cmd": {
-        "t": "upgrade",
-        "towerId": 1935,
-        "track": "power"
+        "t": "heroAttack",
+        "targetId": 2398
       }
     },
     {
-      "tick": 9967,
-      "playerId": 1,
-      "seq": 125,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 1935,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 9987,
-      "playerId": 1,
-      "seq": 126,
+      "tick": 9560,
+      "playerId": 0,
+      "seq": 169,
       "cmd": {
         "t": "orderCreeps",
-        "barracksId": 18,
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "melee",
+          "ranged",
+          "area"
+        ]
+      }
+    },
+    {
+      "tick": 9560,
+      "playerId": 1,
+      "seq": 395,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2402
+      }
+    },
+    {
+      "tick": 9580,
+      "playerId": 1,
+      "seq": 396,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2429
+      }
+    },
+    {
+      "tick": 9600,
+      "playerId": 1,
+      "seq": 397,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2373
+      }
+    },
+    {
+      "tick": 9610,
+      "playerId": 1,
+      "seq": 398,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2428
+      }
+    },
+    {
+      "tick": 9620,
+      "playerId": 1,
+      "seq": 399,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2373
+      }
+    },
+    {
+      "tick": 9630,
+      "playerId": 1,
+      "seq": 400,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2428
+      }
+    },
+    {
+      "tick": 9640,
+      "playerId": 0,
+      "seq": 170,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "ranged",
+          "area",
+          "melee",
+          "melee",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 9640,
+      "playerId": 1,
+      "seq": 401,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2456
+      }
+    },
+    {
+      "tick": 9650,
+      "playerId": 1,
+      "seq": 402,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2458
+      }
+    },
+    {
+      "tick": 9660,
+      "playerId": 0,
+      "seq": 171,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "ranged",
+          "area",
+          "melee",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 9670,
+      "playerId": 1,
+      "seq": 403,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2457
+      }
+    },
+    {
+      "tick": 9680,
+      "playerId": 1,
+      "seq": 404,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2481
+      }
+    },
+    {
+      "tick": 9690,
+      "playerId": 1,
+      "seq": 405,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2478
+      }
+    },
+    {
+      "tick": 9700,
+      "playerId": 1,
+      "seq": 406,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2477
+      }
+    },
+    {
+      "tick": 9710,
+      "playerId": 1,
+      "seq": 407,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2455
+      }
+    },
+    {
+      "tick": 9720,
+      "playerId": 0,
+      "seq": 172,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
         "mix": [
           "melee",
           "melee",
@@ -3174,509 +6270,767 @@
           "area",
           "melee"
         ]
+      }
+    },
+    {
+      "tick": 9720,
+      "playerId": 1,
+      "seq": 408,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2480
+      }
+    },
+    {
+      "tick": 9730,
+      "playerId": 1,
+      "seq": 409,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2508
+      }
+    },
+    {
+      "tick": 9740,
+      "playerId": 1,
+      "seq": 410,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2507
+      }
+    },
+    {
+      "tick": 9750,
+      "playerId": 1,
+      "seq": 411,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2506
+      }
+    },
+    {
+      "tick": 9770,
+      "playerId": 1,
+      "seq": 412,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2430
+      }
+    },
+    {
+      "tick": 9780,
+      "playerId": 0,
+      "seq": 173,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 9790,
+      "playerId": 1,
+      "seq": 413,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2551
+      }
+    },
+    {
+      "tick": 9810,
+      "playerId": 1,
+      "seq": 414,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2550
+      }
+    },
+    {
+      "tick": 9820,
+      "playerId": 0,
+      "seq": 174,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 9830,
+      "playerId": 1,
+      "seq": 415,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2574
+      }
+    },
+    {
+      "tick": 9840,
+      "playerId": 1,
+      "seq": 416,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2570
+      }
+    },
+    {
+      "tick": 9850,
+      "playerId": 1,
+      "seq": 417,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2509
+      }
+    },
+    {
+      "tick": 9860,
+      "playerId": 1,
+      "seq": 418,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2573
+      }
+    },
+    {
+      "tick": 9880,
+      "playerId": 0,
+      "seq": 175,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "melee",
+          "ranged",
+          "area"
+        ]
+      }
+    },
+    {
+      "tick": 9890,
+      "playerId": 1,
+      "seq": 419,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2600
+      }
+    },
+    {
+      "tick": 9910,
+      "playerId": 1,
+      "seq": 420,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2572
+      }
+    },
+    {
+      "tick": 9920,
+      "playerId": 0,
+      "seq": 176,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "ranged",
+          "area",
+          "melee",
+          "melee",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 9920,
+      "playerId": 1,
+      "seq": 421,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2638
+      }
+    },
+    {
+      "tick": 9930,
+      "playerId": 1,
+      "seq": 422,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2599
+      }
+    },
+    {
+      "tick": 9940,
+      "playerId": 0,
+      "seq": 177,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "ranged",
+          "area",
+          "melee",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 9950,
+      "playerId": 1,
+      "seq": 423,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2667
+      }
+    },
+    {
+      "tick": 9970,
+      "playerId": 1,
+      "seq": 424,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2598
+      }
+    },
+    {
+      "tick": 9980,
+      "playerId": 0,
+      "seq": 178,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 9980,
+      "playerId": 1,
+      "seq": 425,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 2636
       }
     }
   ],
   "hashes": {
-    "20": "024480fd",
-    "40": "1258ba03",
-    "60": "12b1eb22",
-    "80": "2813f58a",
-    "100": "a11e7072",
-    "120": "d617542e",
-    "140": "706b4cda",
-    "160": "62f569ee",
-    "180": "b6cb4326",
-    "200": "43edbdfa",
-    "220": "6a914ade",
-    "240": "4e01cba2",
-    "260": "848d69d9",
-    "280": "d253c105",
-    "300": "3347d0d6",
-    "320": "9a274abf",
-    "340": "5640ca68",
-    "360": "307bd0e7",
-    "380": "456522f6",
-    "400": "2ed43c24",
-    "420": "e91055f5",
-    "440": "1b7b6f48",
-    "460": "a2dabfdf",
-    "480": "c710a09b",
-    "500": "1942e089",
-    "520": "12b5cb72",
-    "540": "acf4cea1",
-    "560": "95beb02b",
-    "580": "9f5b8140",
-    "600": "67038af1",
-    "620": "782a348a",
-    "640": "2ed8062e",
-    "660": "5180b684",
-    "680": "a04532d9",
-    "700": "b712dc9c",
-    "720": "31e9f115",
-    "740": "83916e7d",
-    "760": "f1127357",
-    "780": "1e094ee6",
-    "800": "c90b9aeb",
-    "820": "bbc88708",
-    "840": "6ecfa0b6",
-    "860": "8ceab6a3",
-    "880": "5ff7e4bc",
-    "900": "d12fb42b",
-    "920": "e3728324",
-    "940": "d76823d0",
-    "960": "40a11911",
-    "980": "e58540ce",
-    "1000": "83ab5368",
-    "1020": "123d4b4c",
-    "1040": "b2ae17b8",
-    "1060": "19dd8035",
-    "1080": "440dc8f7",
-    "1100": "d6d5abab",
-    "1120": "053f9734",
-    "1140": "b8108626",
-    "1160": "0e483d5d",
-    "1180": "806a838e",
-    "1200": "6e9f8829",
-    "1220": "43f3f46d",
-    "1240": "0b8b5d89",
-    "1260": "51915186",
-    "1280": "4b0bf60a",
-    "1300": "31e6cc19",
-    "1320": "3db3343f",
-    "1340": "301f2284",
-    "1360": "1a0e778c",
-    "1380": "f57869a2",
-    "1400": "36bce6b9",
-    "1420": "86447ec5",
-    "1440": "57d0db6d",
-    "1460": "66c04491",
-    "1480": "45480a3e",
-    "1500": "75bc4f0a",
-    "1520": "bbc6a13f",
-    "1540": "0450f53d",
-    "1560": "635d7a9f",
-    "1580": "f99d36ef",
-    "1600": "da753d7f",
-    "1620": "f7a89d71",
-    "1640": "e7a79375",
-    "1660": "e676ef80",
-    "1680": "842e9bed",
-    "1700": "7be65d2e",
-    "1720": "7b16d903",
-    "1740": "9d45175f",
-    "1760": "7bcd4be2",
-    "1780": "e17bd1a6",
-    "1800": "982ef257",
-    "1820": "88d87271",
-    "1840": "5246bbd9",
-    "1860": "8066c503",
-    "1880": "453e5709",
-    "1900": "ce568581",
-    "1920": "b1099c58",
-    "1940": "4e6eeeb4",
-    "1960": "f5d58d41",
-    "1980": "a1e0386a",
-    "2000": "88bfcf3a",
-    "2020": "ab20a043",
-    "2040": "33da94e2",
-    "2060": "da7d228e",
-    "2080": "5688af88",
-    "2100": "b7b96edc",
-    "2120": "ce2c7d29",
-    "2140": "b8b3b215",
-    "2160": "a7ff4022",
-    "2180": "d5c635ad",
-    "2200": "9f67ba94",
-    "2220": "43cb4309",
-    "2240": "c174c4c6",
-    "2260": "3904f545",
-    "2280": "b89a6cfa",
-    "2300": "d5c3acaa",
-    "2320": "0c48d4d5",
-    "2340": "3d706878",
-    "2360": "d6efcc8f",
-    "2380": "6e3763cd",
-    "2400": "53835577",
-    "2420": "477d47e8",
-    "2440": "66c0ef4f",
-    "2460": "bdc115af",
-    "2480": "39e99152",
-    "2500": "6820e40f",
-    "2520": "7069b318",
-    "2540": "ad1279de",
-    "2560": "9f53934c",
-    "2580": "27406094",
-    "2600": "037551f1",
-    "2620": "efe2124d",
-    "2640": "213780a7",
-    "2660": "7d3aef02",
-    "2680": "495ebefa",
-    "2700": "4f3411a4",
-    "2720": "520a3b99",
-    "2740": "81111d6b",
-    "2760": "73064a5d",
-    "2780": "32cb8700",
-    "2800": "b0613c93",
-    "2820": "87b7240b",
-    "2840": "7ad401e1",
-    "2860": "e49eb1bb",
-    "2880": "9b1c08c7",
-    "2900": "869e46ee",
-    "2920": "3b093a00",
-    "2940": "aacd7a02",
-    "2960": "bc68f7a0",
-    "2980": "6441c531",
-    "3000": "ff6b23db",
-    "3020": "94486545",
-    "3040": "1c2922a6",
-    "3060": "4c87bd12",
-    "3080": "44303ec5",
-    "3100": "5a4e4a8d",
-    "3120": "ff63c279",
-    "3140": "947c6694",
-    "3160": "8b3a11b0",
-    "3180": "92a86a33",
-    "3200": "8b24a838",
-    "3220": "9e90fc47",
-    "3240": "923f69f1",
-    "3260": "27aee2cb",
-    "3280": "575cddfb",
-    "3300": "81490721",
-    "3320": "f0c72860",
-    "3340": "caeb4452",
-    "3360": "e4f33c1e",
-    "3380": "8b6594f7",
-    "3400": "c0322507",
-    "3420": "d117ffb6",
-    "3440": "e05057e4",
-    "3460": "5f9d9bcb",
-    "3480": "5282d077",
-    "3500": "dda6f787",
-    "3520": "6be9cd3c",
-    "3540": "254eacf4",
-    "3560": "484d4832",
-    "3580": "da674fa8",
-    "3600": "a2dfe115",
-    "3620": "bd5dc1f0",
-    "3640": "296bb0d2",
-    "3660": "2dc1c045",
-    "3680": "fa70a582",
-    "3700": "8ff24933",
-    "3720": "ca8b6146",
-    "3740": "5532aceb",
-    "3760": "d333af35",
-    "3780": "2c9fa22b",
-    "3800": "599bccba",
-    "3820": "9fa993c5",
-    "3840": "cc93de3a",
-    "3860": "86c2db67",
-    "3880": "44a2b26a",
-    "3900": "6280cc4c",
-    "3920": "aa744fbc",
-    "3940": "a446ec9f",
-    "3960": "6e5fbf85",
-    "3980": "e1f28775",
-    "4000": "11cb9158",
-    "4020": "9041c43d",
-    "4040": "6c972284",
-    "4060": "ac68c7a2",
-    "4080": "b27910b2",
-    "4100": "62a6b3fb",
-    "4120": "edfafc4a",
-    "4140": "a2fa2c03",
-    "4160": "fb5978cb",
-    "4180": "1adf53ab",
-    "4200": "c1434fe7",
-    "4220": "c19bfbe1",
-    "4240": "86eb03a7",
-    "4260": "74a3af6f",
-    "4280": "5bc2b826",
-    "4300": "a2238af3",
-    "4320": "9c6aabcf",
-    "4340": "f660f974",
-    "4360": "ab9668ed",
-    "4380": "63c4c791",
-    "4400": "3852ae1c",
-    "4420": "a6d72b4f",
-    "4440": "f6d5bccd",
-    "4460": "0f11dd47",
-    "4480": "e3a80b8d",
-    "4500": "b62eb0ed",
-    "4520": "c5a367d1",
-    "4540": "2327b89a",
-    "4560": "f7dee5b2",
-    "4580": "51b2ecb0",
-    "4600": "94880e02",
-    "4620": "6c246b8a",
-    "4640": "d3d74b68",
-    "4660": "93a7c189",
-    "4680": "036e0513",
-    "4700": "d8d18e18",
-    "4720": "4d5efd41",
-    "4740": "641cb382",
-    "4760": "f7f25b92",
-    "4780": "dc15e900",
-    "4800": "688019b0",
-    "4820": "0622ab4d",
-    "4840": "6f67586c",
-    "4860": "c3490bd8",
-    "4880": "c9336368",
-    "4900": "3b5a1e7c",
-    "4920": "51322d39",
-    "4940": "91f1955f",
-    "4960": "08d8a5ea",
-    "4980": "fb1e5059",
-    "5000": "f7a11bce",
-    "5020": "4a9b97c4",
-    "5040": "2dff0181",
-    "5060": "3db524e3",
-    "5080": "4ee55fb2",
-    "5100": "533afc2a",
-    "5120": "76e5f0c3",
-    "5140": "5758e9bf",
-    "5160": "79fd8674",
-    "5180": "4977d7ab",
-    "5200": "00cba5c1",
-    "5220": "40e9ac14",
-    "5240": "b3026dc1",
-    "5260": "a90ed095",
-    "5280": "692d8e2a",
-    "5300": "fdbbedd1",
-    "5320": "308806ee",
-    "5340": "bee45b19",
-    "5360": "0077f726",
-    "5380": "bd123cfa",
-    "5400": "5319af53",
-    "5420": "1b07eb4b",
-    "5440": "8b74d464",
-    "5460": "5a8870fc",
-    "5480": "f4231252",
-    "5500": "b7fb91bd",
-    "5520": "836a801b",
-    "5540": "2d68aaed",
-    "5560": "2cfcaaeb",
-    "5580": "05524812",
-    "5600": "37e225b0",
-    "5620": "6e433b4d",
-    "5640": "19b7ba52",
-    "5660": "2f8e7d3f",
-    "5680": "e730e15d",
-    "5700": "156648a7",
-    "5720": "4cda0571",
-    "5740": "bfb40ec6",
-    "5760": "88e74b7f",
-    "5780": "1e8b64f3",
-    "5800": "11016878",
-    "5820": "5d1565c1",
-    "5840": "295c5c2b",
-    "5860": "f4605413",
-    "5880": "d8ac291c",
-    "5900": "c2f523e3",
-    "5920": "3f86c805",
-    "5940": "955bfccc",
-    "5960": "0cbef334",
-    "5980": "b6bd7c36",
-    "6000": "e5d60e6c",
-    "6020": "27ded7e8",
-    "6040": "026c6ecb",
-    "6060": "f7496053",
-    "6080": "3f1f143a",
-    "6100": "908879a7",
-    "6120": "63ad7215",
-    "6140": "b990b51e",
-    "6160": "e22b4e0e",
-    "6180": "fee1f253",
-    "6200": "3cf1689c",
-    "6220": "4208cefb",
-    "6240": "d40a4ecd",
-    "6260": "6e70a965",
-    "6280": "6ab2ef3b",
-    "6300": "f1d365df",
-    "6320": "0a20b58a",
-    "6340": "7b4379a3",
-    "6360": "d038c57b",
-    "6380": "2d49f12c",
-    "6400": "41efbbe2",
-    "6420": "a94b063f",
-    "6440": "3f0cf7e6",
-    "6460": "7ae7f9c6",
-    "6480": "2128ac38",
-    "6500": "7487619c",
-    "6520": "d08e5124",
-    "6540": "14d2070c",
-    "6560": "711bb2d6",
-    "6580": "12ca9564",
-    "6600": "cf57e758",
-    "6620": "357c8a12",
-    "6640": "2fc084e4",
-    "6660": "8e93d62a",
-    "6680": "b740a92f",
-    "6700": "cdb05463",
-    "6720": "a08b97f3",
-    "6740": "4443c4aa",
-    "6760": "f5719965",
-    "6780": "70f210c9",
-    "6800": "7ff365d3",
-    "6820": "ad9d8c22",
-    "6840": "9c76593c",
-    "6860": "38ad3c50",
-    "6880": "48b188f8",
-    "6900": "9e666e44",
-    "6920": "d19cbb30",
-    "6940": "2119c72c",
-    "6960": "58602800",
-    "6980": "2ddd4653",
-    "7000": "75956c17",
-    "7020": "e6da3ce5",
-    "7040": "ad70e193",
-    "7060": "d383e988",
-    "7080": "71d74ecb",
-    "7100": "12558c4f",
-    "7120": "075faaf7",
-    "7140": "93cf72f4",
-    "7160": "179f232b",
-    "7180": "797ecd8c",
-    "7200": "7a8b6f69",
-    "7220": "723015a4",
-    "7240": "535d4d61",
-    "7260": "af629b96",
-    "7280": "741ecec7",
-    "7300": "9a3723aa",
-    "7320": "568a7bdd",
-    "7340": "e4a59547",
-    "7360": "c2b20486",
-    "7380": "2753d90e",
-    "7400": "ca25aee2",
-    "7420": "c7e4bb72",
-    "7440": "96e0e0e2",
-    "7460": "3c9454d2",
-    "7480": "14ced079",
-    "7500": "6420ca54",
-    "7520": "9a9cb5e8",
-    "7540": "34bea52f",
-    "7560": "bf5136aa",
-    "7580": "df4f3c46",
-    "7600": "f0168666",
-    "7620": "4fb16f9f",
-    "7640": "5bad4bfe",
-    "7660": "83c4ba10",
-    "7680": "20ac566f",
-    "7700": "06f35b4a",
-    "7720": "3c4c1dbc",
-    "7740": "a2113b52",
-    "7760": "9f77e820",
-    "7780": "f77db178",
-    "7800": "1ec870a4",
-    "7820": "dc175af0",
-    "7840": "0ac08aa9",
-    "7860": "f50a52dc",
-    "7880": "006d9223",
-    "7900": "beaff294",
-    "7920": "eb91db01",
-    "7940": "d8ce07b6",
-    "7960": "e2ceb69e",
-    "7980": "d0401e93",
-    "8000": "05005da2",
-    "8020": "40520c94",
-    "8040": "be6d354d",
-    "8060": "57e5db45",
-    "8080": "b710f78c",
-    "8100": "9e32acb1",
-    "8120": "211d0e9f",
-    "8140": "a71a5eb3",
-    "8160": "053ec39c",
-    "8180": "c02d98f4",
-    "8200": "c7583ff3",
-    "8220": "45bdf8b7",
-    "8240": "fda1f15f",
-    "8260": "9a0dd8db",
-    "8280": "60dbf288",
-    "8300": "f9962672",
-    "8320": "93acf44f",
-    "8340": "9536660b",
-    "8360": "f29a82ee",
-    "8380": "c2dbe2a6",
-    "8400": "50255c79",
-    "8420": "35fdd9c4",
-    "8440": "e33d1d05",
-    "8460": "67ad01f5",
-    "8480": "320a51ad",
-    "8500": "524af316",
-    "8520": "75bf8e48",
-    "8540": "87876bbd",
-    "8560": "46922fb4",
-    "8580": "0a11c25e",
-    "8600": "9ad35caa",
-    "8620": "c3d8c9a9",
-    "8640": "98c23b70",
-    "8660": "920afcb1",
-    "8680": "08f1b4f4",
-    "8700": "f93488c1",
-    "8720": "fe0f6fa3",
-    "8740": "1fdda4d2",
-    "8760": "962f6d96",
-    "8780": "78b59497",
-    "8800": "4f73e476",
-    "8820": "d746e899",
-    "8840": "6378c441",
-    "8860": "788f254d",
-    "8880": "af47afbc",
-    "8900": "e7c44902",
-    "8920": "9855edaf",
-    "8940": "3c9ba08a",
-    "8960": "99f8340b",
-    "8980": "60f42365",
-    "9000": "54a98bfd",
-    "9020": "e9588452",
-    "9040": "0d9cbb38",
-    "9060": "87c83603",
-    "9080": "f279e3d5",
-    "9100": "3b6034b3",
-    "9120": "3db9f795",
-    "9140": "d3ad4d34",
-    "9160": "0f4af05b",
-    "9180": "e750c896",
-    "9200": "115cbf4a",
-    "9220": "6f5b3d6a",
-    "9240": "0d8e3935",
-    "9260": "29cb0ff3",
-    "9280": "0a8fa408",
-    "9300": "4b7f0c8e",
-    "9320": "6627dce4",
-    "9340": "dae548e6",
-    "9360": "0c8dc354",
-    "9380": "47e0d1e3",
-    "9400": "4462de0b",
-    "9420": "d82be13a",
-    "9440": "b55b5e8e",
-    "9460": "a58a3e26",
-    "9480": "8a0baac8",
-    "9500": "93734d93",
-    "9520": "e841b08a",
-    "9540": "bd55285a",
-    "9560": "aa10b46c",
-    "9580": "307743fa",
-    "9600": "efeed51f",
-    "9620": "52553326",
-    "9640": "53a38741",
-    "9660": "9046242b",
-    "9680": "ab6f6170",
-    "9700": "5eee85ae",
-    "9720": "1a51201d",
-    "9740": "3bb53d23",
-    "9760": "1911444b",
-    "9780": "7de98ec8",
-    "9800": "93d27527",
-    "9820": "3fe20a7e",
-    "9840": "5f9dfaa3",
-    "9860": "daa67f3b",
-    "9880": "6494cdfd",
-    "9900": "791cb942",
-    "9920": "0f0eba61",
-    "9940": "8bbc1b63",
-    "9960": "61f4d38f",
-    "9980": "6fdb92b8",
-    "10000": "313aa306"
+    "20": "9091dffe",
+    "40": "5ecc9fa0",
+    "60": "32850f39",
+    "80": "dc2c8911",
+    "100": "d0ce79d9",
+    "120": "bda8fcfd",
+    "140": "6b197945",
+    "160": "daf482f6",
+    "180": "e444b00e",
+    "200": "5ff037f5",
+    "220": "016a1640",
+    "240": "d245c815",
+    "260": "a0bc9b3b",
+    "280": "74416ff2",
+    "300": "9ced06a0",
+    "320": "92c9fdc2",
+    "340": "dee32abc",
+    "360": "2afdb6c7",
+    "380": "c9332203",
+    "400": "aa11d4ea",
+    "420": "78208086",
+    "440": "4a349838",
+    "460": "32fe8ab3",
+    "480": "179ec3b5",
+    "500": "d2bc363e",
+    "520": "275a0385",
+    "540": "016695cc",
+    "560": "21ff9a20",
+    "580": "f2bae284",
+    "600": "b6b325a2",
+    "620": "5436f4ff",
+    "640": "89829d11",
+    "660": "f47f5190",
+    "680": "eed4e13a",
+    "700": "0e34a085",
+    "720": "0b241384",
+    "740": "b46d5cf4",
+    "760": "80a0474c",
+    "780": "5660c8bf",
+    "800": "950f59cc",
+    "820": "5ce52d48",
+    "840": "62c34420",
+    "860": "ab19826f",
+    "880": "33373390",
+    "900": "5f487d6d",
+    "920": "77b3a9af",
+    "940": "1525e3f4",
+    "960": "d5784feb",
+    "980": "5974eecb",
+    "1000": "c4e5e5dd",
+    "1020": "165f3b12",
+    "1040": "c73103ff",
+    "1060": "09afa3c3",
+    "1080": "0837476a",
+    "1100": "ed427cb9",
+    "1120": "db7378c0",
+    "1140": "30627643",
+    "1160": "be2007a4",
+    "1180": "07fb88ad",
+    "1200": "ba51c45b",
+    "1220": "af6679ab",
+    "1240": "932a2c41",
+    "1260": "4274713c",
+    "1280": "81f3c1f2",
+    "1300": "4dc0ccff",
+    "1320": "e14c0d6b",
+    "1340": "7d32021e",
+    "1360": "bb2f4a89",
+    "1380": "85b883d3",
+    "1400": "64c6e285",
+    "1420": "f8aba3fe",
+    "1440": "cedd7411",
+    "1460": "5156e346",
+    "1480": "f9245730",
+    "1500": "48cddf8f",
+    "1520": "ec38b6cc",
+    "1540": "142d247f",
+    "1560": "d9ba2a8f",
+    "1580": "382f4085",
+    "1600": "763db311",
+    "1620": "61f78d8c",
+    "1640": "55f1f130",
+    "1660": "6f112ca7",
+    "1680": "b758d0b1",
+    "1700": "27003bb8",
+    "1720": "2f04e806",
+    "1740": "6df30744",
+    "1760": "be5c6c34",
+    "1780": "c7631b06",
+    "1800": "07df8328",
+    "1820": "dc93b23f",
+    "1840": "29d24357",
+    "1860": "f4f19cd0",
+    "1880": "3aed4baf",
+    "1900": "1510337a",
+    "1920": "c23c9ad7",
+    "1940": "4edbc9cd",
+    "1960": "471cc5d0",
+    "1980": "b30eee51",
+    "2000": "43c1084c",
+    "2020": "670896b4",
+    "2040": "615ad79a",
+    "2060": "01e8c693",
+    "2080": "61984514",
+    "2100": "d730b9c8",
+    "2120": "c2293eb3",
+    "2140": "b7f01898",
+    "2160": "d6d54179",
+    "2180": "0364ec68",
+    "2200": "f42cb997",
+    "2220": "72f180fe",
+    "2240": "dec0aacf",
+    "2260": "7ba316d8",
+    "2280": "7467fd80",
+    "2300": "0f618bee",
+    "2320": "64e19574",
+    "2340": "0b3f3131",
+    "2360": "027b9567",
+    "2380": "e1b7670d",
+    "2400": "9ab774f7",
+    "2420": "730325e5",
+    "2440": "b8d31297",
+    "2460": "00f9d5d0",
+    "2480": "25ec98e6",
+    "2500": "bb3344a1",
+    "2520": "45154ab1",
+    "2540": "82f55340",
+    "2560": "7b33da05",
+    "2580": "3e6e5780",
+    "2600": "e492c6f9",
+    "2620": "363877ea",
+    "2640": "024bece0",
+    "2660": "cc61ff5d",
+    "2680": "63cd7daf",
+    "2700": "7c188f0c",
+    "2720": "ec19a57c",
+    "2740": "8e2594f7",
+    "2760": "9b4148db",
+    "2780": "1db198cc",
+    "2800": "5347a40a",
+    "2820": "a0d69528",
+    "2840": "8fe25c1c",
+    "2860": "5c4fb393",
+    "2880": "4384c945",
+    "2900": "0b4d065f",
+    "2920": "67352007",
+    "2940": "c1b4dcb1",
+    "2960": "738115f0",
+    "2980": "eb918bde",
+    "3000": "36ef347a",
+    "3020": "6e9989bf",
+    "3040": "a53846f5",
+    "3060": "318805be",
+    "3080": "34333e83",
+    "3100": "ee84af29",
+    "3120": "d4a57e03",
+    "3140": "3c869bc8",
+    "3160": "6c960b32",
+    "3180": "a67118bd",
+    "3200": "f1db1a94",
+    "3220": "aba2d001",
+    "3240": "41b20cef",
+    "3260": "62c69f00",
+    "3280": "c27a377f",
+    "3300": "f1630978",
+    "3320": "fd2bc1d7",
+    "3340": "deebc690",
+    "3360": "deeb8d47",
+    "3380": "4745417c",
+    "3400": "e939f6c8",
+    "3420": "dd0737d4",
+    "3440": "5f0eb387",
+    "3460": "4bb28075",
+    "3480": "9b10e4bb",
+    "3500": "8416aa84",
+    "3520": "63b00ba9",
+    "3540": "29bc23ba",
+    "3560": "b0946c21",
+    "3580": "a07329e3",
+    "3600": "762cd140",
+    "3620": "006ca287",
+    "3640": "1d0c628d",
+    "3660": "1d2b0de6",
+    "3680": "cee4727a",
+    "3700": "bb2dd523",
+    "3720": "8648273b",
+    "3740": "9c5ad970",
+    "3760": "3070932d",
+    "3780": "4a730a91",
+    "3800": "20a082e2",
+    "3820": "579f87b3",
+    "3840": "ee57b183",
+    "3860": "b6d990c4",
+    "3880": "89b79ce0",
+    "3900": "7b856fe2",
+    "3920": "e6c122b1",
+    "3940": "e956177c",
+    "3960": "f30cf50b",
+    "3980": "0650243f",
+    "4000": "973697d1",
+    "4020": "647e67cd",
+    "4040": "6df22f4a",
+    "4060": "ac2616db",
+    "4080": "6473afa7",
+    "4100": "bc4f0421",
+    "4120": "6abbb8cf",
+    "4140": "d9fa3b7f",
+    "4160": "b9c8a94f",
+    "4180": "2ccacfdb",
+    "4200": "3dab1e60",
+    "4220": "80e015fc",
+    "4240": "aaabd5ab",
+    "4260": "c35abf0c",
+    "4280": "0b2a36d5",
+    "4300": "ae31bdbc",
+    "4320": "78182c72",
+    "4340": "8e14cc22",
+    "4360": "4aeaf0ba",
+    "4380": "7610d38d",
+    "4400": "7545d569",
+    "4420": "465e65c2",
+    "4440": "1a37cf93",
+    "4460": "b232376d",
+    "4480": "626200f2",
+    "4500": "c9d7bd13",
+    "4520": "7b64a1f6",
+    "4540": "61bfeb68",
+    "4560": "b1ec4fec",
+    "4580": "78bc9ba9",
+    "4600": "2b740edd",
+    "4620": "de4cc8bb",
+    "4640": "db963935",
+    "4660": "c90f1b51",
+    "4680": "7f1c406c",
+    "4700": "eabd727f",
+    "4720": "aa1ff532",
+    "4740": "8132970b",
+    "4760": "b0a55381",
+    "4780": "612ddd4f",
+    "4800": "ba4ac9d3",
+    "4820": "ead9f979",
+    "4840": "ab58ac28",
+    "4860": "6a84a7dd",
+    "4880": "9b9e9ba7",
+    "4900": "562c76ce",
+    "4920": "fb62607b",
+    "4940": "011544ba",
+    "4960": "8a23cdc7",
+    "4980": "8b766a31",
+    "5000": "fe6d3466",
+    "5020": "68942757",
+    "5040": "0feed868",
+    "5060": "efce9465",
+    "5080": "c26d2fcb",
+    "5100": "d157359d",
+    "5120": "dc338a78",
+    "5140": "c303104d",
+    "5160": "7fbafa09",
+    "5180": "bc76fbd8",
+    "5200": "fa868521",
+    "5220": "735043ce",
+    "5240": "afe2500f",
+    "5260": "61917a8d",
+    "5280": "8ca559db",
+    "5300": "42c013b0",
+    "5320": "82d48c4c",
+    "5340": "36abe084",
+    "5360": "4e622d76",
+    "5380": "38616709",
+    "5400": "bd075ccc",
+    "5420": "df92127a",
+    "5440": "1a20163d",
+    "5460": "1dfab23e",
+    "5480": "b8e87f6c",
+    "5500": "6e134c5d",
+    "5520": "995197ff",
+    "5540": "8077a510",
+    "5560": "05d51327",
+    "5580": "d359453d",
+    "5600": "d9ab4014",
+    "5620": "e36e8596",
+    "5640": "4f2136ed",
+    "5660": "11a392da",
+    "5680": "15955cae",
+    "5700": "22bd1a9c",
+    "5720": "2dd3a624",
+    "5740": "309f8cd9",
+    "5760": "be3c1231",
+    "5780": "ad4d306c",
+    "5800": "66690a0a",
+    "5820": "48b3dfca",
+    "5840": "f0a39946",
+    "5860": "abd4d3e4",
+    "5880": "a659c09e",
+    "5900": "e988390f",
+    "5920": "08e2e6f9",
+    "5940": "c0228bb1",
+    "5960": "c99fa2c1",
+    "5980": "a7e9dd18",
+    "6000": "f0c56f3e",
+    "6020": "7f290007",
+    "6040": "7a01bc8c",
+    "6060": "fa9d7585",
+    "6080": "7eaea2dc",
+    "6100": "31201d24",
+    "6120": "9e4c65b9",
+    "6140": "804895cd",
+    "6160": "baeb1580",
+    "6180": "ffd5b1ad",
+    "6200": "bd4d80e0",
+    "6220": "b78884c3",
+    "6240": "e5f97131",
+    "6260": "a28f7299",
+    "6280": "65750ead",
+    "6300": "18521057",
+    "6320": "3e21b009",
+    "6340": "4263faa4",
+    "6360": "d4f88026",
+    "6380": "bebc0f9e",
+    "6400": "90dcdb64",
+    "6420": "1634b6f5",
+    "6440": "2b478d98",
+    "6460": "ca4b4f87",
+    "6480": "77ffa0dd",
+    "6500": "2ef82ad4",
+    "6520": "329cd5ea",
+    "6540": "6c62e2c8",
+    "6560": "74afc6a6",
+    "6580": "e518602e",
+    "6600": "7667225b",
+    "6620": "8ef88fba",
+    "6640": "575e31c3",
+    "6660": "a068e8ef",
+    "6680": "7ad321b0",
+    "6700": "36080113",
+    "6720": "3e844fa3",
+    "6740": "00af1ffe",
+    "6760": "f18f1982",
+    "6780": "a3e23de0",
+    "6800": "a39faebe",
+    "6820": "9a7789b2",
+    "6840": "68296411",
+    "6860": "a89159b5",
+    "6880": "820a529a",
+    "6900": "3ec40364",
+    "6920": "03acf4a2",
+    "6940": "1712a32a",
+    "6960": "11dd2c92",
+    "6980": "2dfaa7ef",
+    "7000": "756e3d78",
+    "7020": "7a60c4c9",
+    "7040": "d3c0f5eb",
+    "7060": "2346db06",
+    "7080": "a765eb8a",
+    "7100": "48143f1b",
+    "7120": "685547ca",
+    "7140": "064e6c93",
+    "7160": "2c81f25c",
+    "7180": "c66f1d46",
+    "7200": "333f9e9c",
+    "7220": "51c0e98a",
+    "7240": "dc9e4a32",
+    "7260": "ed134760",
+    "7280": "5309a8fa",
+    "7300": "8157701c",
+    "7320": "a53a7bae",
+    "7340": "8acb3de8",
+    "7360": "c23a14db",
+    "7380": "ac13a712",
+    "7400": "93c9be80",
+    "7420": "cc70b8d8",
+    "7440": "5fbe2b6c",
+    "7460": "11e06275",
+    "7480": "33b4ade5",
+    "7500": "e71cc369",
+    "7520": "00f8cd91",
+    "7540": "5bbbf52d",
+    "7560": "588b59c0",
+    "7580": "cb79dbcd",
+    "7600": "0b939019",
+    "7620": "c5e8f110",
+    "7640": "de16b160",
+    "7660": "2d186deb",
+    "7680": "13f74c3e",
+    "7700": "26215fdb",
+    "7720": "23876918",
+    "7740": "eaeff2b2",
+    "7760": "7b560cc0",
+    "7780": "5159fc67",
+    "7800": "75d91f2c",
+    "7820": "83e723a2",
+    "7840": "5752efbe",
+    "7860": "4f925750",
+    "7880": "e3a66f22",
+    "7900": "31bec50d",
+    "7920": "4a5e4ea4",
+    "7940": "dce162c4",
+    "7960": "f09f5d99",
+    "7980": "a0f070f1",
+    "8000": "946ade53",
+    "8020": "79a862e2",
+    "8040": "5f932544",
+    "8060": "ce525dbc",
+    "8080": "40aa2805",
+    "8100": "d5221706",
+    "8120": "1a3ae876",
+    "8140": "1130af02",
+    "8160": "8afc6ac9",
+    "8180": "c8a6e310",
+    "8200": "175d5211",
+    "8220": "bf3d6ab5",
+    "8240": "4661120e",
+    "8260": "944d027a",
+    "8280": "9574341a",
+    "8300": "2646c543",
+    "8320": "d12ed9e0",
+    "8340": "f8b1dd75",
+    "8360": "3efde38f",
+    "8380": "f94f040f",
+    "8400": "cc729a63",
+    "8420": "188eea58",
+    "8440": "6bbf8099",
+    "8460": "84974ed3",
+    "8480": "4acd277a",
+    "8500": "f2ae3c06",
+    "8520": "1f0ed901",
+    "8540": "b6dec1b7",
+    "8560": "1a9fa940",
+    "8580": "51dcd112",
+    "8600": "4e12562f",
+    "8620": "be0adb0f",
+    "8640": "07551c2e",
+    "8660": "cf8062b8",
+    "8680": "7996faaf",
+    "8700": "c4d09827",
+    "8720": "04246ff2",
+    "8740": "b4f27451",
+    "8760": "807dbc7e",
+    "8780": "12eed1c6",
+    "8800": "6fd0abbe",
+    "8820": "945eda79",
+    "8840": "d171442c",
+    "8860": "4dc26032",
+    "8880": "d1f529e2",
+    "8900": "4041d85f",
+    "8920": "6d41fa1e",
+    "8940": "a11513d6",
+    "8960": "329a775c",
+    "8980": "37f5a40f",
+    "9000": "9991e182",
+    "9020": "05cd3bb1",
+    "9040": "47af9911",
+    "9060": "de5fbe26",
+    "9080": "75fa00e5",
+    "9100": "38c8e250",
+    "9120": "a391b0b5",
+    "9140": "e6d5f3ef",
+    "9160": "a10b512f",
+    "9180": "eb98c876",
+    "9200": "1ac2e240",
+    "9220": "7aa1f0bc",
+    "9240": "a7f71f8c",
+    "9260": "620643f5",
+    "9280": "c121d5a6",
+    "9300": "1d4e3814",
+    "9320": "cd0fa8fb",
+    "9340": "9368063b",
+    "9360": "26dce159",
+    "9380": "b9646590",
+    "9400": "b74d67fb",
+    "9420": "e8b9bb27",
+    "9440": "25c066b8",
+    "9460": "5d20d92d",
+    "9480": "eb1eeeed",
+    "9500": "4ad841ee",
+    "9520": "cb0238e4",
+    "9540": "df6ddb28",
+    "9560": "b5687026",
+    "9580": "1c02cbf2",
+    "9600": "12522639",
+    "9620": "211552f9",
+    "9640": "064c7204",
+    "9660": "fc372c43",
+    "9680": "9002f529",
+    "9700": "b24c0ffd",
+    "9720": "734ad6e5",
+    "9740": "868b1448",
+    "9760": "f049b350",
+    "9780": "540f1779",
+    "9800": "f35882bd",
+    "9820": "777c102b",
+    "9840": "b149bf26",
+    "9860": "6b0ca1fc",
+    "9880": "2de91689",
+    "9900": "2cb2d722",
+    "9920": "e5e1484a",
+    "9940": "2ac4347d",
+    "9960": "713e27c0",
+    "9980": "87dd58cd",
+    "10000": "175d3dbb"
   }
 }

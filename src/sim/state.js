@@ -44,6 +44,7 @@ export const ENTITY_HASH_FIELDS = Object.freeze([
   'powerLevel', 'powerDamagePct', 'shellLevel', 'powerLux', 'entropyRemainder',
   'arrivalTick', 'projectileDamage', 'projectileProc',
   'projectileProcChance', 'projectileProcValue', 'groupId',
+  'heroType', 'shieldHp', 'shieldTicks', 'cd0', 'cd1', 'cd2', 'cd3',
 ]);
 
 /** Team fields included in the hash, in this exact order. */
@@ -89,6 +90,13 @@ export const TEAM_HASH_FIELDS = Object.freeze([
  * @property {number} projectileProcChance projectile proc chance in percent
  * @property {number} projectileProcValue projectile stun ticks or knockback distance
  * @property {number} groupId creeps: id of the creep group, 0 for other kinds
+ * @property {number} heroType heroes: roster id plus one, 0 for other kinds
+ * @property {number} shieldHp damage the shield still absorbs, in milli-HP
+ * @property {number} shieldTicks ticks left on the shield
+ * @property {number} cd0 heroes: ticks left before ability slot 0 (melee) can be cast again
+ * @property {number} cd1 ranged
+ * @property {number} cd2 area
+ * @property {number} cd3 shield
  * @property {number[][]} waypoints barracks: default path for new groups, as [x, z] pairs in units
  * @property {boolean[]} [visibleTo] derived per-team visibility, excluded from the hash
  */
@@ -130,6 +138,8 @@ export const TEAM_HASH_FIELDS = Object.freeze([
  * @property {number} id
  * @property {number} team
  * @property {'human'|'bot'} kind
+ * @property {number} heroLock   bit i set while roster hero i is locked by the rotation (GDD 7.1)
+ * @property {number} heroCooldown ticks until the player may pick a hero again after the last one died
  */
 
 /**
@@ -188,7 +198,7 @@ export function createState({ seed, players, config }) {
     rng: createRng(seed),
     nextId: 1,
     teams,
-    players: players.map((p) => ({ ...p })),
+    players: players.map((p) => ({ heroLock: 0, heroCooldown: 0, ...p })),
     entities: [],
     groups: [],
     orders: [],
@@ -238,17 +248,30 @@ export function createState({ seed, players, config }) {
  */
 export function spawnEntity(state, fields) {
   const e = {
-    id: state.nextId++, born: state.tick, roll: 0, recycle: 0, attack: 0,
+    ...entityDefaults(),
+    id: state.nextId++, born: state.tick,
+    ...fields,
+  };
+  state.entities.push(e);
+  return e;
+}
+
+/**
+ * The fields an entity starts with, apart from its id and birth tick. A checkpoint from an older
+ * version lacks the fields that later milestones added, and `importState` fills them from here.
+ * @returns {Omit<Entity, 'id' | 'born' | 'kind' | 'team' | 'owner' | 'x' | 'z' | 'hp' | 'maxHp'>}
+ */
+export function entityDefaults() {
+  return {
+    roll: 0, recycle: 0, attack: 0,
     targetId: 0, attackCooldown: 0, overrideTargetId: 0, overrideTicks: 0, stunTicks: 0,
     moveTargetX: 0, moveTargetZ: 0, movePath: [], movePathIndex: 0, pathDirty: 0,
     impulseX: 0, impulseZ: 0, impulseTicks: 0,
     powerLevel: 0, powerDamagePct: 0, shellLevel: 0, powerLux: 0, entropyRemainder: 0,
     arrivalTick: 0, projectileDamage: 0, projectileProc: 0,
     projectileProcChance: 0, projectileProcValue: 0, groupId: 0, waypoints: [],
-    ...fields,
+    heroType: 0, shieldHp: 0, shieldTicks: 0, cd0: 0, cd1: 0, cd2: 0, cd3: 0,
   };
-  state.entities.push(e);
-  return e;
 }
 
 /**

@@ -19,7 +19,9 @@
  *      then the waypoint count and each waypoint's x and z, all i64 LE
  *   7. order count               i64 LE
  *      per order, in ascending id order: id, barracksId, owner, type,
- *      ticksLeft, held, then the mix length and each attack code, all i64 LE
+ *      ticksLeft, held, then the mix length and each mix value, all i64 LE
+ *   8. player count              i64 LE
+ *      per player, in list order: id, heroLock, heroCooldown, each i64 LE
  *
  * Every hashed value must be a safe integer; anything else throws, which
  * catches floats leaking into sim state.
@@ -111,6 +113,11 @@ export function hashState(state) {
     for (const v of [o.id, o.barracksId, o.owner, o.type, o.ticksLeft, o.held]) put(v, `order ${o.id}`);
     put(o.mix.length, `order ${o.id}.mix.length`);
     for (const code of o.mix) put(code, `order ${o.id}.mix`);
+  }
+
+  put(state.players.length, 'players.length');
+  for (const p of state.players) {
+    for (const v of [p.id, p.heroLock, p.heroCooldown]) put(v, `player ${p.id}`);
   }
 
   return h.digest();

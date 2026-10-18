@@ -1,0 +1,266 @@
+{
+  "version": 1,
+  "specVersion": "0.10.0",
+  "dataHash": "da27a5e2f28eae939c92adcc2dbede8fc2919292b7233d27a3ce1ddf69a0c6fe",
+  "mapgenVersion": 1,
+  "seed": 515151,
+  "players": [
+    {
+      "id": 0,
+      "team": 0,
+      "kind": "human"
+    },
+    {
+      "id": 1,
+      "team": 1,
+      "kind": "human"
+    }
+  ],
+  "ticks": 1800,
+  "commands": [
+    {
+      "tick": 0,
+      "playerId": 0,
+      "seq": 0,
+      "cmd": {
+        "t": "build",
+        "building": "barracks",
+        "tileX": 40,
+        "tileZ": 90
+      }
+    },
+    {
+      "tick": 0,
+      "playerId": 1,
+      "seq": 0,
+      "cmd": {
+        "t": "build",
+        "building": "barracks",
+        "tileX": 55,
+        "tileZ": 20
+      }
+    },
+    {
+      "tick": 5,
+      "playerId": 0,
+      "seq": 1,
+      "cmd": {
+        "t": "pickHero",
+        "heroId": 4,
+        "lux": 30,
+        "barracksId": 15
+      }
+    },
+    {
+      "tick": 5,
+      "playerId": 1,
+      "seq": 1,
+      "cmd": {
+        "t": "pickHero",
+        "heroId": 1,
+        "lux": 30,
+        "barracksId": 16
+      }
+    },
+    {
+      "tick": 120,
+      "playerId": 0,
+      "seq": 2,
+      "cmd": {
+        "t": "heroMove",
+        "x": 48500,
+        "z": 59500
+      }
+    },
+    {
+      "tick": 120,
+      "playerId": 1,
+      "seq": 2,
+      "cmd": {
+        "t": "heroMove",
+        "x": 48500,
+        "z": 52500
+      }
+    },
+    {
+      "tick": 800,
+      "playerId": 0,
+      "seq": 3,
+      "cmd": {
+        "t": "castAbility",
+        "slot": 3,
+        "targetId": 19
+      }
+    },
+    {
+      "tick": 800,
+      "playerId": 1,
+      "seq": 3,
+      "cmd": {
+        "t": "castAbility",
+        "slot": 1,
+        "targetId": 19
+      }
+    },
+    {
+      "tick": 830,
+      "playerId": 0,
+      "seq": 4,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 20
+      }
+    },
+    {
+      "tick": 900,
+      "playerId": 0,
+      "seq": 5,
+      "cmd": {
+        "t": "castAbility",
+        "slot": 0
+      }
+    },
+    {
+      "tick": 900,
+      "playerId": 1,
+      "seq": 4,
+      "cmd": {
+        "t": "castAbility",
+        "slot": 2,
+        "x": 48500,
+        "z": 58500
+      }
+    },
+    {
+      "tick": 1000,
+      "playerId": 1,
+      "seq": 5,
+      "cmd": {
+        "t": "castAbility",
+        "slot": 3,
+        "targetId": 20
+      }
+    },
+    {
+      "tick": 1000,
+      "playerId": 0,
+      "seq": 6,
+      "cmd": {
+        "t": "castAbility",
+        "slot": 1,
+        "targetId": 20
+      }
+    },
+    {
+      "tick": 1150,
+      "playerId": 0,
+      "seq": 7,
+      "cmd": {
+        "t": "castAbility",
+        "slot": 0
+      }
+    },
+    {
+      "tick": 1150,
+      "playerId": 1,
+      "seq": 6,
+      "cmd": {
+        "t": "castAbility",
+        "slot": 1,
+        "targetId": 19
+      }
+    }
+  ],
+  "hashes": {
+    "20": "28e91622",
+    "40": "49105876",
+    "60": "cfb5e402",
+    "80": "c18909e2",
+    "100": "b2fe2302",
+    "120": "da3670b9",
+    "140": "9ab45b5c",
+    "160": "7db4e9c4",
+    "180": "343b19c5",
+    "200": "9415c369",
+    "220": "fc6b39bf",
+    "240": "42628ffa",
+    "260": "8b3b3cc4",
+    "280": "3519d131",
+    "300": "22a430de",
+    "320": "d9778f38",
+    "340": "52376b7d",
+    "360": "5fbf290e",
+    "380": "9eb75ea2",
+    "400": "ee69ff46",
+    "420": "af3faaee",
+    "440": "bd96eb26",
+    "460": "0c2722e6",
+    "480": "0f9fc656",
+    "500": "28f41cc6",
+    "520": "5798aeb3",
+    "540": "9e8cfbef",
+    "560": "1729d227",
+    "580": "c80a5e0b",
+    "600": "0b3c8473",
+    "620": "958b87e3",
+    "640": "abe3296f",
+    "660": "27ce8a43",
+    "680": "beec3cd3",
+    "700": "3338d773",
+    "720": "91c5bb0f",
+    "740": "1fe2ad0f",
+    "760": "615ecebb",
+    "780": "3eb1c4c0",
+    "800": "49d0a02c",
+    "820": "e6131b54",
+    "840": "041de3c3",
+    "860": "071bde80",
+    "880": "ef1e87ff",
+    "900": "df618769",
+    "920": "b247d21b",
+    "940": "4008701a",
+    "960": "3891761a",
+    "980": "79044eaf",
+    "1000": "cc6ad5f1",
+    "1020": "27858235",
+    "1040": "681527f1",
+    "1060": "d69d414e",
+    "1080": "84766de7",
+    "1100": "84877f23",
+    "1120": "5c1d9abf",
+    "1140": "2de59a03",
+    "1160": "5dd9b41e",
+    "1180": "0cf6d9f4",
+    "1200": "f799502a",
+    "1220": "a0fbf068",
+    "1240": "fe089b41",
+    "1260": "d06a3147",
+    "1280": "43072ade",
+    "1300": "34411738",
+    "1320": "c9e20c72",
+    "1340": "f1d142ed",
+    "1360": "9629d937",
+    "1380": "7ef8d7d9",
+    "1400": "bddd3fbb",
+    "1420": "b829de29",
+    "1440": "97f361cc",
+    "1460": "137de82a",
+    "1480": "fc07fd1c",
+    "1500": "0361cafe",
+    "1520": "e37a6a00",
+    "1540": "bad2ed33",
+    "1560": "30065070",
+    "1580": "ecd984d2",
+    "1600": "5c6b44cc",
+    "1620": "4a917a4e",
+    "1640": "15842f54",
+    "1660": "7bd1e569",
+    "1680": "9664ad8f",
+    "1700": "7ae3d8d5",
+    "1720": "0a500b97",
+    "1740": "fcff7db5",
+    "1760": "dafe9a6e",
+    "1780": "1f9e2c68",
+    "1800": "2ae67139"
+  }
+}

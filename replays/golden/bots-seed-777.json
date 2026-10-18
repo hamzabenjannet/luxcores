@@ -16,7 +16,7 @@
       "kind": "bot"
     }
   ],
-  "ticks": 5000,
+  "ticks": 1217,
   "commands": [
     {
       "tick": 0,
@@ -67,17 +67,284 @@
       "playerId": 0,
       "seq": 2,
       "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 14,
-        "tileZ": 64,
-        "attack": "ranged"
+        "t": "pickHero",
+        "heroId": 0,
+        "lux": 20,
+        "barracksId": 17
       }
     },
     {
       "tick": 47,
       "playerId": 1,
       "seq": 2,
+      "cmd": {
+        "t": "pickHero",
+        "heroId": 0,
+        "lux": 20,
+        "barracksId": 18
+      }
+    },
+    {
+      "tick": 143,
+      "playerId": 0,
+      "seq": 3,
+      "cmd": {
+        "t": "heroMove",
+        "x": 38500,
+        "z": 92500
+      }
+    },
+    {
+      "tick": 150,
+      "playerId": 1,
+      "seq": 3,
+      "cmd": {
+        "t": "heroMove",
+        "x": 57500,
+        "z": 19500
+      }
+    },
+    {
+      "tick": 213,
+      "playerId": 0,
+      "seq": 4,
+      "cmd": {
+        "t": "heroMove",
+        "x": 27500,
+        "z": 88500
+      }
+    },
+    {
+      "tick": 240,
+      "playerId": 0,
+      "seq": 5,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 15,
+        "tileZ": 64,
+        "attack": "ranged"
+      }
+    },
+    {
+      "tick": 247,
+      "playerId": 1,
+      "seq": 4,
+      "cmd": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 14,
+        "tileZ": 47,
+        "attack": "ranged"
+      }
+    },
+    {
+      "tick": 250,
+      "playerId": 1,
+      "seq": 5,
+      "cmd": {
+        "t": "heroMove",
+        "x": 68500,
+        "z": 23500
+      }
+    },
+    {
+      "tick": 303,
+      "playerId": 0,
+      "seq": 6,
+      "cmd": {
+        "t": "heroMove",
+        "x": 20500,
+        "z": 82500
+      }
+    },
+    {
+      "tick": 340,
+      "playerId": 1,
+      "seq": 6,
+      "cmd": {
+        "t": "heroMove",
+        "x": 75500,
+        "z": 29500
+      }
+    },
+    {
+      "tick": 363,
+      "playerId": 0,
+      "seq": 7,
+      "cmd": {
+        "t": "heroMove",
+        "x": 18500,
+        "z": 72500
+      }
+    },
+    {
+      "tick": 400,
+      "playerId": 1,
+      "seq": 7,
+      "cmd": {
+        "t": "heroMove",
+        "x": 77500,
+        "z": 39500
+      }
+    },
+    {
+      "tick": 433,
+      "playerId": 0,
+      "seq": 8,
+      "cmd": {
+        "t": "heroMove",
+        "x": 16500,
+        "z": 56500
+      }
+    },
+    {
+      "tick": 470,
+      "playerId": 1,
+      "seq": 8,
+      "cmd": {
+        "t": "heroMove",
+        "x": 79500,
+        "z": 55500
+      }
+    },
+    {
+      "tick": 500,
+      "playerId": 0,
+      "seq": 9,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 17,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 507,
+      "playerId": 1,
+      "seq": 9,
+      "cmd": {
+        "t": "orderCreeps",
+        "barracksId": 18,
+        "mix": [
+          "melee",
+          "melee",
+          "ranged",
+          "area",
+          "melee"
+        ]
+      }
+    },
+    {
+      "tick": 543,
+      "playerId": 0,
+      "seq": 10,
+      "cmd": {
+        "t": "heroMove",
+        "x": 15500,
+        "z": 55500
+      }
+    },
+    {
+      "tick": 553,
+      "playerId": 0,
+      "seq": 11,
+      "cmd": {
+        "t": "heroMove",
+        "x": 17500,
+        "z": 39500
+      }
+    },
+    {
+      "tick": 573,
+      "playerId": 0,
+      "seq": 12,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 24
+      }
+    },
+    {
+      "tick": 590,
+      "playerId": 1,
+      "seq": 10,
+      "cmd": {
+        "t": "heroMove",
+        "x": 80500,
+        "z": 56500
+      }
+    },
+    {
+      "tick": 600,
+      "playerId": 1,
+      "seq": 11,
+      "cmd": {
+        "t": "heroMove",
+        "x": 78500,
+        "z": 72500
+      }
+    },
+    {
+      "tick": 700,
+      "playerId": 0,
+      "seq": 13,
+      "cmd": {
+        "t": "build",
+        "building": "wind",
+        "tileX": 49,
+        "tileZ": 99
+      }
+    },
+    {
+      "tick": 707,
+      "playerId": 1,
+      "seq": 12,
+      "cmd": {
+        "t": "build",
+        "building": "wind",
+        "tileX": 48,
+        "tileZ": 12
+      }
+    },
+    {
+      "tick": 710,
+      "playerId": 1,
+      "seq": 13,
+      "cmd": {
+        "t": "heroMove",
+        "x": 77500,
+        "z": 82500
+      }
+    },
+    {
+      "tick": 780,
+      "playerId": 1,
+      "seq": 14,
+      "cmd": {
+        "t": "heroMove",
+        "x": 68500,
+        "z": 88500
+      }
+    },
+    {
+      "tick": 813,
+      "playerId": 0,
+      "seq": 14,
+      "cmd": {
+        "t": "heroMove",
+        "x": 17500,
+        "z": 39500
+      }
+    },
+    {
+      "tick": 827,
+      "playerId": 1,
+      "seq": 15,
       "cmd": {
         "t": "build",
         "building": "tower",
@@ -87,25 +354,46 @@
       }
     },
     {
-      "tick": 300,
+      "tick": 833,
       "playerId": 0,
-      "seq": 3,
+      "seq": 15,
       "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
+        "t": "heroAttack",
+        "targetId": 52
       }
     },
     {
-      "tick": 307,
+      "tick": 850,
       "playerId": 1,
-      "seq": 3,
+      "seq": 16,
+      "cmd": {
+        "t": "heroMove",
+        "x": 57500,
+        "z": 92500
+      }
+    },
+    {
+      "tick": 940,
+      "playerId": 1,
+      "seq": 17,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 1
+      }
+    },
+    {
+      "tick": 950,
+      "playerId": 1,
+      "seq": 18,
+      "cmd": {
+        "t": "heroAttack",
+        "targetId": 15
+      }
+    },
+    {
+      "tick": 987,
+      "playerId": 1,
+      "seq": 19,
       "cmd": {
         "t": "orderCreeps",
         "barracksId": 18,
@@ -119,31 +407,9 @@
       }
     },
     {
-      "tick": 500,
+      "tick": 1000,
       "playerId": 0,
-      "seq": 4,
-      "cmd": {
-        "t": "build",
-        "building": "wind",
-        "tileX": 45,
-        "tileZ": 97
-      }
-    },
-    {
-      "tick": 507,
-      "playerId": 1,
-      "seq": 4,
-      "cmd": {
-        "t": "build",
-        "building": "wind",
-        "tileX": 50,
-        "tileZ": 14
-      }
-    },
-    {
-      "tick": 620,
-      "playerId": 0,
-      "seq": 5,
+      "seq": 16,
       "cmd": {
         "t": "build",
         "building": "tower",
@@ -153,2256 +419,95 @@
       }
     },
     {
-      "tick": 687,
-      "playerId": 1,
-      "seq": 5,
-      "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 49,
-        "tileZ": 47,
-        "attack": "area"
-      }
-    },
-    {
-      "tick": 760,
-      "playerId": 0,
-      "seq": 6,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 1007,
-      "playerId": 1,
-      "seq": 6,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
       "tick": 1040,
       "playerId": 0,
-      "seq": 7,
-      "cmd": {
-        "t": "build",
-        "building": "geothermal",
-        "tileX": 46,
-        "tileZ": 75
-      }
-    },
-    {
-      "tick": 1140,
-      "playerId": 0,
-      "seq": 8,
-      "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 82,
-        "tileZ": 64,
-        "attack": "melee"
-      }
-    },
-    {
-      "tick": 1320,
-      "playerId": 0,
-      "seq": 9,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "ranged",
-          "area",
-          "melee",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 1347,
-      "playerId": 1,
-      "seq": 7,
-      "cmd": {
-        "t": "build",
-        "building": "geothermal",
-        "tileX": 49,
-        "tileZ": 36
-      }
-    },
-    {
-      "tick": 1400,
-      "playerId": 0,
-      "seq": 10,
-      "cmd": {
-        "t": "build",
-        "building": "solar",
-        "tileX": 46,
-        "tileZ": 93
-      }
-    },
-    {
-      "tick": 1467,
-      "playerId": 1,
-      "seq": 8,
-      "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 81,
-        "tileZ": 47,
-        "attack": "melee"
-      }
-    },
-    {
-      "tick": 1480,
-      "playerId": 0,
-      "seq": 11,
-      "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 15,
-        "tileZ": 64,
-        "attack": "ranged"
-      }
-    },
-    {
-      "tick": 1560,
-      "playerId": 0,
-      "seq": 12,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "melee",
-          "ranged",
-          "area"
-        ]
-      }
-    },
-    {
-      "tick": 1567,
-      "playerId": 1,
-      "seq": 9,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 1620,
-      "playerId": 0,
-      "seq": 13,
-      "cmd": {
-        "t": "build",
-        "building": "solar",
-        "tileX": 45,
-        "tileZ": 98
-      }
-    },
-    {
-      "tick": 1667,
-      "playerId": 1,
-      "seq": 10,
-      "cmd": {
-        "t": "build",
-        "building": "solar",
-        "tileX": 48,
-        "tileZ": 12
-      }
-    },
-    {
-      "tick": 1680,
-      "playerId": 0,
-      "seq": 14,
-      "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 46,
-        "tileZ": 65,
-        "attack": "area"
-      }
-    },
-    {
-      "tick": 1740,
-      "playerId": 0,
-      "seq": 15,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 1747,
-      "playerId": 1,
-      "seq": 11,
-      "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 80,
-        "tileZ": 46,
-        "attack": "melee"
-      }
-    },
-    {
-      "tick": 1780,
-      "playerId": 0,
-      "seq": 16,
-      "cmd": {
-        "t": "build",
-        "building": "wind",
-        "tileX": 49,
-        "tileZ": 99
-      }
-    },
-    {
-      "tick": 1820,
-      "playerId": 0,
       "seq": 17,
       "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 81,
-        "tileZ": 65,
-        "attack": "melee"
+        "t": "pickHero",
+        "heroId": 1,
+        "lux": 11,
+        "barracksId": 17
       }
     },
     {
-      "tick": 1827,
-      "playerId": 1,
-      "seq": 12,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "melee",
-          "ranged",
-          "area"
-        ]
-      }
-    },
-    {
-      "tick": 1860,
+      "tick": 1143,
       "playerId": 0,
       "seq": 18,
       "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
+        "t": "heroAttack",
+        "targetId": 22
       }
     },
     {
-      "tick": 1887,
-      "playerId": 1,
-      "seq": 13,
-      "cmd": {
-        "t": "build",
-        "building": "solar",
-        "tileX": 45,
-        "tileZ": 12
-      }
-    },
-    {
-      "tick": 1920,
-      "playerId": 0,
-      "seq": 19,
-      "cmd": {
-        "t": "build",
-        "building": "geothermal",
-        "tileX": 17,
-        "tileZ": 87
-      }
-    },
-    {
-      "tick": 1927,
-      "playerId": 1,
-      "seq": 14,
-      "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 14,
-        "tileZ": 46,
-        "attack": "ranged"
-      }
-    },
-    {
-      "tick": 1960,
-      "playerId": 0,
-      "seq": 20,
-      "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 15,
-        "tileZ": 65,
-        "attack": "ranged"
-      }
-    },
-    {
-      "tick": 1987,
-      "playerId": 1,
-      "seq": 15,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 2000,
-      "playerId": 0,
-      "seq": 21,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 2027,
-      "playerId": 1,
-      "seq": 16,
-      "cmd": {
-        "t": "build",
-        "building": "wind",
-        "tileX": 44,
-        "tileZ": 13
-      }
-    },
-    {
-      "tick": 2040,
-      "playerId": 0,
-      "seq": 22,
-      "cmd": {
-        "t": "build",
-        "building": "solar",
-        "tileX": 51,
-        "tileZ": 98
-      }
-    },
-    {
-      "tick": 2067,
-      "playerId": 1,
-      "seq": 17,
-      "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 48,
-        "tileZ": 46,
-        "attack": "area"
-      }
-    },
-    {
-      "tick": 2080,
-      "playerId": 0,
-      "seq": 23,
-      "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 45,
-        "tileZ": 64,
-        "attack": "area"
-      }
-    },
-    {
-      "tick": 2120,
-      "playerId": 0,
-      "seq": 24,
-      "cmd": {
-        "t": "build",
-        "building": "solar",
-        "tileX": 46,
-        "tileZ": 99
-      }
-    },
-    {
-      "tick": 2167,
-      "playerId": 1,
-      "seq": 18,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 2180,
-      "playerId": 0,
-      "seq": 25,
-      "cmd": {
-        "t": "build",
-        "building": "wind",
-        "tileX": 48,
-        "tileZ": 100
-      }
-    },
-    {
-      "tick": 2200,
-      "playerId": 0,
-      "seq": 26,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 19,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2220,
-      "playerId": 0,
-      "seq": 27,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 37,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2240,
-      "playerId": 0,
-      "seq": 28,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 68,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2260,
-      "playerId": 0,
-      "seq": 29,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 92,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2280,
-      "playerId": 0,
-      "seq": 30,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 124,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2320,
-      "playerId": 0,
-      "seq": 31,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 137,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2340,
-      "playerId": 0,
-      "seq": 32,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 175,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2347,
-      "playerId": 1,
-      "seq": 19,
-      "cmd": {
-        "t": "build",
-        "building": "geothermal",
-        "tileX": 78,
-        "tileZ": 24
-      }
-    },
-    {
-      "tick": 2360,
-      "playerId": 0,
-      "seq": 33,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 193,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2400,
-      "playerId": 0,
-      "seq": 34,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 19,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2420,
-      "playerId": 0,
-      "seq": 35,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 37,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2427,
+      "tick": 1180,
       "playerId": 1,
       "seq": 20,
       "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 82,
-        "tileZ": 47,
-        "attack": "melee"
-      }
-    },
-    {
-      "tick": 2460,
-      "playerId": 0,
-      "seq": 36,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 68,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2480,
-      "playerId": 0,
-      "seq": 37,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "melee",
-          "ranged",
-          "area"
-        ]
-      }
-    },
-    {
-      "tick": 2487,
-      "playerId": 1,
-      "seq": 21,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "melee",
-          "ranged",
-          "area"
-        ]
-      }
-    },
-    {
-      "tick": 2500,
-      "playerId": 0,
-      "seq": 38,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 92,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2507,
-      "playerId": 1,
-      "seq": 22,
-      "cmd": {
-        "t": "build",
-        "building": "solar",
-        "tileX": 49,
-        "tileZ": 12
-      }
-    },
-    {
-      "tick": 2520,
-      "playerId": 0,
-      "seq": 39,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 124,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2540,
-      "playerId": 0,
-      "seq": 40,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 137,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2547,
-      "playerId": 1,
-      "seq": 23,
-      "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 82,
-        "tileZ": 46,
-        "attack": "melee"
-      }
-    },
-    {
-      "tick": 2560,
-      "playerId": 0,
-      "seq": 41,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 175,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2580,
-      "playerId": 0,
-      "seq": 42,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 193,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2587,
-      "playerId": 1,
-      "seq": 24,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "melee",
-          "ranged",
-          "area"
-        ]
-      }
-    },
-    {
-      "tick": 2600,
-      "playerId": 0,
-      "seq": 43,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 19,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2607,
-      "playerId": 1,
-      "seq": 25,
-      "cmd": {
-        "t": "build",
-        "building": "solar",
-        "tileX": 50,
-        "tileZ": 13
-      }
-    },
-    {
-      "tick": 2620,
-      "playerId": 0,
-      "seq": 44,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 37,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2627,
-      "playerId": 1,
-      "seq": 26,
-      "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 14,
-        "tileZ": 47,
-        "attack": "ranged"
-      }
-    },
-    {
-      "tick": 2640,
-      "playerId": 0,
-      "seq": 45,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 2660,
-      "playerId": 0,
-      "seq": 46,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 68,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2667,
-      "playerId": 1,
-      "seq": 27,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "ranged",
-          "area",
-          "melee",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 2680,
-      "playerId": 0,
-      "seq": 47,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 92,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2687,
-      "playerId": 1,
-      "seq": 28,
-      "cmd": {
-        "t": "build",
-        "building": "wind",
-        "tileX": 49,
-        "tileZ": 18
-      }
-    },
-    {
-      "tick": 2700,
-      "playerId": 0,
-      "seq": 48,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 124,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2720,
-      "playerId": 0,
-      "seq": 49,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 137,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2727,
-      "playerId": 1,
-      "seq": 29,
-      "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 48,
-        "tileZ": 47,
-        "attack": "area"
-      }
-    },
-    {
-      "tick": 2740,
-      "playerId": 0,
-      "seq": 50,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 175,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2747,
-      "playerId": 1,
-      "seq": 30,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 2760,
-      "playerId": 0,
-      "seq": 51,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 193,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2767,
-      "playerId": 1,
-      "seq": 31,
-      "cmd": {
-        "t": "build",
-        "building": "tower",
-        "tileX": 50,
-        "tileZ": 47,
-        "attack": "area"
-      }
-    },
-    {
-      "tick": 2780,
-      "playerId": 0,
-      "seq": 52,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 19,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2787,
-      "playerId": 1,
-      "seq": 32,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 38,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2800,
-      "playerId": 0,
-      "seq": 53,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 37,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2807,
-      "playerId": 1,
-      "seq": 33,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 90,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2820,
-      "playerId": 0,
-      "seq": 54,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 68,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2827,
-      "playerId": 1,
-      "seq": 34,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 129,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2840,
-      "playerId": 0,
-      "seq": 55,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 92,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2847,
-      "playerId": 1,
-      "seq": 35,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 2860,
-      "playerId": 0,
-      "seq": 56,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 124,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2867,
-      "playerId": 1,
-      "seq": 36,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 192,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2880,
-      "playerId": 0,
-      "seq": 57,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 137,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2887,
-      "playerId": 1,
-      "seq": 37,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 229,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2900,
-      "playerId": 0,
-      "seq": 58,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 175,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2907,
-      "playerId": 1,
-      "seq": 38,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 269,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2920,
-      "playerId": 0,
-      "seq": 59,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 193,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2927,
-      "playerId": 1,
-      "seq": 39,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 342,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2940,
-      "playerId": 0,
-      "seq": 60,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 19,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2947,
-      "playerId": 1,
-      "seq": 40,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 353,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2960,
-      "playerId": 0,
-      "seq": 61,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 37,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2967,
-      "playerId": 1,
-      "seq": 41,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 38,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 2980,
-      "playerId": 0,
-      "seq": 62,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 68,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 2987,
-      "playerId": 1,
-      "seq": 42,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 90,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3007,
-      "playerId": 1,
-      "seq": 43,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 129,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3020,
-      "playerId": 0,
-      "seq": 63,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 3027,
-      "playerId": 1,
-      "seq": 44,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 3040,
-      "playerId": 0,
-      "seq": 64,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 92,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3047,
-      "playerId": 1,
-      "seq": 45,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 192,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3067,
-      "playerId": 1,
-      "seq": 46,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 229,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3080,
-      "playerId": 0,
-      "seq": 65,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 124,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3087,
-      "playerId": 1,
-      "seq": 47,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 269,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3107,
-      "playerId": 1,
-      "seq": 48,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 342,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3120,
-      "playerId": 0,
-      "seq": 66,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 137,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3127,
-      "playerId": 1,
-      "seq": 49,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 3147,
-      "playerId": 1,
-      "seq": 50,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 353,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3160,
-      "playerId": 0,
-      "seq": 67,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 3167,
-      "playerId": 1,
-      "seq": 51,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 38,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3187,
-      "playerId": 1,
-      "seq": 52,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 90,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3200,
-      "playerId": 0,
-      "seq": 68,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 175,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3207,
-      "playerId": 1,
-      "seq": 53,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 129,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3227,
-      "playerId": 1,
-      "seq": 54,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 192,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3240,
-      "playerId": 0,
-      "seq": 69,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 3247,
-      "playerId": 1,
-      "seq": 55,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 229,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3267,
-      "playerId": 1,
-      "seq": 56,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 269,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3280,
-      "playerId": 0,
-      "seq": 70,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 193,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3287,
-      "playerId": 1,
-      "seq": 57,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 342,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3307,
-      "playerId": 1,
-      "seq": 58,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 353,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3327,
-      "playerId": 1,
-      "seq": 59,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 38,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3347,
-      "playerId": 1,
-      "seq": 60,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 90,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3367,
-      "playerId": 1,
-      "seq": 61,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 3387,
-      "playerId": 1,
-      "seq": 62,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 129,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3400,
-      "playerId": 0,
-      "seq": 71,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 19,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3407,
-      "playerId": 1,
-      "seq": 63,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 192,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3427,
-      "playerId": 1,
-      "seq": 64,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 229,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3460,
-      "playerId": 0,
-      "seq": 72,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "melee",
-          "ranged",
-          "area"
-        ]
-      }
-    },
-    {
-      "tick": 3467,
-      "playerId": 1,
-      "seq": 65,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 269,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3507,
-      "playerId": 1,
-      "seq": 66,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 342,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3547,
-      "playerId": 1,
-      "seq": 67,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 353,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3560,
-      "playerId": 0,
-      "seq": 73,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 3627,
-      "playerId": 1,
-      "seq": 68,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 38,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3640,
-      "playerId": 0,
-      "seq": 74,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 37,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3680,
-      "playerId": 0,
-      "seq": 75,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 68,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3687,
-      "playerId": 1,
-      "seq": 69,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 90,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3720,
-      "playerId": 0,
-      "seq": 76,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 92,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3727,
-      "playerId": 1,
-      "seq": 70,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 129,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3760,
-      "playerId": 0,
-      "seq": 77,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 124,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3767,
-      "playerId": 1,
-      "seq": 71,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 192,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3800,
-      "playerId": 0,
-      "seq": 78,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 3807,
-      "playerId": 1,
-      "seq": 72,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 229,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3827,
-      "playerId": 1,
-      "seq": 73,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 3840,
-      "playerId": 0,
-      "seq": 79,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 137,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3867,
-      "playerId": 1,
-      "seq": 74,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 269,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3880,
-      "playerId": 0,
-      "seq": 80,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 175,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3907,
-      "playerId": 1,
-      "seq": 75,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 342,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 3920,
-      "playerId": 0,
-      "seq": 81,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "melee",
-          "ranged",
-          "area"
-        ]
-      }
-    },
-    {
-      "tick": 3947,
-      "playerId": 1,
-      "seq": 76,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "area",
-          "melee",
-          "melee",
-          "melee",
-          "ranged"
-        ]
-      }
-    },
-    {
-      "tick": 3960,
-      "playerId": 0,
-      "seq": 82,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 193,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 3987,
-      "playerId": 1,
-      "seq": 77,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 353,
-        "track": "power"
-      }
-    },
-    {
-      "tick": 4000,
-      "playerId": 0,
-      "seq": 83,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 4027,
-      "playerId": 1,
-      "seq": 78,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 38,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 4047,
-      "playerId": 1,
-      "seq": 79,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "melee",
-          "ranged",
-          "area"
-        ]
-      }
-    },
-    {
-      "tick": 4107,
-      "playerId": 1,
-      "seq": 80,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 4127,
-      "playerId": 1,
-      "seq": 81,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 90,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 4187,
-      "playerId": 1,
-      "seq": 82,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 129,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 4227,
-      "playerId": 1,
-      "seq": 83,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 192,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 4267,
-      "playerId": 1,
-      "seq": 84,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 4307,
-      "playerId": 1,
-      "seq": 85,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 229,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 4347,
-      "playerId": 1,
-      "seq": 86,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 269,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 4387,
-      "playerId": 1,
-      "seq": 87,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 342,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 4427,
-      "playerId": 1,
-      "seq": 88,
-      "cmd": {
-        "t": "upgrade",
-        "towerId": 353,
-        "track": "shell"
-      }
-    },
-    {
-      "tick": 4440,
-      "playerId": 0,
-      "seq": 84,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 4567,
-      "playerId": 1,
-      "seq": 89,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 4660,
-      "playerId": 0,
-      "seq": 85,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "melee",
-          "ranged",
-          "area"
-        ]
-      }
-    },
-    {
-      "tick": 4720,
-      "playerId": 0,
-      "seq": 86,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 4747,
-      "playerId": 1,
-      "seq": 90,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "area",
-          "melee",
-          "melee",
-          "melee",
-          "ranged"
-        ]
-      }
-    },
-    {
-      "tick": 4807,
-      "playerId": 1,
-      "seq": 91,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 18,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
-      }
-    },
-    {
-      "tick": 4860,
-      "playerId": 0,
-      "seq": 87,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "melee",
-          "ranged",
-          "area"
-        ]
-      }
-    },
-    {
-      "tick": 4960,
-      "playerId": 0,
-      "seq": 88,
-      "cmd": {
-        "t": "orderCreeps",
-        "barracksId": 17,
-        "mix": [
-          "melee",
-          "melee",
-          "ranged",
-          "area",
-          "melee"
-        ]
+        "t": "heroAttack",
+        "targetId": 1
       }
     }
   ],
   "hashes": {
-    "20": "7604942a",
-    "40": "db1579e8",
-    "60": "fdb21009",
-    "80": "45cb9e89",
-    "100": "81725f19",
-    "120": "45e99295",
-    "140": "29614b49",
-    "160": "2d7e9b2d",
-    "180": "50fcbd7d",
-    "200": "d6bd21c9",
-    "220": "eed39e7d",
-    "240": "b83b7859",
-    "260": "3f622206",
-    "280": "f2eaea3a",
-    "300": "b519c259",
-    "320": "bd8a7e74",
-    "340": "fd7418ee",
-    "360": "f8ad6fb7",
-    "380": "ca7bc92b",
-    "400": "eb75d2fd",
-    "420": "c0104076",
-    "440": "2465a8d3",
-    "460": "e2b6873a",
-    "480": "a6fb3e4c",
-    "500": "7052a3c6",
-    "520": "35dad637",
-    "540": "2413e08f",
-    "560": "08ade132",
-    "580": "8e5b3784",
-    "600": "e566a164",
-    "620": "90e6b455",
-    "640": "adce4315",
-    "660": "4bab7e2f",
-    "680": "5b7957e2",
-    "700": "490e3c06",
-    "720": "2a4aadec",
-    "740": "99aa0567",
-    "760": "3d49a0e2",
-    "780": "5d699f4e",
-    "800": "db741c99",
-    "820": "6b2e5ad5",
-    "840": "2a8319fc",
-    "860": "bd4a74e1",
-    "880": "7cd31b3c",
-    "900": "339deb0b",
-    "920": "bacafbfc",
-    "940": "9a89aa00",
-    "960": "784bd19a",
-    "980": "5911c9ca",
-    "1000": "ebe37911",
-    "1020": "93634b1a",
-    "1040": "5cd7e945",
-    "1060": "e217c435",
-    "1080": "43b61e2e",
-    "1100": "1fb17ec6",
-    "1120": "bf1dae10",
-    "1140": "af8e8f34",
-    "1160": "4af08fe7",
-    "1180": "d973d606",
-    "1200": "c79d7edc",
-    "1220": "fa9acfdb",
-    "1240": "f6108774",
-    "1260": "cd368655",
-    "1280": "a9c120a9",
-    "1300": "59123d7e",
-    "1320": "74c64d42",
-    "1340": "40f10528",
-    "1360": "031efbe4",
-    "1380": "f3b052cf",
-    "1400": "2e382841",
-    "1420": "9affe67c",
-    "1440": "a97d3d54",
-    "1460": "4aac2b8e",
-    "1480": "a5c8504f",
-    "1500": "5cc26e31",
-    "1520": "d54dcb15",
-    "1540": "3cd91b71",
-    "1560": "8d08a736",
-    "1580": "551e0cd9",
-    "1600": "f561738d",
-    "1620": "4bbea26e",
-    "1640": "26aa5cb1",
-    "1660": "d475eb7a",
-    "1680": "ded65319",
-    "1700": "9bbfe663",
-    "1720": "d9246f3c",
-    "1740": "9cdbd836",
-    "1760": "f7aa70af",
-    "1780": "66018c66",
-    "1800": "58f925b3",
-    "1820": "4bd9675d",
-    "1840": "fdd3f06d",
-    "1860": "031b2077",
-    "1880": "0d0449e0",
-    "1900": "7460c459",
-    "1920": "13db12c8",
-    "1940": "6df389dd",
-    "1960": "b2af7ead",
-    "1980": "100b0a4f",
-    "2000": "167775a0",
-    "2020": "6284dd08",
-    "2040": "49aa9b23",
-    "2060": "7717f084",
-    "2080": "fe3aa3a8",
-    "2100": "5a3a7b35",
-    "2120": "3ffa4168",
-    "2140": "c252f83d",
-    "2160": "8e147831",
-    "2180": "1bac22bf",
-    "2200": "c7b347db",
-    "2220": "b2111778",
-    "2240": "9881911e",
-    "2260": "ed3022d4",
-    "2280": "fbba4c8c",
-    "2300": "abd5d134",
-    "2320": "1e0d6f76",
-    "2340": "d51936cc",
-    "2360": "fddd5547",
-    "2380": "c0b892a9",
-    "2400": "09223ea0",
-    "2420": "3b4785fc",
-    "2440": "037b0d75",
-    "2460": "17ac202a",
-    "2480": "af4dddbd",
-    "2500": "abcfd827",
-    "2520": "1b9a26a5",
-    "2540": "cb15b1fb",
-    "2560": "c1663ea4",
-    "2580": "42282402",
-    "2600": "8c691367",
-    "2620": "71952e1d",
-    "2640": "544b290d",
-    "2660": "0a6f8f72",
-    "2680": "5fb45d0c",
-    "2700": "16bac915",
-    "2720": "ef1f9bb6",
-    "2740": "982c34f1",
-    "2760": "d789ca03",
-    "2780": "e13a0132",
-    "2800": "8de50a83",
-    "2820": "e0d877b3",
-    "2840": "e010f0a9",
-    "2860": "06bda5fc",
-    "2880": "68bb8543",
-    "2900": "e397b252",
-    "2920": "3613e8a7",
-    "2940": "eb089154",
-    "2960": "5fb9b4fb",
-    "2980": "f361a43b",
-    "3000": "58f7ac9a",
-    "3020": "abc29401",
-    "3040": "9f4efc92",
-    "3060": "67b2d2f6",
-    "3080": "341e3bb2",
-    "3100": "8067afc3",
-    "3120": "56645b3f",
-    "3140": "c5cc5327",
-    "3160": "be07d8e1",
-    "3180": "e8d8c287",
-    "3200": "4b347530",
-    "3220": "7ace6533",
-    "3240": "4d723df3",
-    "3260": "280a8d29",
-    "3280": "567c99e1",
-    "3300": "ea8f6008",
-    "3320": "b7648c6d",
-    "3340": "69cf30d1",
-    "3360": "16880d6e",
-    "3380": "cdaf840a",
-    "3400": "a461837b",
-    "3420": "92e3c330",
-    "3440": "1a31e7fc",
-    "3460": "3f112aaf",
-    "3480": "526b8c12",
-    "3500": "3cd6dd85",
-    "3520": "4dcc1704",
-    "3540": "7cb75ef6",
-    "3560": "12df3d25",
-    "3580": "63550e2b",
-    "3600": "8d6e303f",
-    "3620": "7462b0f7",
-    "3640": "014b4439",
-    "3660": "6fcc8d66",
-    "3680": "ecf9d456",
-    "3700": "06432a5f",
-    "3720": "376f4843",
-    "3740": "d44c6361",
-    "3760": "3a0e9bab",
-    "3780": "f2da4c2f",
-    "3800": "56ee0793",
-    "3820": "a40e2b39",
-    "3840": "5aec905e",
-    "3860": "97a433ac",
-    "3880": "d1dca979",
-    "3900": "042f1419",
-    "3920": "cafb016d",
-    "3940": "27cd8854",
-    "3960": "7b42e77c",
-    "3980": "92d17faf",
-    "4000": "47f77748",
-    "4020": "f5f2a8e4",
-    "4040": "9c24bd54",
-    "4060": "76e1feb5",
-    "4080": "e45aded2",
-    "4100": "1358d95a",
-    "4120": "913a2030",
-    "4140": "e4410ea1",
-    "4160": "23e8e187",
-    "4180": "a1598529",
-    "4200": "fa78e320",
-    "4220": "83673746",
-    "4240": "cee80ce3",
-    "4260": "ecc9ce6a",
-    "4280": "f17c339f",
-    "4300": "c7ba78bc",
-    "4320": "e823409d",
-    "4340": "5a15dfb6",
-    "4360": "d74ef913",
-    "4380": "665b68bb",
-    "4400": "3dfc5d2a",
-    "4420": "3793a52e",
-    "4440": "3cf97c83",
-    "4460": "cfd4a99b",
-    "4480": "86a7e76f",
-    "4500": "5e8b2b94",
-    "4520": "c2ae9c54",
-    "4540": "c0ad7826",
-    "4560": "5071ecc0",
-    "4580": "54d2c77a",
-    "4600": "2b0d21ce",
-    "4620": "9b74e3b8",
-    "4640": "119dfd7e",
-    "4660": "87e2b67d",
-    "4680": "9740972a",
-    "4700": "905e784c",
-    "4720": "ae6cc293",
-    "4740": "9ea666a3",
-    "4760": "df3dab79",
-    "4780": "62547ce4",
-    "4800": "f62cb63a",
-    "4820": "e3e77d0b",
-    "4840": "e5215ed8",
-    "4860": "ca9a6e72",
-    "4880": "df714829",
-    "4900": "5f5e20e3",
-    "4920": "5cc9c12d",
-    "4940": "08ff10fa",
-    "4960": "ca15177d",
-    "4980": "597d897c",
-    "5000": "72bb2207"
+    "20": "e52c1709",
+    "40": "562225ab",
+    "60": "89ff0536",
+    "80": "019bbece",
+    "100": "afabcc3e",
+    "120": "798b1f52",
+    "140": "2a939a52",
+    "160": "d1883ce4",
+    "180": "68d58859",
+    "200": "d3ee3e71",
+    "220": "5671cfd4",
+    "240": "73da0df8",
+    "260": "2afe91ab",
+    "280": "ab1df100",
+    "300": "2cea2dc6",
+    "320": "98b12398",
+    "340": "ea2971d4",
+    "360": "3983f5fa",
+    "380": "47bdaba1",
+    "400": "e1658731",
+    "420": "96b953e1",
+    "440": "999cf15c",
+    "460": "c54b1b92",
+    "480": "3bd3c0a6",
+    "500": "15c3c715",
+    "520": "6790636b",
+    "540": "3fd614b4",
+    "560": "0d4cb9ce",
+    "580": "892a7726",
+    "600": "42ef32ea",
+    "620": "ea2df503",
+    "640": "5677e69a",
+    "660": "89a2fabe",
+    "680": "c68d5140",
+    "700": "07d95358",
+    "720": "b3f47de6",
+    "740": "f65c7f42",
+    "760": "45b69229",
+    "780": "1f7a06fe",
+    "800": "2ad0161e",
+    "820": "32d5a7af",
+    "840": "44ecab02",
+    "860": "3834e23b",
+    "880": "e7131d38",
+    "900": "ed3b4809",
+    "920": "7d8ae47f",
+    "940": "4d0c3839",
+    "960": "0cf1f2ee",
+    "980": "b13360bc",
+    "1000": "9cf392bc",
+    "1020": "cf46556a",
+    "1040": "9ad4bc9c",
+    "1060": "75d58885",
+    "1080": "edd5535f",
+    "1100": "ba0d2d83",
+    "1120": "88a61e09",
+    "1140": "dbb4c010",
+    "1160": "7765f452",
+    "1180": "2daa325f",
+    "1200": "bbd219bc"
   }
 }

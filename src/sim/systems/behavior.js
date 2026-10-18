@@ -2,8 +2,9 @@
 /**
  * System: behavior
  * Scope: tower target acquisition and hero-aggression override (GDD 5.0), creep targeting and
- * steering along group paths (GDD 9.1, 9.2), and route computation for heroes and creeps.
- * Milestone: M3, M4 (creeps)
+ * steering along group paths (GDD 9.1, 9.2), a hero's walk into reach of its attack target (GDD 11.1),
+ * and route computation for heroes and creeps.
+ * Milestone: M3, M4 (creeps), M5 (hero chase)
  */
 
 import { dist2, idiv, UNITS_PER_TILE } from '../fixed.js';
@@ -159,47 +160,95 @@ function steerCreeps(state, getBlocked) {
     }
     if (!goalUnits) continue;
 
-    // A building cannot be entered: melee stands on the free tile beside it (center distance exactly 1 tile).
-    const blocked = getBlocked();
-    let tx = Math.floor(goalUnits.x / UNITS_PER_TILE);
-    let tz = Math.floor(goalUnits.z / UNITS_PER_TILE);
-    let gx = goalUnits.x;
-    let gz = goalUnits.z;
-    if (toBuilding) {
-      let side = null;
-      let sideD = Number.MAX_SAFE_INTEGER;
-      for (const [dx, dz] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
-        const x = tx + dx;
-        const z = tz + dz;
-        if (x < 0 || z < 0 || x >= width || z >= height || blocked[z * width + x]) continue;
-        const d = dist2(creep.x, creep.z, x * UNITS_PER_TILE + 500, z * UNITS_PER_TILE + 500);
-        if (d < sideD) {
-          sideD = d;
-          side = { x, z };
-        }
-      }
-      if (!side) continue;
-      tx = side.x;
-      tz = side.z;
-      gx = tx * UNITS_PER_TILE + idiv(UNITS_PER_TILE, 2);
-      gz = tz * UNITS_PER_TILE + idiv(UNITS_PER_TILE, 2);
-    } else if (blocked[tz * width + tx]) {
-      const free = nearestFree(blocked, width, height, tx, tz, creep.x, creep.z);
-      if (!free) continue;
-      gx = free.x * UNITS_PER_TILE + idiv(UNITS_PER_TILE, 2);
-      gz = free.z * UNITS_PER_TILE + idiv(UNITS_PER_TILE, 2);
-    }
+    if (!goalUnits) continue;
+    aim(state, getBlocked, creep, goalUnits, toBuilding);
+  }
+}
 
-    const sameGoal = creep.moveTargetX === gx && creep.moveTargetZ === gz;
-    const idle = creep.movePath.length === 0 && creep.pathDirty === 0;
-    const away = dist2(creep.x, creep.z, gx, gz) > 500 * 500;
-    if (!sameGoal || (idle && away)) {
-      creep.moveTargetX = gx;
-      creep.moveTargetZ = gz;
-      creep.movePath = [];
-      creep.movePathIndex = 0;
-      creep.pathDirty = 1;
+/**
+ * Aims a creep or hero at a goal: a building cannot be entered, so a melee mover stands on the free
+ * tile beside it; a goal on a blocked tile moves to the nearest free tile. A new goal, or an idle
+ * mover that is away from it, asks the shared A* pass for a route.
+ * @param {import('../state.js').SimState} state
+ * @param {() => Uint8Array} getBlocked
+ * @param {import('../state.js').Entity} creep
+ * @param {{ x: number, z: number }} goalUnits
+ * @param {boolean} toBuilding
+ */
+function aim(state, getBlocked, creep, goalUnits, toBuilding) {
+  const { width, height } = state.map;
+  // A building cannot be entered: melee stands on the free tile beside it (center distance exactly 1 tile).
+  const blocked = getBlocked();
+  let tx = Math.floor(goalUnits.x / UNITS_PER_TILE);
+  let tz = Math.floor(goalUnits.z / UNITS_PER_TILE);
+  let gx = goalUnits.x;
+  let gz = goalUnits.z;
+  if (toBuilding) {
+    let side = null;
+    let sideD = Number.MAX_SAFE_INTEGER;
+    for (const [dx, dz] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
+      const x = tx + dx;
+      const z = tz + dz;
+      if (x < 0 || z < 0 || x >= width || z >= height || blocked[z * width + x]) return;
+      const d = dist2(creep.x, creep.z, x * UNITS_PER_TILE + 500, z * UNITS_PER_TILE + 500);
+      if (d < sideD) {
+        sideD = d;
+        side = { x, z };
+      }
     }
+    if (!side) return;
+    tx = side.x;
+    tz = side.z;
+    gx = tx * UNITS_PER_TILE + idiv(UNITS_PER_TILE, 2);
+    gz = tz * UNITS_PER_TILE + idiv(UNITS_PER_TILE, 2);
+  } else if (blocked[tz * width + tx]) {
+    const free = nearestFree(blocked, width, height, tx, tz, creep.x, creep.z);
+    if (!free) return;
+    gx = free.x * UNITS_PER_TILE + idiv(UNITS_PER_TILE, 2);
+    gz = free.z * UNITS_PER_TILE + idiv(UNITS_PER_TILE, 2);
+  }
+
+  const sameGoal = creep.moveTargetX === gx && creep.moveTargetZ === gz;
+  const idle = creep.movePath.length === 0 && creep.pathDirty === 0;
+  const away = dist2(creep.x, creep.z, gx, gz) > 500 * 500;
+  if (!sameGoal || (idle && away)) {
+    creep.moveTargetX = gx;
+    creep.moveTargetZ = gz;
+    creep.movePath = [];
+    creep.movePathIndex = 0;
+    creep.pathDirty = 1;
+  }
+}
+
+/**
+ * A hero with an attack order walks into reach of its target and stands still there. The order comes
+ * from `heroAttack`; a `heroMove` clears it. A target that died or left the map ends the chase.
+ * @param {import('../state.js').SimState} state
+ * @param {() => Uint8Array} getBlocked
+ */
+function steerHeroes(state, getBlocked) {
+  const { attackTypes } = state.config.balance;
+  for (const hero of state.entities) {
+    if (hero.kind !== KIND.HERO || hero.targetId === 0) continue;
+    const target = findEntity(state, hero.targetId);
+    if (!target || target.hp <= 0) {
+      hero.targetId = 0;
+      hero.movePath = [];
+      hero.movePathIndex = 0;
+      hero.pathDirty = 0;
+      continue;
+    }
+    const rules = attackTypes[TYPE_NAMES[hero.attack] || 'melee'];
+    const reach = rules.reachTiles > 0 ? rules.reachTiles : meleeReach(state, target);
+    if (dist2(hero.x, hero.z, target.x, target.z) <= reach * reach) {
+      hero.movePath = [];
+      hero.movePathIndex = 0;
+      hero.pathDirty = 0;
+      hero.moveTargetX = hero.x;
+      hero.moveTargetZ = hero.z;
+      continue;
+    }
+    aim(state, getBlocked, hero, { x: target.x, z: target.z }, target.kind <= KIND.BLOCKER);
   }
 }
 
@@ -208,6 +257,7 @@ export function run(state) {
   let repaths = 0;
   let blocked;
   steerCreeps(state, () => (blocked ??= buildBlockedGrid(state)));
+  steerHeroes(state, () => (blocked ??= buildBlockedGrid(state)));
   for (const entity of state.entities) {
     if ((entity.kind !== KIND.HERO && entity.kind !== KIND.CREEP) || entity.pathDirty === 0 || repaths >= REPATH_BUDGET) continue;
     blocked ??= buildBlockedGrid(state);

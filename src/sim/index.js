@@ -14,3 +14,6 @@ export { generateMap, isConnected } from './mapgen.js';
 export { buildZoneOf, ATTACK_CODE } from './buildings.js';
 export { createRng, nextInt } from './rng.js';
 export { TICK_HZ, UNITS_PER_TILE, MILLI } from './fixed.js';
+export { heroOf, canPickHero, abilityOf, SLOT_TYPES } from './heroes.js';
+export { ORDER_TYPE } from './creeps.js';
+export { laneRoute } from './creeps.js';

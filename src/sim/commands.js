@@ -10,6 +10,7 @@
 
 import { tryBuild, tryCancelRecycle, tryRecycle, tryUpgradeTower } from './buildings.js';
 import { tryCancelQueue, tryMergeGroups, tryOrderCreeps, trySetBarracksPath, trySetGroupPath, trySplitGroup } from './creeps.js';
+import { tryCastAbility, tryPickHero } from './heroes.js';
 import { tryHeroAttack } from './systems/combat.js';
 import { tryHeroMove } from './systems/movement.js';
 
@@ -61,6 +62,8 @@ export const HANDLERS = {
   setGroupPath: trySetGroupPath,
   mergeGroups: tryMergeGroups,
   splitGroup: trySplitGroup,
+  pickHero: tryPickHero,
+  castAbility: tryCastAbility,
   heroAttack: tryHeroAttack,
   heroMove: tryHeroMove,
 };

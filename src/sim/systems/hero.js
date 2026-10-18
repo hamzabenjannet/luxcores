@@ -1,11 +1,11 @@
 // @ts-check
 /**
- * System: hero
- * Scope: respawn cooldown (100 ticks), rotation lock over the 5-hero roster. GDD 7.1
- * Milestone: M5 (see docs/HANDOVER.md)
+ * System: hero (pipeline step 4)
+ * Runs down the wait before a player may pick another hero after the last one died. The
+ * cooldown starts in the cleanup system, in the tick the hero is removed. GDD 7.1
  */
 
-/** @param {import('../state.js').SimState} _state */
-export function run(_state) {
-  // TODO(M5): implement.
+/** @param {import('../state.js').SimState} state */
+export function run(state) {
+  for (const player of state.players) if (player.heroCooldown > 0) player.heroCooldown--;
 }

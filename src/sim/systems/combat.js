@@ -7,7 +7,7 @@
 
 import { chancePct } from '../rng.js';
 import { dist2, idiv, isqrt, MILLI, TICK_HZ, UNITS_PER_TILE } from '../fixed.js';
-import { damageCore } from '../lux.js';
+import { dealDamage } from '../damage.js';
 import { KIND, findEntity, spawnEntity } from '../state.js';
 import { meleeReach } from '../reach.js';
 import { towerCanTarget } from './behavior.js';
@@ -41,7 +41,7 @@ export function tryHeroAttack(state, playerId, cmd) {
 }
 
 /** @param {number} kind */
-function isAttackable(kind) {
+export function isAttackable(kind) {
   return kind === KIND.CORE || (kind >= KIND.SOLAR && kind <= KIND.HERO);
 }
 
@@ -106,18 +106,7 @@ export function run(state) {
   }
 
   // A tower reacts when it can reach the attacking hero.
-  for (const { attacker, target } of readyHeroes) {
-    if (target.kind !== KIND.HERO) continue;
-    const overrideTicks = state.config.balance.tower.targetOverrideTicks;
-    for (const tower of state.entities) {
-      if (tower.kind !== KIND.TOWER || tower.team !== target.team) continue;
-      const range = state.config.buildings.tower.rangeTiles;
-      if (dist2(tower.x, tower.z, attacker.x, attacker.z) > range * range) continue;
-      tower.overrideTargetId = attacker.id;
-      tower.overrideTicks = overrideTicks;
-      tower.targetId = attacker.id;
-    }
-  }
+  for (const { attacker, target } of readyHeroes) alertTowers(state, attacker, target);
 
   for (const tower of state.entities) {
     if (tower.kind !== KIND.TOWER || tower.stunTicks > 0) {
@@ -152,8 +141,27 @@ export function run(state) {
   for (const target of state.entities) {
     const damage = damageById[target.id] ?? 0;
     if (damage === 0) continue;
-    if (target.kind === KIND.CORE) damageCore(state, target.team, damage);
-    else target.hp = Math.max(0, target.hp - damage);
+    dealDamage(state, target, damage);
+  }
+}
+
+/**
+ * GDD 5.0 override: when a hero attacks a friendly hero, the defending team's towers in reach of the
+ * attacker switch to it for a few seconds. A no-op for any other target.
+ * @param {import('../state.js').SimState} state
+ * @param {import('../state.js').Entity} attacker
+ * @param {import('../state.js').Entity} target
+ */
+export function alertTowers(state, attacker, target) {
+  if (target.kind !== KIND.HERO) return;
+  const overrideTicks = state.config.balance.tower.targetOverrideTicks;
+  const range = state.config.buildings.tower.rangeTiles;
+  for (const tower of state.entities) {
+    if (tower.kind !== KIND.TOWER || tower.team !== target.team) continue;
+    if (dist2(tower.x, tower.z, attacker.x, attacker.z) > range * range) continue;
+    tower.overrideTargetId = attacker.id;
+    tower.overrideTicks = overrideTicks;
+    tower.targetId = attacker.id;
   }
 }
 
@@ -260,7 +268,7 @@ function addSplashHits(state, hits, attacker, primary, damage, radius) {
  * @param {import('../state.js').Entity} source
  * @param {import('../state.js').Entity} target
  */
-function isEnemy(source, target) {
+export function isEnemy(source, target) {
   return target.hp > 0 && target.team >= 0 && target.team !== source.team && isAttackable(target.kind);
 }
 
