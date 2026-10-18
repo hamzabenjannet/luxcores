@@ -93,3 +93,41 @@ test('a spectator watches two bots play to the end', { timeout: 180_000, skip },
     assert.deepEqual(errors, [], 'the page must log no console or page errors');
   }, { MATCH_MAX_TICKS: '600' });
 });
+
+test('the menu and lobby work by hand: a bot match, then a match for two humans', { timeout: 180_000, skip }, async () => {
+  await withBackend(async ({ errors, newContext, plain }) => {
+    // Play Against Bot: type a name, press the button, press Start Match.
+    const solo = await plain('/');
+    await solo.fill('#menu input[placeholder="Your name"]', 'Halo');
+    await solo.click('#menu button:has-text("Play Against Bot")');
+    await solo.waitForSelector('#menu .card .title:has-text("Lobby")');
+    assert.deepEqual(await solo.$$eval('#menu .player', (n) => n.map((x) => x.textContent)), ['Halo', 'Bot']);
+    await solo.click('#menu button:has-text("Start Match")');
+    await solo.waitForSelector('.palette:not([hidden])', { timeout: 30_000 });
+    await solo.waitForFunction(() => document.getElementById('hud-core')?.textContent?.startsWith('Core'));
+    assert.equal(await solo.isHidden('#menu'), true, 'the lobby closes when the match starts');
+
+    // Host a Match for Two: the host cannot start alone, and the second player joins by id.
+    const host = await plain('/');
+    await host.fill('#menu input[placeholder="Your name"]', 'Host');
+    await host.fill('#menu input[placeholder^="Map seed"]', '42');
+    await host.click('#menu button:has-text("Host a Match for Two")');
+    await host.waitForSelector('#menu .card .title:has-text("Lobby")');
+    assert.equal(await host.isDisabled('#menu button:has-text("Start Match")'), true, 'one human cannot start a match for two');
+    assert.match((await host.textContent('#menu .status')) ?? '', /Waiting for a second player/);
+    const id = ((await host.textContent('#menu .subtitle')) ?? '').replace('Match ', '').trim();
+
+    const guest = await plain('/');
+    await guest.fill('#menu input[placeholder="Your name"]', 'Guest');
+    await guest.fill('#menu input[placeholder="Match id to join"]', id);
+    await guest.click('#menu button:has-text("Join Match")');
+    await guest.waitForSelector('#menu .card .title:has-text("Lobby")');
+    assert.equal(await guest.isHidden('#menu button:has-text("Start Match")'), true, 'only the host starts');
+    await host.waitForFunction(() => [...document.querySelectorAll('#menu button')].some((b) => b.textContent === 'Start Match' && !(/** @type {HTMLButtonElement} */ (b)).disabled));
+    await host.click('#menu button:has-text("Start Match")');
+    for (const page of [host, guest]) await page.waitForSelector('.palette:not([hidden])', { timeout: 30_000 });
+    assert.deepEqual(errors, [], 'the pages must log no console or page errors');
+    mkdirSync(SHOTS, { recursive: true });
+    await guest.screenshot({ path: join(SHOTS, 'menu-two-humans.png') });
+  }, { MATCH_MAX_TICKS: '1200' });
+});
