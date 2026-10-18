@@ -77,6 +77,62 @@ test('a human builds, upgrades and recycles through the controls, against a bot'
   }, { MATCH_MAX_TICKS: '2400' });
 });
 
+test('a human buys items at a barracks, receives them with the hero and uses them, through the controls', { timeout: 180_000, skip }, async () => {
+  await withBackend(async ({ errors, newContext, open }) => {
+    const page = await open(await newContext(), `name=Shopper&match=new&vsBot=1&autostart=1&seed=${SEED}`);
+    await until(page, () => /** @type {any} */ (window).__luxTest.entities().length > 0);
+    const me = () => page.evaluate(() => /** @type {any} */ (window).__luxTest.players().find((/** @type {any} */ p) => p.id === 0));
+    const hero = () => page.evaluate(() => /** @type {any} */ (window).__luxTest.entities().find((/** @type {any} */ e) => e.kind === 10 && e.owner === 0));
+
+    const barracksTile = freeSpot(SEED, 0);
+    await page.click('button[data-building="barracks"]');
+    await tapTile(page, barracksTile);
+    await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 6 && e.team === 0));
+    await tapTile(page, barracksTile);
+    await page.waitForSelector('.panel:not([hidden]) .shop-item[data-shop-item="2"]');
+    assert.equal(await page.locator('.shop-item').count(), 4, 'every item is on sale');
+    assert.match(await page.textContent('.shop-item[data-shop-item="2"]') ?? '', /^Haste20$/);
+
+    // Two items before any hero exists: they wait in the barracks.
+    await page.click('.shop-item[data-shop-item="2"]');
+    await page.click('.shop-item[data-shop-item="0"]');
+    await until(page, () => /** @type {any} */ (window).__luxTest.orders().filter((/** @type {any} */ o) => o.type === 3).length === 2);
+    await until(page, () => /** @type {any} */ (window).__luxTest.orders().filter((/** @type {any} */ o) => o.type === 3 && o.held === 1).length === 2, undefined, 15_000);
+    await until(page, () => [...document.querySelectorAll('.queue-text')].some((n) => n.textContent === 'Item Haste HELD'));
+    assert.equal(await page.locator('.hero-bar').isHidden(), true, 'no hero, no item bar');
+
+    // A small hero with the 25% allocation, then the items arrive with it.
+    await page.click('[data-alloc="25%"]');
+    await page.click('.hero-pick[data-hero="1"]');
+    await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 10 && e.owner === 0), undefined, 30_000);
+    await page.waitForSelector('.hero-bar:not([hidden]) .item[data-item="2"]');
+    await until(page, () => document.querySelector('.item[data-item="2"]')?.textContent === 'Haste 1');
+    assert.equal(await page.textContent('.item[data-item="0"]'), 'Boost 1');
+    assert.equal(await page.textContent('.item[data-item="3"]'), 'Sluggish 0');
+    assert.deepEqual((await me()).items, [1, 0, 1, 0]);
+
+    // Haste is one tap: it applies at once and the count drops.
+    await page.click('.item[data-item="2"]');
+    await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 10 && e.owner === 0 && e.speedMod === 300));
+    await until(page, () => document.querySelector('.item[data-item="2"]')?.textContent === 'Haste 0');
+
+    // Boost aims: the first tap on the button waits for a target, empty ground refuses, the hero takes it.
+    const before = await hero();
+    await page.click('.item[data-item="0"]');
+    await until(page, () => document.querySelector('.item[data-item="0"]')?.classList.contains('active') === true);
+    await until(page, () => document.querySelector('.toast.show')?.textContent === 'Tap your hero or a building.');
+    await page.evaluate(() => /** @type {any} */ (window).__luxTest.tap(10, 10));
+    await until(page, () => document.querySelector('.toast.show')?.textContent === 'Tap your hero or one of your buildings.');
+    await page.evaluate((h) => /** @type {any} */ (window).__luxTest.tap(h.x / 1000, h.z / 1000), before);
+    await until(page, () => /** @type {any} */ (window).__luxTest.players().find((/** @type {any} */ p) => p.id === 0)?.items[0] === 0);
+    assert.equal((await hero()).maxHp, before.maxHp + 150_000, 'Energy Boost adds 15 lux, which is 150 HP');
+    assert.equal(await page.locator('.item[data-item="0"].active').count(), 0, 'the aim ended with the use');
+    mkdirSync(SHOTS, { recursive: true });
+    await page.screenshot({ path: join(SHOTS, 'play-items.png') });
+    assert.deepEqual(errors, [], 'the page must log no console or page errors');
+  }, { MATCH_MAX_TICKS: '2400' });
+});
+
 test('a human picks a hero at a barracks, shields it and aims its area ability, through the controls', { timeout: 180_000, skip }, async () => {
   await withBackend(async ({ errors, newContext, open }) => {
     const page = await open(await newContext(), `name=Halo&match=new&vsBot=1&autostart=1&seed=${SEED}`);

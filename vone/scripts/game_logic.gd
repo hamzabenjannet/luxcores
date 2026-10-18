@@ -65,8 +65,9 @@ static func mix_for(count: int, type: String) -> Array:
 		out.append(cycle[i % cycle.size()] if type == "mixed" else type)
 	return out
 
-## Order type code of a hero pick in Order.type (ORDER_TYPE.hero in src/sim/creeps.js).
+## Order type codes of a hero pick and an item in Order.type (ORDER_TYPE in src/sim/creeps.js).
 const HERO_ORDER := 2
+const ITEM_ORDER := 3
 
 ## Seconds as the UI writes them, rounded up to a tenth, with integer math only:
 ## 99 ticks at 20 Hz is "5.0s".
@@ -77,8 +78,9 @@ static func seconds_text(ticks: int, tick_hz: int) -> String:
 	return "%d.%ds" % [tenths / 10, tenths % 10]
 
 ## The lines of a barracks queue, in queue order: [{index, orderId, text}]. A held group shows HELD.
-## A hero pick shows the hero's name and the lux allocated to it.
-static func queue_lines(orders: Array, barracks_id: int, tick_hz: int, hero_names: Array = []) -> Array:
+## A hero pick shows the hero's name and the lux allocated to it, and an item shows its name and HELD
+## while it waits for a hero or a free slot.
+static func queue_lines(orders: Array, barracks_id: int, tick_hz: int, hero_names: Array = [], item_names: Array = []) -> Array:
 	var initials := {1: "M", 2: "R", 3: "A"}
 	var out: Array = []
 	var index := 0
@@ -89,6 +91,10 @@ static func queue_lines(orders: Array, barracks_id: int, tick_hz: int, hero_name
 		if int(order.get("type", 1)) == HERO_ORDER:
 			var hero_name := String(hero_names[int(mix[0])]) if int(mix[0]) < hero_names.size() else "?"
 			out.append({"index": index, "orderId": int(order.id), "text": "Hero %s %d lux %s" % [hero_name, int(mix[1]), seconds_text(int(order.get("ticksLeft", 0)), tick_hz)]})
+		elif int(order.get("type", 1)) == ITEM_ORDER:
+			var item_name := String(item_names[int(mix[0])]) if int(mix[0]) < item_names.size() else "?"
+			var wait := "HELD" if int(order.get("held", 0)) == 1 else seconds_text(int(order.get("ticksLeft", 0)), tick_hz)
+			out.append({"index": index, "orderId": int(order.id), "text": "Item %s %s" % [item_name, wait]})
 		else:
 			var letters := ""
 			for code in mix:
@@ -131,6 +137,46 @@ static func immediate_cast(slot: int, hero: Dictionary) -> Dictionary:
 	if slot == 3:
 		return {"t": "castAbility", "slot": 3, "targetId": int(hero.id)}
 	return {}
+
+## How each item target in data/items.json is aimed: no tap, an own hero or building, or an enemy hero or creep.
+const ITEM_AIM := {"self": "none", "ownHeroOrBuilding": "ally", "enemyUnit": "enemy"}
+
+## The short name of an item for a button: the last word, so Energy Boost reads Boost.
+static func item_short_name(item_name: String) -> String:
+	var words := item_name.split(" ")
+	return words[words.size() - 1]
+
+## The item quick slots of the hero bar (GDD 8.1): [{id, aim, count, active, ready, text}]. An item is
+## ready when the hero holds one and, for Energy Grab, no funnel runs. A running Energy Grab shows the
+## whole lux it can still funnel instead of the count. items is data/items.json `list`.
+static func item_states(items: Array, counts: Array, funnel_lux: int) -> Array:
+	var out: Array = []
+	for item in items:
+		var id := int(item.id)
+		var count := int(counts[id]) if id < counts.size() else 0
+		var active := String(item.effect.kind) == "funnelMode" and funnel_lux > 0
+		var short := item_short_name(String(item.name))
+		@warning_ignore("integer_division")
+		out.append({
+			"id": id, "aim": String(ITEM_AIM.get(String(item.target), "none")), "count": count,
+			"active": active, "ready": count > 0 and not active,
+			"text": "%s %d" % [short, funnel_lux / MILLI] if active else "%s %d" % [short, count],
+		})
+	return out
+
+## The command of an item that needs no second tap, or an empty Dictionary for the aimed ones.
+static func immediate_use(id: int, items: Array) -> Dictionary:
+	for item in items:
+		if int(item.id) == id and String(ITEM_AIM.get(String(item.target), "none")) == "none":
+			return {"t": "useItem", "inventorySlot": id}
+	return {}
+
+## The item buttons of a barracks panel (GDD 8.1): [{id, name, costLux, poor}].
+static func shop_states(items: Array, core_lux_milli: int, min_left_lux: int) -> Array:
+	var out: Array = []
+	for item in items:
+		out.append({"id": int(item.id), "name": item_short_name(String(item.name)), "costLux": int(item.costLux), "poor": not can_afford(core_lux_milli, int(item.costLux), min_left_lux)})
+	return out
 
 ## Whether sending this command ends build mode: a placement frees the palette selection.
 static func ends_build_mode(command: Dictionary) -> bool:
@@ -202,12 +248,21 @@ static func lux_of(entity: Dictionary, hp_factor: Dictionary) -> int:
 	return roundi(float(entity.get("hp", 0)) / factor / float(MILLI))
 
 ## Label text of an entity, or "" for kinds with no name (projectiles). A hero shows its roster name
-## when hero_names has one, and any entity under a shield shows SHIELD.
-## Examples: "Solar 20", "Tower R P2 S1 18", "Barracks 40 REC", "Lumen Core 94", "Halo 30 SHIELD".
-static func entity_text(entity: Dictionary, hp_factor: Dictionary, hero_names: Array = []) -> String:
+## when hero_names has one, and any entity under a shield shows SHIELD. A ground item shows its item
+## name (item_names by item id) and a loot bag the number of items inside; neither shows lux.
+## Examples: "Solar 20", "Tower R P2 S1 18", "Barracks 40 REC", "Lumen Core 94", "Halo 30 SHIELD", "Haste", "Loot Bag 5".
+static func entity_text(entity: Dictionary, hp_factor: Dictionary, hero_names: Array = [], item_names: Array = []) -> String:
 	var kind := int(entity.get("kind", 0))
 	if not KIND_NAMES.has(kind):
 		return ""
+	if kind == KIND_GROUND_ITEM:
+		var item_id := int(entity.get("itemId", 0))
+		return String(item_names[item_id - 1]) if item_id > 0 and item_id <= item_names.size() else String(KIND_NAMES[kind])
+	if kind == KIND_LOOT_BAG:
+		var total := 0
+		for n in entity.get("items", []):
+			total += int(n)
+		return "%s %d" % [KIND_NAMES[kind], total]
 	var hero_type := int(entity.get("heroType", 0))
 	var label: String = KIND_NAMES[kind]
 	if kind == KIND_HERO and hero_type > 0 and hero_type <= hero_names.size():
@@ -274,7 +329,8 @@ static func pick_entity(entities: Array, ground: Vector2) -> Dictionary:
 ##   attack, core_lux_milli, data ({buildings, balance, mapgen}), vents, and for creeps
 ##   mode ("path" adds waypoints, "merge" picks the group to join, "" for none),
 ##   selected_group (id, or -1) and path_count (waypoints placed so far), and ability
-##   (1 ranged or 2 area while the next tap aims that ability, -1 for none).
+##   (1 ranged or 2 area while the next tap aims that ability, -1 for none), and item (the id of an aimed
+##   item, Energy Boost or Sluggish, while the next tap aims it, -1 for none; data then carries items).
 static func resolve_tap(ctx: Dictionary) -> Dictionary:
 	var ground: Vector2 = ctx.ground
 	var entities: Array = ctx.get("entities", [])
@@ -292,6 +348,21 @@ static func resolve_tap(ctx: Dictionary) -> Dictionary:
 		return {"message": "Tap an enemy to hit."}
 	if ability == 2:
 		return {"command": {"t": "castAbility", "slot": 2, "x": roundi(ground.x * UNITS_PER_TILE), "z": roundi(ground.y * UNITS_PER_TILE)}}
+
+	var item := int(ctx.get("item", -1))
+	if item >= 0:
+		var aim := "enemy"
+		for entry in data.items.list:
+			if int(entry.id) == item:
+				aim = String(ITEM_AIM.get(String(entry.target), "enemy"))
+		var item_target := pick_entity(entities, ground)
+		if aim == "ally":
+			if not item_target.is_empty() and int(item_target.get("owner", -1)) == viewer_team and (int(item_target.kind) == KIND_HERO or is_building_kind(int(item_target.kind))):
+				return {"command": {"t": "useItem", "inventorySlot": item, "targetId": int(item_target.id)}}
+			return {"message": "Tap your hero or one of your buildings."}
+		if not item_target.is_empty() and int(item_target.get("team", -1)) >= 0 and int(item_target.get("team", -1)) != viewer_team and (int(item_target.kind) == KIND_HERO or int(item_target.kind) == KIND_CREEP):
+			return {"command": {"t": "useItem", "inventorySlot": item, "targetId": int(item_target.id)}}
+		return {"message": "Tap an enemy hero or creep."}
 
 	if not building.is_empty():
 		var zone := build_zone(data.mapgen, viewer_team)
@@ -335,6 +406,10 @@ static func resolve_tap(ctx: Dictionary) -> Dictionary:
 		if int(entity.get("kind", 0)) == KIND_HERO and int(entity.get("owner", -1)) == viewer_team:
 			hero = entity
 			break
+	if not picked.is_empty() and (int(picked.kind) == KIND_GROUND_ITEM or int(picked.kind) == KIND_LOOT_BAG):
+		if hero.is_empty():
+			return {"message": "You need a hero to pick that up."}
+		return {"command": {"t": "pickUp", "groundItemId": int(picked.id)}}
 	if not picked.is_empty() and is_building_kind(int(picked.kind)) and int(picked.get("owner", -1)) == viewer_team:
 		return {"select": int(picked.id)}
 	if not picked.is_empty() and int(picked.kind) == KIND_CREEP and int(picked.get("owner", -1)) == viewer_team:

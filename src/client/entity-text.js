@@ -38,14 +38,18 @@ export function luxOf(e, hpFactor) {
 
 /**
  * Label text of an entity, or null for kinds with no name (projectiles). A hero shows its roster
- * name when `heroNames` has one, and any entity under a shield shows SHIELD.
- * Examples: "Solar 20", "Tower R P2 S1 18", "Barracks 40 REC", "Lumen Core 94", "Halo 30 SHIELD".
- * @param {{ kind: number, hp: number, attack?: number, powerLevel?: number, shellLevel?: number, stunTicks?: number, recycle?: number, heroType?: number, shieldHp?: number }} e
+ * name when `heroNames` has one, and any entity under a shield shows SHIELD. A ground item shows its
+ * item name and a loot bag the number of items inside; neither shows lux.
+ * Examples: "Solar 20", "Tower R P2 S1 18", "Barracks 40 REC", "Lumen Core 94", "Halo 30 SHIELD", "Haste", "Loot Bag 5".
+ * @param {{ kind: number, hp: number, attack?: number, powerLevel?: number, shellLevel?: number, stunTicks?: number, recycle?: number, heroType?: number, shieldHp?: number, itemId?: number, items?: readonly number[] }} e
  * @param {{ core: number, default: number }} hpFactor
  * @param {readonly string[]} [heroNames] roster names in roster order, from data/heroes.json
+ * @param {readonly string[]} [itemNames] item names by item id, from data/items.json
  * @returns {string | null}
  */
-export function entityText(e, hpFactor, heroNames = []) {
+export function entityText(e, hpFactor, heroNames = [], itemNames = []) {
+  if (e.kind === KIND.GROUND_ITEM) return e.itemId ? (itemNames[e.itemId - 1] ?? KIND_NAMES[e.kind]) : KIND_NAMES[e.kind];
+  if (e.kind === KIND.LOOT_BAG) return `${KIND_NAMES[e.kind]} ${(e.items ?? []).reduce((total, n) => total + n, 0)}`;
   const name = e.kind === KIND.HERO && e.heroType ? (heroNames[e.heroType - 1] ?? KIND_NAMES[e.kind]) : KIND_NAMES[e.kind];
   if (!name) return null;
   const parts = [name];

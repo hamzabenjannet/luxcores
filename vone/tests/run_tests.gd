@@ -19,6 +19,7 @@ func _init() -> void:
 		"buildings": _read_json(root.path_join("data/buildings.json")),
 		"balance": _read_json(root.path_join("data/balance.json")),
 		"mapgen": _read_json(root.path_join("data/mapgen.json")),
+		"items": _read_json(root.path_join("data/items.json")),
 	}
 	if fixture.is_empty() or data.buildings.is_empty():
 		push_error("Could not read the fixture or the data files under %s" % root)
@@ -38,13 +39,23 @@ func _init() -> void:
 	var roster: Array = fixture.roster
 	_check("the fixture hero names match the roster", _normalize(hero_names), _normalize(_names_of(roster)))
 	_check("the fixture roster matches data/heroes.json", _normalize(roster), _normalize(_roster_of(data.heroes)))
+	var item_names: Array = fixture.itemNames
+	_check("the fixture item names match the item data", _normalize(item_names), _normalize(_item_names_of(data.items)))
+	_check("the fixture items match data/items.json", _normalize(fixture.items), _normalize(_items_of(data.items)))
 	for c in fixture.entityText:
 		var expected := "" if c.expect == null else String(c.expect)
-		_check("entity text %s" % JSON.stringify(c.entity), GameLogic.entity_text(c.entity, fixture.hpFactor, hero_names), expected)
+		_check("entity text %s" % JSON.stringify(c.entity), GameLogic.entity_text(c.entity, fixture.hpFactor, hero_names, item_names), expected)
 	for c in fixture.secondsText:
 		_check("seconds text %s" % JSON.stringify(c), GameLogic.seconds_text(int(c.ticks), int(c.tickHz)), String(c.expect))
 	for c in fixture.abilityStates:
 		_check("ability buttons: %s" % String(c.name), _normalize(GameLogic.ability_states(c.hero, fixture.abilities, int(c.coreLuxMilli), int(c.minLeftLux), int(c.tickHz))), _normalize(c.expect))
+	for c in fixture.itemStates:
+		_check("item buttons: %s" % String(c.name), _normalize(GameLogic.item_states(fixture.items, c.counts, int(c.funnelLux))), _normalize(c.expect))
+	for c in fixture.immediateUse:
+		var use := GameLogic.immediate_use(int(c.id), fixture.items)
+		_check("immediate use %s" % JSON.stringify(c), _normalize(use if not use.is_empty() else null), _normalize(c.expect))
+	for c in fixture.shopStates:
+		_check("item shop: %s" % String(c.name), _normalize(GameLogic.shop_states(fixture.items, int(c.coreLuxMilli), int(c.minLeftLux))), _normalize(c.expect))
 	for c in fixture.endsBuildMode:
 		_check("ends build mode %s" % JSON.stringify(c.command), GameLogic.ends_build_mode(c.command), bool(c.expect))
 	for c in fixture.immediateCast:
@@ -67,7 +78,7 @@ func _init() -> void:
 	for c in fixture.mixFor:
 		_check("order mix %s" % JSON.stringify(c), _normalize(GameLogic.mix_for(int(c.count), String(c.type))), _normalize(c.expect))
 	for c in fixture.queueLines:
-		_check("queue lines for barracks %d" % int(c.barracksId), _normalize(GameLogic.queue_lines(c.orders, int(c.barracksId), int(c.tickHz), fixture.heroNames)), _normalize(c.expect))
+		_check("queue lines for barracks %d" % int(c.barracksId), _normalize(GameLogic.queue_lines(c.orders, int(c.barracksId), int(c.tickHz), fixture.heroNames, item_names)), _normalize(c.expect))
 	for c in fixture.groupActions:
 		var ids: Array = []
 		for action in GameLogic.group_actions(int(c.size), bool(c.custom)):
@@ -88,6 +99,7 @@ func _init() -> void:
 			"selected_group": int(ctx.get("selectedGroup", -1)) if ctx.get("selectedGroup") != null else -1,
 			"path_count": int(ctx.get("pathCount", 0)),
 			"ability": int(ctx.get("ability", -1)) if ctx.get("ability") != null else -1,
+			"item": int(ctx.get("item", -1)) if ctx.get("item") != null else -1,
 		})
 		_check("tap: %s" % String(c.name), _normalize(result), _normalize(c.expect))
 
@@ -111,6 +123,18 @@ func _names_of(roster: Array) -> Array:
 	var out: Array = []
 	for entry in roster:
 		out.append(String(entry.name))
+	return out
+
+func _item_names_of(items: Dictionary) -> Array:
+	var out: Array = []
+	for entry in items.get("list", []):
+		out.append(String(entry.name))
+	return out
+
+func _items_of(items: Dictionary) -> Array:
+	var out: Array = []
+	for entry in items.get("list", []):
+		out.append({"id": int(entry.id), "name": String(entry.name), "costLux": int(entry.costLux), "target": String(entry.target), "effect": {"kind": String(entry.effect.kind)}})
 	return out
 
 func _roster_of(heroes: Dictionary) -> Array:

@@ -198,6 +198,43 @@ func _run() -> void:
 	_check("the aim ended with the cast", _main._ability, -1)
 	_main._leave_match()
 
+	# Part 1d: items. Buy two before any hero exists, get them with the hero, use Haste and aim Energy Boost.
+	_main._mode_selector.select(0)
+	_main._match_input.text = ""
+	await _main._connect_match()
+	await _main._start_match()
+	_check("part 1d starts", await _until(func(): return _entities().size() > 0), true)
+	var shop_tile := _free_tile(0)
+	_main._select_building("barracks")
+	await _main._on_arena_tapped(Vector2(shop_tile.x + 0.5, shop_tile.y + 0.5))
+	_check("the shop barracks appears", await _until(func(): return _find(GameLogic.KIND_BARRACKS, 0).size() == 1), true)
+	await _main._on_arena_tapped(Vector2(shop_tile.x + 0.5, shop_tile.y + 0.5))
+	_check("the barracks panel sells the four items", _main._shop_box.get_child_count() == 2 and _main._shop_box.get_child(1).get_child_count() == 4, true)
+	_check("the shop shows the price", _main._shop_box.get_child(1).get_child(2).text, "Haste 20")
+	_main._shop_box.get_child(1).get_child(2).pressed.emit() # Haste
+	_main._shop_box.get_child(1).get_child(0).pressed.emit() # Energy Boost
+	var held: bool = await _until(func(): return _main._current_snapshot.orders.filter(func(o): return int(o.type) == GameLogic.ITEM_ORDER and int(o.held) == 1).size() == 2)
+	_check("both items wait in the barracks without a hero", held, true)
+	_check("the queue says an item is held", _main._queue_labels.values().any(func(label): return label.text == "Item Haste HELD"), true)
+	_check("no hero, no item bar", _main._item_bar.visible, false)
+	_main._set_hero_alloc("25%")
+	_main._hero_box.get_child(2).get_child(1).pressed.emit() # Prism, with 25% of the Core
+	_check("the hero stands on the map", await _until(func(): return _find(GameLogic.KIND_HERO, 0).size() == 1), true)
+	_check("the items arrive with the hero", await _until(func(): return _main._viewer_player().get("items", [0, 0, 0, 0]).map(func(n): return int(n)) == [1, 0, 1, 0]), true)
+	_check("the item bar shows the counts", await _until(func(): return _main._item_bar.visible and _main._item_buttons[2].text == "Haste 1" and _main._item_buttons[0].text == "Boost 1"), true)
+	_main._use_from_bar(2)
+	_check("Haste applies at once", await _until(func(): return int(_find(GameLogic.KIND_HERO, 0)[0].get("speedMod", 0)) == 300), true)
+	_check("the Haste count drops", await _until(func(): return _main._item_buttons[2].text == "Haste 0"), true)
+	var boosted: Dictionary = _find(GameLogic.KIND_HERO, 0)[0]
+	_main._use_from_bar(0)
+	_check("aiming Energy Boost waits for a tap", _main._item_aim, 0)
+	await _main._on_arena_tapped(Vector2(10.0, 10.0))
+	_check("empty ground is refused with a reason", _main._status_label.text, "Tap your hero or one of your buildings.")
+	await _main._on_arena_tapped(Vector2(float(boosted.x) / 1000.0, float(boosted.z) / 1000.0))
+	_check("Energy Boost adds 15 lux of HP", await _until(func(): return int(_find(GameLogic.KIND_HERO, 0)[0].maxHp) == int(boosted.maxHp) + 150000), true)
+	_check("the aim ended with the use", _main._item_aim, -1)
+	_main._leave_match()
+
 	# Part 2: two bots play, and this client only watches.
 	_main._mode_selector.select(1)
 	_main._match_input.text = ""

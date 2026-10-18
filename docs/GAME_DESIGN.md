@@ -2,11 +2,20 @@
 
 Working title. A strategy game mixing hero control (Dota 2), creep waypoint paths (Age of Empires) and base building with tower defense (Generals Zero Hour, Clash Royale). Everything in the world is made of light energy, measured in **lux**. Destroyed things dissolve into light; there is no blood or gore.
 
-Status: draft v0.9.8. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
+Status: draft v0.9.9. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
 
 ---
 
 ## 0. Changelog
+
+### v0.9.8 → v0.9.9
+
+Details that the item milestone (M6) needed. They await the owners' approval; section 8.4 states each one.
+
+| Area | Change |
+|---|---|
+| Item rules | Section 8.4 lists how the inventory, purchases, delivery, use, Energy Grab, Haste, Sluggish, drops, map spawns and pickups work in the sim |
+| Interface | A placed building ends build mode at once (section 11), and a tap on a ground item or loot bag sends the hero to take it |
 
 ### v0.9.7 → v0.9.8
 
@@ -426,6 +435,22 @@ Haste turns 1 hit/s into 4 hits/s. If playtests show it's dominant, +100 (2 hits
 - Hero kills drop the loot bag (section 8.1) instead of a random item.
 - Map spawns: one item every 60 s at one of 4 mirrored points in the DMZ.
 - Single items on the ground despawn after 30 s.
+
+### 8.4 Rules as Implemented (M6, awaiting approval)
+
+The sections above left these details open. `src/sim/items.js` and the item systems follow them.
+
+- **Inventory.** It is a count per item id, 50 items in all, and `useItem` names an item by its id (`inventorySlot`), so the four quick slots of the HUD are the four items. The inventory belongs to the player and is empty while no hero lives, because a hero's death empties it into a loot bag.
+- **Buying.** `orderItem` pays the full price at once and queues like a creep order, with a build time of 1 s. `cancelQueue` refunds the whole price. A finished item is held in its barracks until its owner has a hero and a free slot, and then goes to the inventory, oldest first. It is delivered in the tick the hero spawns. A barracks that dies loses the items it holds.
+- **Using.** `useItem` needs a living hero, and an item that needs a target must find it within 5 tiles of the hero. A refused use keeps the item. A stunned hero can still use items, because only abilities and attacks stop under a stun.
+- **Energy Boost.** It adds 15 lux (150 HP) to the HP and to the maximum HP of an own hero or building, never the Lumen Core. It also works on a building in its recycle channel.
+- **Energy Grab.** The budget of 50 lux belongs to the player and is refused while a budget still runs. Only a hero's basic attacks funnel, with their splash and shots, and only against enemy units, buildings and the Lumen Core. The lux funneled is the HP that the target lost after its shield, at the target's HP factor (1 for the Core). It goes to the pending pool, and the budget is consumed when it reaches 0. The effect ends when the hero dies, and abilities never funnel.
+- **Haste and Sluggish.** An item sets the attack speed change of its target for 300 ticks, counting the tick of the use. A second change replaces the first and does not add to it. Sluggish needs an enemy hero or creep, never a building. The attack speed has a floor of 20 (section 7.3).
+- **Drops.** Every creep that dies, from any cause, rolls the 10% chance for a random item on the spot where it died. A hero that dies drops its inventory as one loot bag and never a random item. An empty inventory drops nothing.
+- **Map spawns.** At every tick that is a multiple of 1 200, one random item appears at one of the four DMZ points, chosen by the seeded generator. Two items may share a point.
+- **Pickup.** A hero takes a ground item or a loot bag when it stands within 0.6 tiles of it and has a free slot. Of several heroes in reach the nearest one takes it, whichever team it plays for. A bag gives as many items as the free slots hold and stays with the rest. `pickUp` walks the hero to the item, and the system takes it on arrival.
+- **Despawn.** A ground item and a loot bag last 600 ticks from the tick they appear.
+- **Bots.** They buy and use no items (section 12.1), but a bot hero takes what it walks over.
 
 ## 9. Creeps
 

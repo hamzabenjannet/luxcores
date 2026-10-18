@@ -22,6 +22,11 @@ const DEFAULT_HEIGHT = 0.6;
 const ATTACK_COLORS = /** @type {Record<number, number>} */ ({ 1: 0xff9f43, 2: 0x2de2e6, 3: 0xb26bff });
 const MAX_AIM_LINES = 256;
 
+/** Ground items and loot bags are neutral and drawn as small gems. @param {number} kind */
+function isLootKind(kind) {
+  return kind === KIND.GROUND_ITEM || kind === KIND.LOOT_BAG;
+}
+
 /**
  * @param {THREE.Scene} scene
  * @param {number[]} teamColors 0xRRGGBB per team
@@ -31,6 +36,9 @@ export function createEntityMeshes(scene, teamColors) {
   const capGeometry = new THREE.SphereGeometry(0.3, 10, 8);
   const shotGeometry = new THREE.SphereGeometry(0.22, 8, 6);
   const shotMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const gemGeometry = new THREE.OctahedronGeometry(0.3);
+  const groundItemMaterial = new THREE.MeshBasicMaterial({ color: 0xffc24d });
+  const lootBagMaterial = new THREE.MeshBasicMaterial({ color: 0xfff1b8 });
   /** @type {THREE.MeshStandardMaterial[]} */
   const materials = teamColors.map((color) => new THREE.MeshStandardMaterial({ color: 0x000000, emissive: color, emissiveIntensity: 1.4 }));
   /** @type {Map<number, THREE.Object3D>} */
@@ -51,6 +59,7 @@ export function createEntityMeshes(scene, teamColors) {
   /** @param {import('../../sim/state.js').Entity} e */
   function createMesh(e) {
     if (e.kind === KIND.PROJECTILE) return new THREE.Mesh(shotGeometry, shotMaterial);
+    if (isLootKind(e.kind)) return new THREE.Mesh(gemGeometry, e.kind === KIND.LOOT_BAG ? lootBagMaterial : groundItemMaterial);
     const height = HEIGHT[e.kind] ?? DEFAULT_HEIGHT;
     const mesh = new THREE.Mesh(box, materials[e.team] ?? materials[0]);
     mesh.scale.y = height;
@@ -73,7 +82,7 @@ export function createEntityMeshes(scene, teamColors) {
     for (const e of entities) byId.set(e.id, e);
 
     for (const e of entities) {
-      if (e.kind === KIND.CORE || e.kind === KIND.BLOCKER || e.team < 0) continue;
+      if (e.kind === KIND.CORE || e.kind === KIND.BLOCKER || (e.team < 0 && !isLootKind(e.kind))) continue;
       alive.add(e.id);
       let object = byEntity.get(e.id);
       if (!object) {
@@ -88,6 +97,9 @@ export function createEntityMeshes(scene, teamColors) {
         object.position.set(x / 1000, 0.8, z / 1000);
       } else if (e.kind === KIND.TOWER) {
         object.position.set(e.x / 1000, 0, e.z / 1000);
+      } else if (isLootKind(e.kind)) {
+        object.position.set(e.x / 1000, 0.5, e.z / 1000);
+        object.rotation.y += 0.03;
       } else {
         object.position.set(e.x / 1000, object.scale.y / 2, e.z / 1000);
       }

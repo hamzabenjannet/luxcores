@@ -109,13 +109,31 @@ Open for the owners:
 - **Hero roster.** Names and kits are still the placeholders in `data/heroes.json` until Hama designs them.
 - **No camera follow, no portrait, no hold-to-aim.** M7 and M8 own those, as the milestone table says.
 
-## Next Milestone: M6
+## M6 (Items)
+
+Done on 2026-10-18 in the sim, the server snapshot, the web client and the Godot client. `src/sim/items.js` holds the shop, the inventory, the four effects, the loot bag and the pickup; `systems/items.js` runs the map spawns, the despawn and the pickup; `systems/combat.js` funnels lux for Energy Grab and applies Haste and Sluggish to the attack interval; `systems/cleanup.js` drops the loot bag and rolls the creep drops. GDD 8.4 states the rules that the GDD left open, and they await the owners' approval (`SPEC_VERSION` stays 0.10.0, so every golden replay was re-recorded and `items-seed-616161` was added). The acceptance checks are tests in `test/items.test.js`:
+
+- Energy Boost is refused on the Lumen Core, on an enemy and out of reach, and keeps the item. On an own hero or building it adds 150 HP to the HP and the maximum HP.
+- Energy Grab funnels exactly 50 lux into the pending pool and then ends, a second use is refused while it runs, damage taken by a shield funnels nothing, and the effect ends with the hero.
+- Haste turns one hit per second into about four for 300 ticks and then wears off. Sluggish slows an enemy hero or creep and is refused on own units, buildings and far targets.
+- A purchase pays at once, builds for 20 ticks and waits (held) for a hero and a free slot. A barracks that dies loses what it holds, and cancelling refunds in full. The inventory stops at 50 items.
+- A dead hero leaves its inventory as a loot bag that any hero can take, up to its free slots. Bags and ground items despawn after 600 ticks, and a map item appears at tick 1 200 and every 1 200 ticks after.
+- A creep death drops an item about one time in ten from the seeded generator, and a checkpoint taken in the middle of item play resumes to the same hashes. An older checkpoint without item fields still loads.
+
+Both clients show the item bar (one button per item with its count), a shop row in the barracks panel with the price, the queue lines of item orders, labels for ground items and bags, and a tap on a ground item or bag that sends the hero to take it. Energy Boost and Sluggish wait for a tap on the target. The shared decisions are `itemStates`, `immediateUse`, `shopStates` and the new `resolveTap` branches, with cases in `test/fixtures/client-parity.json`. The browser test buys two items before any hero exists, gets them with the hero, uses Haste and aims Energy Boost. The Godot live test does the same.
+
+Open for the owners:
+
+- **Approve GDD 8.4.** The details most likely to matter: the inventory is a count per item, a bag or a creep death drops on the spot, a second Haste or Sluggish replaces the first, a creep that dies from entropy still rolls a drop, and Energy Grab ends when the hero dies.
+- **Hama's review of the item interface.** The item bar sits under the ability buttons and the shop row sits in the barracks panel. The ground items are small gems with a name label; Hama may want models and a different place for the quick slots.
+- **No bot items.** GDD 12.1 gives the bot no items. A bot hero picks up what it walks over, which changes the balance a little `[UNVERIFIED]`.
+
+## Next Milestone: M7
 
 From `docs/TECH_ARCHITECTURE.md` section 14. Each milestone ends with tests green and a short demo on a phone. Both clients grow together: put every UI decision in `src/client/ui/controls.js` and `vone/scripts/game_logic.gd`, and add parity cases.
 
 | # | Scope | Done when |
 |---|---|---|
-| M6 | Items: inventory (50), barracks orders waiting for a hero, drops, map spawns, loot bags (owner can reclaim), the 4 starter items | Energy Boost refused on the Core; Energy Grab funnels exactly 50 lux then is consumed |
 | M7 | Client: instanced rendering, interpolation, camera follow on the selected hero, a small lux count beside every unit and building (no glow-as-health, GDD 13.1), end-of-match stats | 60 creeps on screen at 60 fps on a mid-range Android phone |
 | M8 | Touch controls per GDD 11: tap select, hero move and attack, ability targeting, path mode with Undo/Go/Cancel and Reuse last path, build ghost, quick slots, pinch zoom | A full match playable by touch |
 | M9 | Bot per GDD 12.1, hot-seat toggle, bot-vs-bot soak over 1 000 seeds in Node | Soak finishes with no crash and no non-integer values |

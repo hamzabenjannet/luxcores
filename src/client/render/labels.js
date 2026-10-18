@@ -65,8 +65,9 @@ function makeLabel(text, color) {
  * @param {{ core: number, default: number }} hpFactor
  * @param {number[]} teamColors 0xRRGGBB per team
  * @param {readonly string[]} [heroNames] roster names in roster order
+ * @param {readonly string[]} [itemNames] item names by item id
  */
-export function createLabels(scene, hpFactor, teamColors, heroNames = []) {
+export function createLabels(scene, hpFactor, teamColors, heroNames = [], itemNames = []) {
   /** @type {Map<number, ReturnType<typeof makeLabel>>} */
   const byEntity = new Map();
 
@@ -85,7 +86,7 @@ export function createLabels(scene, hpFactor, teamColors, heroNames = []) {
   function update(entities) {
     const alive = new Set();
     for (const e of entities) {
-      const text = entityText(e, hpFactor, heroNames);
+      const text = entityText(e, hpFactor, heroNames, itemNames);
       if (text === null) continue; // projectiles and other nameless kinds
       alive.add(e.id);
       let label = byEntity.get(e.id);

@@ -44,9 +44,15 @@ var _queue_box: VBoxContainer
 var _order_key := ""
 var _hero_box: VBoxContainer
 var _hero_key := ""
+var _shop_box: VBoxContainer
+var _shop_key := ""
 var _hero_bar: HBoxContainer
 var _hero_name_label: Label
 var _ability_buttons: Array = []
+var _item_bar: HBoxContainer
+var _item_buttons: Array = []
+## The id of the item (Energy Boost or Sluggish) whose target the next tap chooses, or -1.
+var _item_aim := -1
 ## The slot (1 ranged, 2 area) whose target the next tap chooses, or -1.
 var _ability := -1
 ## Label of the chosen hero allocation, one of GameLogic.hero_lux_choices.
@@ -258,6 +264,9 @@ func _build_interface() -> void:
 	_hero_box = VBoxContainer.new()
 	_hero_box.add_theme_constant_override("separation", 6)
 	_panel.add_child(_hero_box)
+	_shop_box = VBoxContainer.new()
+	_shop_box.add_theme_constant_override("separation", 6)
+	_panel.add_child(_shop_box)
 	_queue_box = VBoxContainer.new()
 	_queue_box.add_theme_constant_override("separation", 4)
 	_panel.add_child(_queue_box)
@@ -279,6 +288,11 @@ func _build_interface() -> void:
 		_hero_bar.add_child(ability_button)
 		_ability_buttons.append(ability_button)
 	_game.add_child(_hero_bar)
+	# The item bar: one quick slot per item, with how many the hero holds. It shows while a hero lives.
+	_item_bar = HBoxContainer.new()
+	_item_bar.visible = false
+	_item_bar.add_theme_constant_override("separation", 8)
+	_game.add_child(_item_bar)
 
 	var game_controls := HBoxContainer.new()
 	_start_button = _make_button("START MATCH", Color("#287557"))
@@ -433,7 +447,7 @@ func _connect_match() -> void:
 	_is_host = bool(result.get("is_host", false))
 	_role = str(result.get("role", "player"))
 	_data = result.data
-	_arena.set_balance(_data.balance, _data.heroes)
+	_arena.set_balance(_data.balance, _data.heroes, _data.items)
 	_tick_hz = int(_backend.get_spec().get("tickHz", 20))
 	_match_id_input.text = _backend.get_match_id()
 	_home.visible = false
@@ -476,6 +490,7 @@ func _start_match() -> void:
 
 func _select_building(building: String) -> void:
 	_ability = -1
+	_item_aim = -1
 	_selected_group = -1
 	_mode = ""
 	_path_points = []
@@ -530,9 +545,11 @@ func _on_arena_tapped(ground: Vector2) -> void:
 		"selected_group": _selected_group,
 		"path_count": _path_points.size(),
 		"ability": _ability,
+		"item": _item_aim,
 	})
 	if result.has("command"):
 		_ability = -1
+		_item_aim = -1
 		# A placed building ends build mode at once, so a second tap cannot place a second one.
 		if GameLogic.ends_build_mode(result.command):
 			_building = ""
@@ -619,6 +636,8 @@ func _refresh_panel() -> void:
 		_panel_key = ""
 		_order_key = ""
 		_hero_key = ""
+		_shop_key = ""
+		_clear_box(_shop_box)
 		_queue_key = ""
 		return
 	_show_building_panel(selected)
@@ -654,6 +673,8 @@ func _show_path_bar() -> void:
 	_clear_box(_queue_box)
 	_order_key = ""
 	_hero_key = ""
+	_shop_key = ""
+	_clear_box(_shop_box)
 	_queue_key = ""
 	_panel_title.text = "Path: %d/%d waypoints. Tap the map to add one." % [_path_points.size(), int(_data.balance.creep.maxWaypoints)]
 	var key := "path|%d|%d" % [_path_points.size(), _last_path.size()]
@@ -702,6 +723,8 @@ func _show_group_panel(group: Dictionary) -> void:
 	_clear_box(_queue_box)
 	_order_key = ""
 	_hero_key = ""
+	_shop_key = ""
+	_clear_box(_shop_box)
 	_queue_key = ""
 	var size := GameLogic.group_size(_current_snapshot.get("entities", []), int(group.id))
 	_panel_title.text = "Group of %d: tap another of your groups to merge." % size if _mode == "merge" else "Group of %d, %s" % [size, "custom path" if int(group.get("custom", 0)) == 1 else "lane route"]
@@ -766,6 +789,8 @@ func _show_building_panel(selected: Dictionary) -> void:
 		_clear_box(_queue_box)
 		_order_key = ""
 		_hero_key = ""
+		_shop_key = ""
+		_clear_box(_shop_box)
 		_queue_key = ""
 
 ## Creep order controls and the queue of a barracks.
@@ -811,7 +836,8 @@ func _show_barracks_controls(barracks: Dictionary, lux: int, min_left: int) -> v
 			_order_box.add_child(clear_button)
 
 	_show_hero_picks(barracks, lux, min_left)
-	var lines := GameLogic.queue_lines(_current_snapshot.get("orders", []), int(barracks.id), _tick_hz, _hero_names())
+	_show_shop(barracks, lux, min_left)
+	var lines := GameLogic.queue_lines(_current_snapshot.get("orders", []), int(barracks.id), _tick_hz, _hero_names(), _item_names())
 	var queue_key := str(barracks.id)
 	for order in _current_snapshot.get("orders", []):
 		if int(order.barracksId) == int(barracks.id):
@@ -837,6 +863,16 @@ func _show_barracks_controls(barracks: Dictionary, lux: int, min_left: int) -> v
 			var node: Label = _queue_labels.get(int(line.index))
 			if node != null and node.text != String(line.text):
 				node.text = String(line.text)
+
+## Item names by item id, from data/items.json.
+func _item_names() -> Array:
+	var names: Array = []
+	for entry in _data.get("items", {}).get("list", []):
+		names.append(String(entry.name))
+	return names
+
+func _item_list() -> Array:
+	return _data.get("items", {}).get("list", [])
 
 ## Roster names in roster order, from data/heroes.json.
 func _hero_names() -> Array:
@@ -920,6 +956,35 @@ func _show_hero_picks(barracks: Dictionary, lux: int, min_left: int) -> void:
 		heroes.add_child(hero_button)
 	_hero_box.add_child(heroes)
 
+## The item part of a barracks panel (GDD 8.1): one button per item with its price. A bought item
+## waits in the queue and reaches the hero's inventory when it is built.
+func _show_shop(barracks: Dictionary, lux: int, min_left: int) -> void:
+	var shop := GameLogic.shop_states(_item_list(), lux, min_left)
+	var key := str(int(barracks.id))
+	for entry in shop:
+		key += "|%d%s" % [int(entry.id), "P" if entry.poor else ""]
+	if key == _shop_key:
+		return
+	_shop_key = key
+	_clear_box(_shop_box)
+	var note := Label.new()
+	note.add_theme_font_size_override("font_size", 15)
+	note.add_theme_color_override("font_color", Color("#8a93a6"))
+	note.text = "Items: bought here, carried by your hero"
+	_shop_box.add_child(note)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	for entry in shop:
+		var item_button := _make_button("%s %d" % [entry.name, int(entry.costLux)], Color("#24364a"))
+		item_button.custom_minimum_size = Vector2(0, 44)
+		item_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		item_button.name = "ShopItem%d" % int(entry.id)
+		if bool(entry.poor):
+			item_button.modulate = Color(1, 1, 1, 0.5)
+		item_button.pressed.connect(_run_panel_action.bind({"t": "orderItem", "barracksId": int(barracks.id), "itemId": int(entry.id)}))
+		row.add_child(item_button)
+	_shop_box.add_child(row)
+
 func _set_hero_alloc(label: String) -> void:
 	_hero_alloc = label
 	_refresh_panel()
@@ -935,10 +1000,13 @@ func _refresh_hero_bar() -> void:
 	var hero := _viewer_hero()
 	if hero.is_empty() or _data.is_empty():
 		_hero_bar.visible = false
+		_item_bar.visible = false
 		_ability = -1
+		_item_aim = -1
 		return
 	_hero_bar.visible = true
-	_hero_name_label.text = GameLogic.entity_text(hero, _data.balance.hpFactor, _hero_names())
+	_hero_name_label.text = GameLogic.entity_text(hero, _data.balance.hpFactor, _hero_names(), _item_names())
+	_refresh_item_bar()
 	var states := GameLogic.ability_states(hero, _data.abilities, _viewer_core_lux_milli(), int(_data.balance.core.minLeftAfterSpendLux), _tick_hz)
 	for state in states:
 		var button: Button = _ability_buttons[int(state.slot)]
@@ -946,6 +1014,55 @@ func _refresh_hero_bar() -> void:
 		var dim: bool = not bool(state.ready) or bool(state.poor)
 		button.modulate = Color(1, 1, 1, 0.5 if dim else 1.0)
 		button.flat = _ability != int(state.slot)
+
+## The item quick slots under the ability buttons: the short name and how many the hero holds.
+func _refresh_item_bar() -> void:
+	var items := _item_list()
+	if _item_buttons.is_empty() and not items.is_empty():
+		for entry in items:
+			var item_button := _make_button(GameLogic.item_short_name(String(entry.name)), Color("#2b3a2f"))
+			item_button.custom_minimum_size = Vector2(0, 44)
+			item_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			item_button.name = "Item%d" % int(entry.id)
+			item_button.pressed.connect(_use_from_bar.bind(int(entry.id)))
+			_item_bar.add_child(item_button)
+			_item_buttons.append(item_button)
+	_item_bar.visible = not _item_buttons.is_empty()
+	var player := _viewer_player()
+	for state in GameLogic.item_states(items, player.get("items", []), int(player.get("funnelLux", 0))):
+		var item_button: Button = _item_buttons[int(state.id)]
+		item_button.text = String(state.text)
+		item_button.modulate = Color(1, 1, 1, 1.0 if bool(state.ready) else 0.5)
+		item_button.flat = not (bool(state.active) or _item_aim == int(state.id))
+
+## An item button: self items apply at once, the others wait for a tap on the target.
+func _use_from_bar(id: int) -> void:
+	if _viewer_hero().is_empty():
+		return
+	var player := _viewer_player()
+	var state: Dictionary = GameLogic.item_states(_item_list(), player.get("items", []), int(player.get("funnelLux", 0)))[id]
+	if not bool(state.ready):
+		_set_status("Energy Grab is running." if bool(state.active) else "You hold no %s." % String(_item_names()[id]))
+		return
+	var use := GameLogic.immediate_use(id, _item_list())
+	_ability = -1
+	if not use.is_empty():
+		_item_aim = -1
+		_run_panel_action(use)
+	elif _item_aim == id:
+		_item_aim = -1
+	else:
+		_item_aim = id
+		_building = ""
+		_selected_entity = -1
+		_selected_group = -1
+		_mode = ""
+		_build_description.visible = false
+		_tower_attack_row.visible = false
+		_set_status("Tap your hero or a building." if String(state.aim) == "ally" else "Tap an enemy hero or creep.")
+	_arena.set_selection(_building, _selected_entity)
+	_refresh_palette()
+	_refresh_panel()
 
 func _cast_from_bar(slot: int) -> void:
 	var hero := _viewer_hero()
@@ -963,6 +1080,7 @@ func _cast_from_bar(slot: int) -> void:
 		_ability = -1
 	else:
 		_ability = slot
+		_item_aim = -1
 		_building = ""
 		_selected_entity = -1
 		_selected_group = -1

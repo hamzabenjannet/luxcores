@@ -4,14 +4,14 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { KIND, SPEC_VERSION } from '../src/sim/index.js';
 import { entityText, isDay } from '../src/client/entity-text.js';
-import { abilityStates, actionsFor, canAfford, endsBuildMode, groupActions, heroLuxChoices, heroPickState, immediateCast, mixFor, queueLines, resolveTap, secondsText } from '../src/client/ui/controls.js';
+import { abilityStates, actionsFor, canAfford, endsBuildMode, groupActions, heroLuxChoices, heroPickState, immediateCast, immediateUse, itemStates, mixFor, queueLines, resolveTap, secondsText, shopStates } from '../src/client/ui/controls.js';
 import { ROOT, loadData } from './helpers/load-data.js';
 
 // The Godot client answers the same cases in vone/tests/run_tests.gd. A rule change in
 // one client that skips the other fails one of the two runs.
 const fixture = JSON.parse(readFileSync(join(ROOT, 'test', 'fixtures', 'client-parity.json'), 'utf8'));
 const { raw, config } = loadData();
-const data = { buildings: raw.buildings, balance: raw.balance, mapgen: raw.mapgen };
+const data = { buildings: raw.buildings, balance: raw.balance, mapgen: raw.mapgen, items: raw.items };
 
 test('the fixture uses the sim kind codes and the balance data it names', () => {
   assert.deepEqual(fixture.kinds, KIND);
@@ -26,8 +26,13 @@ test('the fixture names the heroes, abilities and roster of the data files', () 
   for (const [type, template] of Object.entries(raw.abilities.templates)) assert.equal(fixture.abilities.templates[type].costLux, /** @type {any} */ (template).costLux);
 });
 
+test('the fixture names the items of the data file', () => {
+  assert.deepEqual(fixture.itemNames, raw.items.list.map((/** @type {any} */ i) => i.name));
+  assert.deepEqual(fixture.items, raw.items.list.map((/** @type {any} */ i) => ({ id: i.id, name: i.name, costLux: i.costLux, target: i.target, effect: { kind: i.effect.kind } })));
+});
+
 test('entity text cases', () => {
-  for (const c of fixture.entityText) assert.equal(entityText(c.entity, fixture.hpFactor, fixture.heroNames), c.expect, JSON.stringify(c.entity));
+  for (const c of fixture.entityText) assert.equal(entityText(c.entity, fixture.hpFactor, fixture.heroNames, fixture.itemNames), c.expect, JSON.stringify(c.entity));
 });
 
 test('seconds text cases', () => {
@@ -67,7 +72,13 @@ test('creep order mix cases', () => {
 });
 
 test('queue line cases', () => {
-  for (const c of fixture.queueLines) assert.deepEqual(queueLines(c.orders, c.barracksId, c.tickHz, fixture.heroNames), c.expect);
+  for (const c of fixture.queueLines) assert.deepEqual(queueLines(c.orders, c.barracksId, c.tickHz, fixture.heroNames, fixture.itemNames), c.expect);
+});
+
+test('item cases', () => {
+  for (const c of fixture.itemStates) assert.deepEqual(itemStates(fixture.items, c.counts, c.funnelLux), c.expect, c.name);
+  for (const c of fixture.immediateUse) assert.deepEqual(immediateUse(c.id, fixture.items), c.expect, JSON.stringify(c));
+  for (const c of fixture.shopStates) assert.deepEqual(shopStates(fixture.items, c.coreLuxMilli, c.minLeftLux), c.expect, c.name);
 });
 
 test('group panel action cases', () => {
@@ -89,6 +100,7 @@ test('tap cases', () => {
       selectedGroup: c.ctx.selectedGroup ?? null,
       pathCount: c.ctx.pathCount ?? 0,
       ability: c.ctx.ability ?? null,
+      item: c.ctx.item ?? null,
     });
     assert.deepEqual(actual, c.expect, c.name);
   }

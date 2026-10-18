@@ -149,6 +149,42 @@
         "stunTicks": 3
       },
       "expect": "Barracks 40 STUN SHIELD"
+    },
+    {
+      "entity": {
+        "kind": 12,
+        "hp": 1,
+        "itemId": 3
+      },
+      "expect": "Haste"
+    },
+    {
+      "entity": {
+        "kind": 12,
+        "hp": 1,
+        "itemId": 0
+      },
+      "expect": "Item"
+    },
+    {
+      "entity": {
+        "kind": 13,
+        "hp": 1,
+        "items": [
+          1,
+          0,
+          2,
+          0
+        ]
+      },
+      "expect": "Loot Bag 3"
+    },
+    {
+      "entity": {
+        "kind": 13,
+        "hp": 1
+      },
+      "expect": "Loot Bag 0"
     }
   ],
   "isDay": [
@@ -1183,6 +1219,985 @@
           "z": 60700
         }
       }
+    },
+    {
+      "name": "tapping a ground item sends the hero to pick it up",
+      "ctx": {
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000,
+        "entities": [
+          {
+            "id": 1,
+            "kind": 1,
+            "team": 0,
+            "owner": -1,
+            "x": 48500,
+            "z": 96500
+          },
+          {
+            "id": 2,
+            "kind": 10,
+            "team": 0,
+            "owner": 0,
+            "x": 40000,
+            "z": 60000
+          },
+          {
+            "id": 3,
+            "kind": 9,
+            "team": 1,
+            "owner": 1,
+            "x": 42000,
+            "z": 60000
+          },
+          {
+            "id": 4,
+            "kind": 6,
+            "team": 0,
+            "owner": 0,
+            "x": 44000,
+            "z": 90000
+          },
+          {
+            "id": 5,
+            "kind": 8,
+            "team": -1,
+            "owner": -1,
+            "x": 36000,
+            "z": 60000
+          },
+          {
+            "id": 6,
+            "kind": 12,
+            "team": -1,
+            "owner": -1,
+            "x": 30000,
+            "z": 60000,
+            "itemId": 3
+          },
+          {
+            "id": 7,
+            "kind": 13,
+            "team": -1,
+            "owner": 0,
+            "x": 30000,
+            "z": 70000,
+            "items": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "id": 8,
+            "kind": 10,
+            "team": 1,
+            "owner": 1,
+            "x": 46000,
+            "z": 60000
+          }
+        ],
+        "ground": [
+          30,
+          60
+        ]
+      },
+      "expect": {
+        "command": {
+          "t": "pickUp",
+          "groundItemId": 6
+        }
+      }
+    },
+    {
+      "name": "tapping a loot bag sends the hero to pick it up",
+      "ctx": {
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000,
+        "entities": [
+          {
+            "id": 1,
+            "kind": 1,
+            "team": 0,
+            "owner": -1,
+            "x": 48500,
+            "z": 96500
+          },
+          {
+            "id": 2,
+            "kind": 10,
+            "team": 0,
+            "owner": 0,
+            "x": 40000,
+            "z": 60000
+          },
+          {
+            "id": 3,
+            "kind": 9,
+            "team": 1,
+            "owner": 1,
+            "x": 42000,
+            "z": 60000
+          },
+          {
+            "id": 4,
+            "kind": 6,
+            "team": 0,
+            "owner": 0,
+            "x": 44000,
+            "z": 90000
+          },
+          {
+            "id": 5,
+            "kind": 8,
+            "team": -1,
+            "owner": -1,
+            "x": 36000,
+            "z": 60000
+          },
+          {
+            "id": 6,
+            "kind": 12,
+            "team": -1,
+            "owner": -1,
+            "x": 30000,
+            "z": 60000,
+            "itemId": 3
+          },
+          {
+            "id": 7,
+            "kind": 13,
+            "team": -1,
+            "owner": 0,
+            "x": 30000,
+            "z": 70000,
+            "items": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "id": 8,
+            "kind": 10,
+            "team": 1,
+            "owner": 1,
+            "x": 46000,
+            "z": 60000
+          }
+        ],
+        "ground": [
+          30,
+          70
+        ]
+      },
+      "expect": {
+        "command": {
+          "t": "pickUp",
+          "groundItemId": 7
+        }
+      }
+    },
+    {
+      "name": "tapping a ground item without a hero says so",
+      "ctx": {
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000,
+        "entities": [
+          {
+            "id": 1,
+            "kind": 1,
+            "team": 0,
+            "owner": -1,
+            "x": 48500,
+            "z": 96500
+          },
+          {
+            "id": 3,
+            "kind": 9,
+            "team": 1,
+            "owner": 1,
+            "x": 42000,
+            "z": 60000
+          },
+          {
+            "id": 4,
+            "kind": 6,
+            "team": 0,
+            "owner": 0,
+            "x": 44000,
+            "z": 90000
+          },
+          {
+            "id": 5,
+            "kind": 8,
+            "team": -1,
+            "owner": -1,
+            "x": 36000,
+            "z": 60000
+          },
+          {
+            "id": 6,
+            "kind": 12,
+            "team": -1,
+            "owner": -1,
+            "x": 30000,
+            "z": 60000,
+            "itemId": 3
+          },
+          {
+            "id": 7,
+            "kind": 13,
+            "team": -1,
+            "owner": 0,
+            "x": 30000,
+            "z": 70000,
+            "items": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "id": 8,
+            "kind": 10,
+            "team": 1,
+            "owner": 1,
+            "x": 46000,
+            "z": 60000
+          }
+        ],
+        "ground": [
+          30,
+          60
+        ]
+      },
+      "expect": {
+        "message": "You need a hero to pick that up."
+      }
+    },
+    {
+      "name": "aiming Energy Boost at the own hero uses it on the hero",
+      "ctx": {
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000,
+        "entities": [
+          {
+            "id": 1,
+            "kind": 1,
+            "team": 0,
+            "owner": -1,
+            "x": 48500,
+            "z": 96500
+          },
+          {
+            "id": 2,
+            "kind": 10,
+            "team": 0,
+            "owner": 0,
+            "x": 40000,
+            "z": 60000
+          },
+          {
+            "id": 3,
+            "kind": 9,
+            "team": 1,
+            "owner": 1,
+            "x": 42000,
+            "z": 60000
+          },
+          {
+            "id": 4,
+            "kind": 6,
+            "team": 0,
+            "owner": 0,
+            "x": 44000,
+            "z": 90000
+          },
+          {
+            "id": 5,
+            "kind": 8,
+            "team": -1,
+            "owner": -1,
+            "x": 36000,
+            "z": 60000
+          },
+          {
+            "id": 6,
+            "kind": 12,
+            "team": -1,
+            "owner": -1,
+            "x": 30000,
+            "z": 60000,
+            "itemId": 3
+          },
+          {
+            "id": 7,
+            "kind": 13,
+            "team": -1,
+            "owner": 0,
+            "x": 30000,
+            "z": 70000,
+            "items": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "id": 8,
+            "kind": 10,
+            "team": 1,
+            "owner": 1,
+            "x": 46000,
+            "z": 60000
+          }
+        ],
+        "ground": [
+          40,
+          60
+        ],
+        "item": 0
+      },
+      "expect": {
+        "command": {
+          "t": "useItem",
+          "inventorySlot": 0,
+          "targetId": 2
+        }
+      }
+    },
+    {
+      "name": "aiming Energy Boost at an own building uses it on the building",
+      "ctx": {
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000,
+        "entities": [
+          {
+            "id": 1,
+            "kind": 1,
+            "team": 0,
+            "owner": -1,
+            "x": 48500,
+            "z": 96500
+          },
+          {
+            "id": 2,
+            "kind": 10,
+            "team": 0,
+            "owner": 0,
+            "x": 40000,
+            "z": 60000
+          },
+          {
+            "id": 3,
+            "kind": 9,
+            "team": 1,
+            "owner": 1,
+            "x": 42000,
+            "z": 60000
+          },
+          {
+            "id": 4,
+            "kind": 6,
+            "team": 0,
+            "owner": 0,
+            "x": 44000,
+            "z": 90000
+          },
+          {
+            "id": 5,
+            "kind": 8,
+            "team": -1,
+            "owner": -1,
+            "x": 36000,
+            "z": 60000
+          },
+          {
+            "id": 6,
+            "kind": 12,
+            "team": -1,
+            "owner": -1,
+            "x": 30000,
+            "z": 60000,
+            "itemId": 3
+          },
+          {
+            "id": 7,
+            "kind": 13,
+            "team": -1,
+            "owner": 0,
+            "x": 30000,
+            "z": 70000,
+            "items": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "id": 8,
+            "kind": 10,
+            "team": 1,
+            "owner": 1,
+            "x": 46000,
+            "z": 60000
+          }
+        ],
+        "ground": [
+          44,
+          90
+        ],
+        "item": 0
+      },
+      "expect": {
+        "command": {
+          "t": "useItem",
+          "inventorySlot": 0,
+          "targetId": 4
+        }
+      }
+    },
+    {
+      "name": "aiming Energy Boost at an enemy refuses",
+      "ctx": {
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000,
+        "entities": [
+          {
+            "id": 1,
+            "kind": 1,
+            "team": 0,
+            "owner": -1,
+            "x": 48500,
+            "z": 96500
+          },
+          {
+            "id": 2,
+            "kind": 10,
+            "team": 0,
+            "owner": 0,
+            "x": 40000,
+            "z": 60000
+          },
+          {
+            "id": 3,
+            "kind": 9,
+            "team": 1,
+            "owner": 1,
+            "x": 42000,
+            "z": 60000
+          },
+          {
+            "id": 4,
+            "kind": 6,
+            "team": 0,
+            "owner": 0,
+            "x": 44000,
+            "z": 90000
+          },
+          {
+            "id": 5,
+            "kind": 8,
+            "team": -1,
+            "owner": -1,
+            "x": 36000,
+            "z": 60000
+          },
+          {
+            "id": 6,
+            "kind": 12,
+            "team": -1,
+            "owner": -1,
+            "x": 30000,
+            "z": 60000,
+            "itemId": 3
+          },
+          {
+            "id": 7,
+            "kind": 13,
+            "team": -1,
+            "owner": 0,
+            "x": 30000,
+            "z": 70000,
+            "items": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "id": 8,
+            "kind": 10,
+            "team": 1,
+            "owner": 1,
+            "x": 46000,
+            "z": 60000
+          }
+        ],
+        "ground": [
+          42,
+          60
+        ],
+        "item": 0
+      },
+      "expect": {
+        "message": "Tap your hero or one of your buildings."
+      }
+    },
+    {
+      "name": "aiming Energy Boost at the Lumen Core refuses",
+      "ctx": {
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000,
+        "entities": [
+          {
+            "id": 1,
+            "kind": 1,
+            "team": 0,
+            "owner": -1,
+            "x": 48500,
+            "z": 96500
+          },
+          {
+            "id": 2,
+            "kind": 10,
+            "team": 0,
+            "owner": 0,
+            "x": 40000,
+            "z": 60000
+          },
+          {
+            "id": 3,
+            "kind": 9,
+            "team": 1,
+            "owner": 1,
+            "x": 42000,
+            "z": 60000
+          },
+          {
+            "id": 4,
+            "kind": 6,
+            "team": 0,
+            "owner": 0,
+            "x": 44000,
+            "z": 90000
+          },
+          {
+            "id": 5,
+            "kind": 8,
+            "team": -1,
+            "owner": -1,
+            "x": 36000,
+            "z": 60000
+          },
+          {
+            "id": 6,
+            "kind": 12,
+            "team": -1,
+            "owner": -1,
+            "x": 30000,
+            "z": 60000,
+            "itemId": 3
+          },
+          {
+            "id": 7,
+            "kind": 13,
+            "team": -1,
+            "owner": 0,
+            "x": 30000,
+            "z": 70000,
+            "items": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "id": 8,
+            "kind": 10,
+            "team": 1,
+            "owner": 1,
+            "x": 46000,
+            "z": 60000
+          }
+        ],
+        "ground": [
+          48.5,
+          96.5
+        ],
+        "item": 0
+      },
+      "expect": {
+        "message": "Tap your hero or one of your buildings."
+      }
+    },
+    {
+      "name": "aiming Sluggish at an enemy creep uses it on the creep",
+      "ctx": {
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000,
+        "entities": [
+          {
+            "id": 1,
+            "kind": 1,
+            "team": 0,
+            "owner": -1,
+            "x": 48500,
+            "z": 96500
+          },
+          {
+            "id": 2,
+            "kind": 10,
+            "team": 0,
+            "owner": 0,
+            "x": 40000,
+            "z": 60000
+          },
+          {
+            "id": 3,
+            "kind": 9,
+            "team": 1,
+            "owner": 1,
+            "x": 42000,
+            "z": 60000
+          },
+          {
+            "id": 4,
+            "kind": 6,
+            "team": 0,
+            "owner": 0,
+            "x": 44000,
+            "z": 90000
+          },
+          {
+            "id": 5,
+            "kind": 8,
+            "team": -1,
+            "owner": -1,
+            "x": 36000,
+            "z": 60000
+          },
+          {
+            "id": 6,
+            "kind": 12,
+            "team": -1,
+            "owner": -1,
+            "x": 30000,
+            "z": 60000,
+            "itemId": 3
+          },
+          {
+            "id": 7,
+            "kind": 13,
+            "team": -1,
+            "owner": 0,
+            "x": 30000,
+            "z": 70000,
+            "items": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "id": 8,
+            "kind": 10,
+            "team": 1,
+            "owner": 1,
+            "x": 46000,
+            "z": 60000
+          }
+        ],
+        "ground": [
+          42,
+          60
+        ],
+        "item": 3
+      },
+      "expect": {
+        "command": {
+          "t": "useItem",
+          "inventorySlot": 3,
+          "targetId": 3
+        }
+      }
+    },
+    {
+      "name": "aiming Sluggish at an enemy hero uses it on the hero",
+      "ctx": {
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000,
+        "entities": [
+          {
+            "id": 1,
+            "kind": 1,
+            "team": 0,
+            "owner": -1,
+            "x": 48500,
+            "z": 96500
+          },
+          {
+            "id": 2,
+            "kind": 10,
+            "team": 0,
+            "owner": 0,
+            "x": 40000,
+            "z": 60000
+          },
+          {
+            "id": 3,
+            "kind": 9,
+            "team": 1,
+            "owner": 1,
+            "x": 42000,
+            "z": 60000
+          },
+          {
+            "id": 4,
+            "kind": 6,
+            "team": 0,
+            "owner": 0,
+            "x": 44000,
+            "z": 90000
+          },
+          {
+            "id": 5,
+            "kind": 8,
+            "team": -1,
+            "owner": -1,
+            "x": 36000,
+            "z": 60000
+          },
+          {
+            "id": 6,
+            "kind": 12,
+            "team": -1,
+            "owner": -1,
+            "x": 30000,
+            "z": 60000,
+            "itemId": 3
+          },
+          {
+            "id": 7,
+            "kind": 13,
+            "team": -1,
+            "owner": 0,
+            "x": 30000,
+            "z": 70000,
+            "items": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "id": 8,
+            "kind": 10,
+            "team": 1,
+            "owner": 1,
+            "x": 46000,
+            "z": 60000
+          }
+        ],
+        "ground": [
+          46,
+          60
+        ],
+        "item": 3
+      },
+      "expect": {
+        "command": {
+          "t": "useItem",
+          "inventorySlot": 3,
+          "targetId": 8
+        }
+      }
+    },
+    {
+      "name": "aiming Sluggish at an own unit refuses",
+      "ctx": {
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000,
+        "entities": [
+          {
+            "id": 1,
+            "kind": 1,
+            "team": 0,
+            "owner": -1,
+            "x": 48500,
+            "z": 96500
+          },
+          {
+            "id": 2,
+            "kind": 10,
+            "team": 0,
+            "owner": 0,
+            "x": 40000,
+            "z": 60000
+          },
+          {
+            "id": 3,
+            "kind": 9,
+            "team": 1,
+            "owner": 1,
+            "x": 42000,
+            "z": 60000
+          },
+          {
+            "id": 4,
+            "kind": 6,
+            "team": 0,
+            "owner": 0,
+            "x": 44000,
+            "z": 90000
+          },
+          {
+            "id": 5,
+            "kind": 8,
+            "team": -1,
+            "owner": -1,
+            "x": 36000,
+            "z": 60000
+          },
+          {
+            "id": 6,
+            "kind": 12,
+            "team": -1,
+            "owner": -1,
+            "x": 30000,
+            "z": 60000,
+            "itemId": 3
+          },
+          {
+            "id": 7,
+            "kind": 13,
+            "team": -1,
+            "owner": 0,
+            "x": 30000,
+            "z": 70000,
+            "items": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "id": 8,
+            "kind": 10,
+            "team": 1,
+            "owner": 1,
+            "x": 46000,
+            "z": 60000
+          }
+        ],
+        "ground": [
+          40,
+          60
+        ],
+        "item": 3
+      },
+      "expect": {
+        "message": "Tap an enemy hero or creep."
+      }
+    },
+    {
+      "name": "aiming Sluggish at empty ground refuses",
+      "ctx": {
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000,
+        "entities": [
+          {
+            "id": 1,
+            "kind": 1,
+            "team": 0,
+            "owner": -1,
+            "x": 48500,
+            "z": 96500
+          },
+          {
+            "id": 2,
+            "kind": 10,
+            "team": 0,
+            "owner": 0,
+            "x": 40000,
+            "z": 60000
+          },
+          {
+            "id": 3,
+            "kind": 9,
+            "team": 1,
+            "owner": 1,
+            "x": 42000,
+            "z": 60000
+          },
+          {
+            "id": 4,
+            "kind": 6,
+            "team": 0,
+            "owner": 0,
+            "x": 44000,
+            "z": 90000
+          },
+          {
+            "id": 5,
+            "kind": 8,
+            "team": -1,
+            "owner": -1,
+            "x": 36000,
+            "z": 60000
+          },
+          {
+            "id": 6,
+            "kind": 12,
+            "team": -1,
+            "owner": -1,
+            "x": 30000,
+            "z": 60000,
+            "itemId": 3
+          },
+          {
+            "id": 7,
+            "kind": 13,
+            "team": -1,
+            "owner": 0,
+            "x": 30000,
+            "z": 70000,
+            "items": [
+              1,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "id": 8,
+            "kind": 10,
+            "team": 1,
+            "owner": 1,
+            "x": 46000,
+            "z": 60000
+          }
+        ],
+        "ground": [
+          20,
+          20
+        ],
+        "item": 3
+      },
+      "expect": {
+        "message": "Tap an enemy hero or creep."
+      }
     }
   ],
   "mixFor": [
@@ -1341,6 +2356,57 @@
           "index": 1,
           "orderId": 71,
           "text": "Group of 2 MM 2.0s"
+        }
+      ]
+    },
+    {
+      "barracksId": 10,
+      "tickHz": 20,
+      "orders": [
+        {
+          "id": 60,
+          "barracksId": 10,
+          "owner": 0,
+          "type": 3,
+          "mix": [
+            2
+          ],
+          "ticksLeft": 12,
+          "held": 0
+        },
+        {
+          "id": 61,
+          "barracksId": 10,
+          "owner": 0,
+          "type": 3,
+          "mix": [
+            0
+          ],
+          "ticksLeft": 0,
+          "held": 1
+        },
+        {
+          "id": 62,
+          "barracksId": 11,
+          "owner": 0,
+          "type": 3,
+          "mix": [
+            1
+          ],
+          "ticksLeft": 20,
+          "held": 0
+        }
+      ],
+      "expect": [
+        {
+          "index": 0,
+          "text": "Item Haste 0.6s",
+          "orderId": 60
+        },
+        {
+          "index": 1,
+          "text": "Item Energy Boost HELD",
+          "orderId": 61
         }
       ]
     }
@@ -1640,10 +2706,40 @@
     }
   ],
   "endsBuildMode": [
-    { "command": { "t": "build", "building": "tower", "tileX": 10, "tileZ": 80, "attack": "ranged" }, "expect": true },
-    { "command": { "t": "build", "building": "barracks", "tileX": 10, "tileZ": 80 }, "expect": true },
-    { "command": { "t": "castAbility", "slot": 0 }, "expect": false },
-    { "command": { "t": "heroMove", "x": 1, "z": 2 }, "expect": false }
+    {
+      "command": {
+        "t": "build",
+        "building": "tower",
+        "tileX": 10,
+        "tileZ": 80,
+        "attack": "ranged"
+      },
+      "expect": true
+    },
+    {
+      "command": {
+        "t": "build",
+        "building": "barracks",
+        "tileX": 10,
+        "tileZ": 80
+      },
+      "expect": true
+    },
+    {
+      "command": {
+        "t": "castAbility",
+        "slot": 0
+      },
+      "expect": false
+    },
+    {
+      "command": {
+        "t": "heroMove",
+        "x": 1,
+        "z": 2
+      },
+      "expect": false
+    }
   ],
   "immediateCast": [
     {
@@ -2075,6 +3171,303 @@
         {
           "label": "75%",
           "lux": 3
+        }
+      ]
+    }
+  ],
+  "itemNames": [
+    "Energy Boost",
+    "Energy Grab",
+    "Haste",
+    "Sluggish"
+  ],
+  "items": [
+    {
+      "id": 0,
+      "name": "Energy Boost",
+      "costLux": 20,
+      "target": "ownHeroOrBuilding",
+      "effect": {
+        "kind": "addLux"
+      }
+    },
+    {
+      "id": 1,
+      "name": "Energy Grab",
+      "costLux": 20,
+      "target": "self",
+      "effect": {
+        "kind": "funnelMode"
+      }
+    },
+    {
+      "id": 2,
+      "name": "Haste",
+      "costLux": 20,
+      "target": "self",
+      "effect": {
+        "kind": "attackSpeed"
+      }
+    },
+    {
+      "id": 3,
+      "name": "Sluggish",
+      "costLux": 20,
+      "target": "enemyUnit",
+      "effect": {
+        "kind": "attackSpeed"
+      }
+    }
+  ],
+  "itemStates": [
+    {
+      "name": "nothing held",
+      "counts": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "funnelLux": 0,
+      "expect": [
+        {
+          "id": 0,
+          "aim": "ally",
+          "count": 0,
+          "active": false,
+          "ready": false,
+          "text": "Boost 0"
+        },
+        {
+          "id": 1,
+          "aim": "none",
+          "count": 0,
+          "active": false,
+          "ready": false,
+          "text": "Grab 0"
+        },
+        {
+          "id": 2,
+          "aim": "none",
+          "count": 0,
+          "active": false,
+          "ready": false,
+          "text": "Haste 0"
+        },
+        {
+          "id": 3,
+          "aim": "enemy",
+          "count": 0,
+          "active": false,
+          "ready": false,
+          "text": "Sluggish 0"
+        }
+      ]
+    },
+    {
+      "name": "one of each is ready",
+      "counts": [
+        1,
+        1,
+        2,
+        3
+      ],
+      "funnelLux": 0,
+      "expect": [
+        {
+          "id": 0,
+          "aim": "ally",
+          "count": 1,
+          "active": false,
+          "ready": true,
+          "text": "Boost 1"
+        },
+        {
+          "id": 1,
+          "aim": "none",
+          "count": 1,
+          "active": false,
+          "ready": true,
+          "text": "Grab 1"
+        },
+        {
+          "id": 2,
+          "aim": "none",
+          "count": 2,
+          "active": false,
+          "ready": true,
+          "text": "Haste 2"
+        },
+        {
+          "id": 3,
+          "aim": "enemy",
+          "count": 3,
+          "active": false,
+          "ready": true,
+          "text": "Sluggish 3"
+        }
+      ]
+    },
+    {
+      "name": "a running Energy Grab shows its lux and is not ready",
+      "counts": [
+        0,
+        1,
+        0,
+        0
+      ],
+      "funnelLux": 40070,
+      "expect": [
+        {
+          "id": 0,
+          "aim": "ally",
+          "count": 0,
+          "active": false,
+          "ready": false,
+          "text": "Boost 0"
+        },
+        {
+          "id": 1,
+          "aim": "none",
+          "count": 1,
+          "active": true,
+          "ready": false,
+          "text": "Grab 40"
+        },
+        {
+          "id": 2,
+          "aim": "none",
+          "count": 0,
+          "active": false,
+          "ready": false,
+          "text": "Haste 0"
+        },
+        {
+          "id": 3,
+          "aim": "enemy",
+          "count": 0,
+          "active": false,
+          "ready": false,
+          "text": "Sluggish 0"
+        }
+      ]
+    }
+  ],
+  "immediateUse": [
+    {
+      "id": 0,
+      "expect": null
+    },
+    {
+      "id": 1,
+      "expect": {
+        "t": "useItem",
+        "inventorySlot": 1
+      }
+    },
+    {
+      "id": 2,
+      "expect": {
+        "t": "useItem",
+        "inventorySlot": 2
+      }
+    },
+    {
+      "id": 3,
+      "expect": null
+    }
+  ],
+  "shopStates": [
+    {
+      "name": "a full Core pays for every item",
+      "coreLuxMilli": 100000,
+      "minLeftLux": 1,
+      "expect": [
+        {
+          "id": 0,
+          "name": "Boost",
+          "costLux": 20,
+          "poor": false
+        },
+        {
+          "id": 1,
+          "name": "Grab",
+          "costLux": 20,
+          "poor": false
+        },
+        {
+          "id": 2,
+          "name": "Haste",
+          "costLux": 20,
+          "poor": false
+        },
+        {
+          "id": 3,
+          "name": "Sluggish",
+          "costLux": 20,
+          "poor": false
+        }
+      ]
+    },
+    {
+      "name": "a Core that would drop under 1 lux cannot pay",
+      "coreLuxMilli": 20500,
+      "minLeftLux": 1,
+      "expect": [
+        {
+          "id": 0,
+          "name": "Boost",
+          "costLux": 20,
+          "poor": true
+        },
+        {
+          "id": 1,
+          "name": "Grab",
+          "costLux": 20,
+          "poor": true
+        },
+        {
+          "id": 2,
+          "name": "Haste",
+          "costLux": 20,
+          "poor": true
+        },
+        {
+          "id": 3,
+          "name": "Sluggish",
+          "costLux": 20,
+          "poor": true
+        }
+      ]
+    },
+    {
+      "name": "exactly 21 lux pays",
+      "coreLuxMilli": 21000,
+      "minLeftLux": 1,
+      "expect": [
+        {
+          "id": 0,
+          "name": "Boost",
+          "costLux": 20,
+          "poor": false
+        },
+        {
+          "id": 1,
+          "name": "Grab",
+          "costLux": 20,
+          "poor": false
+        },
+        {
+          "id": 2,
+          "name": "Haste",
+          "costLux": 20,
+          "poor": false
+        },
+        {
+          "id": 3,
+          "name": "Sluggish",
+          "costLux": 20,
+          "poor": false
         }
       ]
     }

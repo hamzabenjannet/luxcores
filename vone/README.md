@@ -1,6 +1,6 @@
 # Luxcores Godot Client
 
-The Godot client renders match maps and server snapshots. Match simulation, command validation, and updates run on the backend through its plain WebSocket API (`/ws`). The client stands at milestone M5 of the web reference and matches the web client rule for rule. It covers the economy, buildings, tower upgrades, creep orders and groups, combat visuals, and heroes with their picks and abilities.
+The Godot client renders match maps and server snapshots. Match simulation, command validation, and updates run on the backend through its plain WebSocket API (`/ws`). The client stands at milestone M6 of the web reference and matches the web client rule for rule. It covers the economy, buildings, tower upgrades, creep orders and groups, combat visuals, and heroes with their picks and abilities, and items with a shop, an item bar and loot.
 
 ## Run
 
@@ -24,6 +24,7 @@ A Match ID in the field joins that match instead. An ID of a bot match joins as 
 - Pans the view by dragging and adds `+` and `−` zoom buttons to the arena overlay.
 - Builds all six buildings with a tower attack type. A placed building frees the palette selection at once, so a second tap cannot place a second one, and a refused tap keeps the selection. It also upgrades towers (power and shell), recycles and cancels a recycle.
 - Picks a hero at a barracks (M5): the panel lists the roster, greys out locked heroes and says why no pick is possible (a hero on the field, in production or the 5 second wait after a death), and offers 25%, 50%, 75% or the most the Core can spare as the lux to allocate. A hero bar then shows M R A S with each cost or cooldown: melee and shield cast at once, ranged and area wait for a tap. A shield draws as a cyan ring and a SHIELD tag.
+- Buys items at a barracks (M6): the panel sells the four starter items with their prices, a bought item waits in the queue (HELD without a hero) and reaches the hero's inventory when it is built. An item bar under the abilities shows the count of each; Haste and Energy Grab apply at once, Energy Boost and Sluggish wait for a tap on their target. A tap on a ground item or a loot bag sends the hero to take it.
 - Orders creeps from a barracks: 1 to 5 creeps, melee, ranged, area or mixed, with the queue listed and a cancel button per order (by order id).
 - Selects a creep group by tapping one of its creeps, then offers Path, Merge, Split and Lane Route. Path mode takes up to 10 waypoints with Undo, Go, Cancel and Reuse Last, and a barracks keeps a default path for new groups. The arena draws the selected group's route.
 - Resolves taps through `scripts/game_logic.gd`. A tap builds, selects an own building or creep group, adds a waypoint in path mode or picks the group to join in merge mode. Once a hero exists, a tap moves it or attacks an enemy, and a hero told to attack walks into reach first. With an ability aimed, a tap casts it.
@@ -39,13 +40,13 @@ A Match ID in the field joins that match instead. An ID of a bot match joins as 
 Run these from the repo root. Each needs Godot 4.6 (`GODOT_BIN`, `godot` on the PATH, or the macOS app).
 
 ```bash
-# Pure game logic against the shared fixtures: 107 checks, no server needed.
+# Pure game logic against the shared fixtures: 135 checks, no server needed.
 Godot --headless --path vone --script res://tests/run_tests.gd
 
 # Main 3D scene, entity rendering and camera controls, no server needed.
 Godot --headless --path vone --script res://tests/main3d_scene.gd
 
-# The real main scene against a running backend: 65 checks.
+# The real main scene against a running backend: 81 checks.
 Godot --headless --path vone --script res://tests/live_match.gd -- --server=http://127.0.0.1:3000
 
 # Both, with a throwaway backend, as part of the browser tests.

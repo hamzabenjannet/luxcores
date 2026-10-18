@@ -30,6 +30,7 @@ var _layout: Dictionary = {}
 var _snapshot: Dictionary = {}
 var _hp_factor := {"core": 1, "default": 10}
 var _hero_names: Array = []
+var _item_names: Array = []
 var _paths: Array = []
 var _selected_entity_id := -1
 var _map_width := 96
@@ -71,12 +72,15 @@ func _add_interface() -> void:
 	interface.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	canvas.add_child(interface)
 
-func set_balance(balance: Dictionary, heroes: Dictionary = {}) -> void:
+func set_balance(balance: Dictionary, heroes: Dictionary = {}, items: Dictionary = {}) -> void:
 	if balance.has("hpFactor"):
 		_hp_factor = balance.hpFactor
 	_hero_names = []
 	for entry in heroes.get("roster", []):
 		_hero_names.append(String(entry.name))
+	_item_names = []
+	for entry in items.get("list", []):
+		_item_names.append(String(entry.name))
 
 func set_world(layout: Dictionary, world_snapshot: Dictionary, _team: int) -> void:
 	var map_changed := layout != _layout
@@ -279,7 +283,7 @@ func _make_entity(entity: Dictionary) -> Node3D:
 		_add_tower_marker(anchor, entity)
 	if id == _selected_entity_id:
 		_add_selection_marker(anchor, tint)
-	var label_text := GameLogic.entity_text(entity, _hp_factor, _hero_names)
+	var label_text := GameLogic.entity_text(entity, _hp_factor, _hero_names, _item_names)
 	if not label_text.is_empty():
 		var label := Label3D.new()
 		label.text = label_text

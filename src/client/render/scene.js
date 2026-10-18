@@ -29,8 +29,9 @@ const VIEW_TILES_WIDE = 32;
  * @param {{ core: number, default: number }} hpFactor raw data/balance.json hpFactor
  * @param {number} [viewerTeam] the camera starts at this team's Core
  * @param {readonly string[]} [heroNames] roster names in roster order, for the hero labels
+ * @param {readonly string[]} [itemNames] item names by item id, for the item labels
  */
-export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0, heroNames = []) {
+export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0, heroNames = [], itemNames = []) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   const scene = new THREE.Scene();
@@ -73,7 +74,7 @@ export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0, hero
   borderGeo.setAttribute('position', new THREE.Float32BufferAttribute(borderPts, 3));
   scene.add(new THREE.LineSegments(borderGeo, new THREE.LineBasicMaterial({ color: 0x2a3550 })));
 
-  const labels = createLabels(scene, hpFactor, TEAM_COLORS, heroNames);
+  const labels = createLabels(scene, hpFactor, TEAM_COLORS, heroNames, itemNames);
   const entityMeshes = createEntityMeshes(scene, TEAM_COLORS);
   const overlay = createOverlay(scene);
   addGeneratedLayout(scene, view, labels);

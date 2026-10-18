@@ -58,8 +58,9 @@ export function mixFor(count, type) {
 /** Initial of an attack code, as the queue text shows it: M, R or A. */
 const ATTACK_INITIAL = /** @type {Record<number, string>} */ ({ 1: 'M', 2: 'R', 3: 'A' });
 
-/** Order type code of a hero pick in `Order.type` (`ORDER_TYPE.hero` in src/sim/creeps.js). */
+/** Order type codes of a hero pick and an item in `Order.type` (`ORDER_TYPE` in src/sim/creeps.js). */
 const HERO_ORDER = 2;
+const ITEM_ORDER = 3;
 
 /**
  * Seconds as the UI writes them, rounded up to a tenth, with integer math only: 99 ticks at 20 Hz is "5.0s".
@@ -73,20 +74,24 @@ export function secondsText(ticks, tickHz) {
 
 /**
  * The lines of a barracks queue, in queue order. A held group shows HELD; others show seconds left.
- * A hero pick shows the hero's name and the lux allocated to it.
+ * A hero pick shows the hero's name and the lux allocated to it, and an item shows its name and HELD
+ * while it waits for a hero or a free slot.
  * @param {readonly import('../../sim/state.js').Order[]} orders
  * @param {number} barracksId
  * @param {number} tickHz
  * @param {readonly string[]} [heroNames] roster names in roster order
+ * @param {readonly string[]} [itemNames] item names by item id
  * @returns {{ index: number, orderId: number, text: string }[]}
  */
-export function queueLines(orders, barracksId, tickHz, heroNames = []) {
+export function queueLines(orders, barracksId, tickHz, heroNames = [], itemNames = []) {
   return orders.filter((o) => o.barracksId === barracksId).map((o, index) => ({
     index,
     orderId: o.id,
     text: o.type === HERO_ORDER
       ? `Hero ${heroNames[o.mix[0]] ?? '?'} ${o.mix[1]} lux ${secondsText(o.ticksLeft, tickHz)}`
-      : `Group of ${o.mix.length} ${o.mix.map((c) => ATTACK_INITIAL[c] ?? '?').join('')} ${o.held ? 'HELD' : `${(Math.max(0, o.ticksLeft) / tickHz).toFixed(1)}s`}`,
+      : o.type === ITEM_ORDER
+        ? `Item ${itemNames[o.mix[0]] ?? '?'} ${o.held ? 'HELD' : secondsText(o.ticksLeft, tickHz)}`
+        : `Group of ${o.mix.length} ${o.mix.map((c) => ATTACK_INITIAL[c] ?? '?').join('')} ${o.held ? 'HELD' : `${(Math.max(0, o.ticksLeft) / tickHz).toFixed(1)}s`}`,
   }));
 }
 
@@ -137,6 +142,64 @@ export function immediateCast(slot, hero) {
   if (slot === 0) return { t: 'castAbility', slot: 0 };
   if (slot === 3) return { t: 'castAbility', slot: 3, targetId: hero.id };
   return null;
+}
+
+/** How each item target in data/items.json is aimed: no tap, an own hero or building, or an enemy hero or creep. */
+const ITEM_AIM = /** @type {Record<string, string>} */ ({ self: 'none', ownHeroOrBuilding: 'ally', enemyUnit: 'enemy' });
+
+/**
+ * The short name of an item for a button: the last word, so Energy Boost reads Boost.
+ * @param {string} name
+ */
+export function itemShortName(name) {
+  return name.split(' ').pop() ?? name;
+}
+
+/**
+ * The item quick slots of the hero bar (GDD 8.1): one per item, with how many the hero holds. An item is
+ * ready when the hero holds one and, for Energy Grab, no funnel runs. A running Energy Grab shows the whole
+ * lux it can still funnel instead of the count.
+ * @param {readonly { id: number, name: string, target: string, effect: { kind: string } }[]} items data/items.json `list`
+ * @param {readonly number[]} counts the player's inventory by item id
+ * @param {number} funnelLux milli-lux Energy Grab may still funnel
+ * @returns {{ id: number, aim: string, count: number, active: boolean, ready: boolean, text: string }[]}
+ */
+export function itemStates(items, counts, funnelLux) {
+  return items.map((item) => {
+    const count = counts[item.id] ?? 0;
+    const active = item.effect.kind === 'funnelMode' && funnelLux > 0;
+    const short = itemShortName(item.name);
+    return {
+      id: item.id,
+      aim: ITEM_AIM[item.target] ?? 'none',
+      count,
+      active,
+      ready: count > 0 && !active,
+      text: active ? `${short} ${Math.floor(funnelLux / MILLI)}` : `${short} ${count}`,
+    };
+  });
+}
+
+/**
+ * The command of an item that needs no second tap, or null for the aimed ones.
+ * @param {number} id item id
+ * @param {readonly { id: number, target: string }[]} items data/items.json `list`
+ * @returns {import('../../sim/commands.js').Command | null}
+ */
+export function immediateUse(id, items) {
+  const item = items.find((i) => i.id === id);
+  return item && ITEM_AIM[item.target] === 'none' ? { t: 'useItem', inventorySlot: id } : null;
+}
+
+/**
+ * The item buttons of a barracks panel (GDD 8.1): name, price and whether the Core can pay.
+ * @param {readonly { id: number, name: string, costLux: number }[]} items data/items.json `list`
+ * @param {number} coreLuxMilli
+ * @param {number} minLeftLux whole lux
+ * @returns {{ id: number, name: string, costLux: number, poor: boolean }[]}
+ */
+export function shopStates(items, coreLuxMilli, minLeftLux) {
+  return items.map((item) => ({ id: item.id, name: itemShortName(item.name), costLux: item.costLux, poor: !canAfford(coreLuxMilli, item.costLux, minLeftLux) }));
 }
 
 /**
@@ -252,7 +315,8 @@ export function pickEntity(entities, ground) {
  *   selectedGroup?: number | null,
  *   pathCount?: number,             // waypoints already placed in path mode
  *   ability?: number | null,        // 1 (ranged) or 2 (area) while the next tap aims that ability
- * }} ctx
+ *   item?: number | null,           // the id of an aimed item (Energy Boost or Sluggish) while the next tap aims it
+ * }} ctx `data` also carries `items` (data/items.json) when an item is aimed
  * @returns {TapResult}
  */
 export function resolveTap(ctx) {
@@ -269,6 +333,21 @@ export function resolveTap(ctx) {
   }
   if (ctx.ability === 2) {
     return { command: { t: 'castAbility', slot: 2, x: Math.round(ground.x * UNITS_PER_TILE), z: Math.round(ground.z * UNITS_PER_TILE) } };
+  }
+
+  if (ctx.item !== undefined && ctx.item !== null) {
+    const aim = ITEM_AIM[/** @type {any} */ (data).items.list[ctx.item]?.target];
+    const target = pickEntity(entities, ground);
+    if (aim === 'ally') {
+      if (target && target.owner === viewerTeam && (target.kind === KIND.HERO || BUILDING_KINDS.has(target.kind))) {
+        return { command: { t: 'useItem', inventorySlot: ctx.item, targetId: target.id } };
+      }
+      return { message: 'Tap your hero or one of your buildings.' };
+    }
+    if (target && target.team >= 0 && target.team !== viewerTeam && (target.kind === KIND.HERO || target.kind === KIND.CREEP)) {
+      return { command: { t: 'useItem', inventorySlot: ctx.item, targetId: target.id } };
+    }
+    return { message: 'Tap an enemy hero or creep.' };
   }
 
   if (building) {
@@ -295,6 +374,9 @@ export function resolveTap(ctx) {
     return { message: 'Tap one of your other groups to merge.' };
   }
   const hero = entities.find((e) => e.kind === KIND.HERO && e.owner === viewerTeam);
+  if (picked && (picked.kind === KIND.GROUND_ITEM || picked.kind === KIND.LOOT_BAG)) {
+    return hero ? { command: { t: 'pickUp', groundItemId: picked.id } } : { message: 'You need a hero to pick that up.' };
+  }
   if (picked && BUILDING_KINDS.has(picked.kind) && picked.owner === viewerTeam) return { select: picked.id };
   if (picked && picked.kind === KIND.CREEP && picked.owner === viewerTeam) return { selectGroup: picked.groupId };
   if (picked && hero && picked.id !== hero.id && picked.team !== viewerTeam) return { command: { t: 'heroAttack', targetId: picked.id } };
@@ -333,7 +415,7 @@ export function actionsFor(e, towerData) {
  *   viewerTeam: number,
  *   spectator: boolean,
  *   tickHz: number,
- *   data: { buildings: any, balance: any, mapgen: any, heroes: any, abilities: any },
+ *   data: { buildings: any, balance: any, mapgen: any, heroes: any, abilities: any, items: any },
  *   send: (cmd: import('../../sim/commands.js').Command) => Promise<{ accepted: boolean, reason?: string }>,
  * }} opts
  */
@@ -357,12 +439,16 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   let orderType = 'mixed';
   /** The slot (1 ranged, 2 area) whose target the next tap chooses, or null. */
   let ability = /** @type {number | null} */ (null);
+  /** The id of the item (Boost or Sluggish) whose target the next tap chooses, or null. */
+  let itemAim = /** @type {number | null} */ (null);
   /** Label of the chosen hero allocation, one of `heroLuxChoices`. */
   let heroAlloc = '50%';
   let toastTimer = 0;
   const minLeft = data.balance.core.minLeftAfterSpendLux;
   const roster = /** @type {{ id: number, name: string, primary: string }[]} */ (data.heroes.roster);
   const heroNames = roster.map((r) => r.name);
+  const itemList = /** @type {{ id: number, name: string, costLux: number, target: string, effect: { kind: string } }[]} */ (data.items.list);
+  const itemNames = itemList.map((i) => i.name);
 
   root.replaceChildren();
   const toast = el('div', 'toast');
@@ -377,7 +463,8 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   }
   const heroName = el('div', 'hero-name');
   const abilityRow = el('div', 'ability-row');
-  heroBar.append(heroName, abilityRow);
+  const itemRow = el('div', 'ability-row item-row');
+  heroBar.append(heroName, abilityRow, itemRow);
   /** @type {HTMLButtonElement[]} */
   const abilityButtons = ABILITY_SLOTS.map(({ slot, type, letter }) => {
     const b = /** @type {HTMLButtonElement} */ (el('button', 'ability', letter));
@@ -385,6 +472,16 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     b.title = type;
     b.addEventListener('click', () => castFromBar(slot));
     abilityRow.append(b);
+    return b;
+  });
+
+  /** @type {HTMLButtonElement[]} */
+  const itemButtons = itemList.map((item) => {
+    const b = /** @type {HTMLButtonElement} */ (el('button', 'ability item', itemShortName(item.name)));
+    b.dataset.item = String(item.id);
+    b.title = item.name;
+    b.addEventListener('click', () => useFromBar(item.id));
+    itemRow.append(b);
     return b;
   });
 
@@ -397,6 +494,7 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     b.addEventListener('click', () => {
       building = building === item.key ? null : item.key;
       ability = null;
+      itemAim = null;
       selected = null;
       selectedGroup = null;
       mode = null;
@@ -461,7 +559,7 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
       return;
     }
     heroBar.hidden = false;
-    const text = entityText(hero, data.balance.hpFactor, heroNames) ?? 'Hero';
+    const text = entityText(hero, data.balance.hpFactor, heroNames, itemNames) ?? 'Hero';
     if (heroName.textContent !== text) heroName.textContent = text;
     const states = abilityStates(hero, data.abilities, view.team(viewerTeam).coreLux, minLeft, tickHz);
     for (const st of states) {
@@ -470,6 +568,41 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
       b.classList.toggle('poor', !st.ready || st.poor);
       b.classList.toggle('active', ability === st.slot);
     }
+    const mine = view.players().find((p) => p.id === viewerTeam);
+    for (const st of itemStates(itemList, mine?.items ?? [], mine?.funnelLux ?? 0)) {
+      const b = itemButtons[st.id];
+      if (b.textContent !== st.text) b.textContent = st.text;
+      b.classList.toggle('poor', !st.ready);
+      b.classList.toggle('active', st.active || itemAim === st.id);
+    }
+  }
+
+  /**
+   * An item button: self items apply at once, the others wait for a tap on the target.
+   * @param {number} id
+   */
+  function useFromBar(id) {
+    const hero = myHero();
+    if (!hero) return;
+    const mine = view.players().find((p) => p.id === viewerTeam);
+    const st = itemStates(itemList, mine?.items ?? [], mine?.funnelLux ?? 0)[id];
+    if (!st.ready) return say(st.active ? 'Energy Grab is running.' : `You hold no ${itemNames[id]}.`);
+    const use = immediateUse(id, itemList);
+    ability = null;
+    if (use) {
+      itemAim = null;
+      issue(use);
+    } else if (itemAim === id) {
+      itemAim = null;
+    } else {
+      itemAim = id;
+      building = null;
+      selected = null;
+      selectedGroup = null;
+      mode = null;
+      say(st.aim === 'ally' ? 'Tap your hero or a building.' : 'Tap an enemy hero or creep.');
+    }
+    render();
   }
 
   /** @param {number} slot */
@@ -486,6 +619,7 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
       ability = null;
     } else {
       ability = slot;
+      itemAim = null;
       building = null;
       selected = null;
       selectedGroup = null;
@@ -500,11 +634,13 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   const panelRow = el('div', 'panel-row');
   const orderRow = el('div', 'panel-row order-row');
   const heroRow = el('div', 'panel-row hero-row');
+  const shopRow = el('div', 'panel-row shop-row');
   const queueList = el('div', 'queue');
-  panel.append(panelTitle, panelRow, orderRow, heroRow, queueList);
+  panel.append(panelTitle, panelRow, orderRow, heroRow, shopRow, queueList);
   let panelKey = '';
   let orderKey = '';
   let heroKey = '';
+  let shopKey = '';
   let queueKey = '';
   /** @type {Map<number, HTMLElement>} */
   const queueStatus = new Map();
@@ -536,7 +672,8 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     const e = selected === null ? undefined : view.entities().find((x) => x.id === selected);
     if (!e) {
       selected = null;
-      panelKey = orderKey = heroKey = queueKey = '';
+      panelKey = orderKey = heroKey = shopKey = queueKey = '';
+      shopRow.replaceChildren();
       panel.hidden = true;
       return;
     }
@@ -553,7 +690,8 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     orderRow.replaceChildren();
     heroRow.replaceChildren();
     queueList.replaceChildren();
-    orderKey = heroKey = queueKey = '';
+    shopRow.replaceChildren();
+    orderKey = heroKey = shopKey = queueKey = '';
     panelTitle.textContent = pathTitle(pathPoints.length);
     const key = `path|${pathPoints.length}|${lastPath.length}`;
     if (key === panelKey) return;
@@ -581,7 +719,8 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     orderRow.replaceChildren();
     heroRow.replaceChildren();
     queueList.replaceChildren();
-    orderKey = heroKey = queueKey = '';
+    shopRow.replaceChildren();
+    orderKey = heroKey = shopKey = queueKey = '';
     const size = groupSize(view.entities(), group.id);
     panelTitle.textContent = mode === 'merge'
       ? `Group of ${size}: tap another of your groups to merge.`
@@ -630,7 +769,8 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
       orderRow.replaceChildren();
       heroRow.replaceChildren();
       queueList.replaceChildren();
-      orderKey = heroKey = queueKey = '';
+      shopRow.replaceChildren();
+    orderKey = heroKey = shopKey = queueKey = '';
     }
   }
 
@@ -669,7 +809,8 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
       orderRow.replaceChildren(...rows);
     }
     renderHeroPicks(e, lux);
-    const lines = queueLines(view.orders(), e.id, tickHz, heroNames);
+    renderShop(e, lux);
+    const lines = queueLines(view.orders(), e.id, tickHz, heroNames, itemNames);
     const lineKey = `${e.id}|${view.orders().filter((o) => o.barracksId === e.id).map((o) => `${o.id}:${o.held}`).join(',')}`;
     if (lineKey !== queueKey) {
       queueKey = lineKey;
@@ -726,6 +867,26 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     heroRow.replaceChildren(el('div', 'hero-note', pickState.note ? `Hero: ${pickState.note}` : 'Hero: pick one, with the lux below'), allocation, heroes);
   }
 
+  /**
+   * The item part of a barracks panel (GDD 8.1): one button per item with its price. A bought item
+   * waits in the queue and reaches the hero's inventory when it is built.
+   * @param {import('../../sim/state.js').Entity} e @param {number} lux
+   */
+  function renderShop(e, lux) {
+    const shop = shopStates(itemList, lux, minLeft);
+    const key = `${e.id}|${shop.map((s) => `${s.id}${s.poor ? 'P' : ''}`).join(',')}`;
+    if (key === shopKey) return;
+    shopKey = key;
+    const buttonsRow = el('div', 'segments');
+    for (const s of shop) {
+      const b = button(s.name, () => issue({ t: 'orderItem', barracksId: e.id, itemId: s.id }), s.poor ? 'segment shop-item poor' : 'segment shop-item');
+      b.dataset.shopItem = String(s.id);
+      b.append(el('span', 'tool-cost', String(s.costLux)));
+      buttonsRow.append(b);
+    }
+    shopRow.replaceChildren(el('div', 'hero-note', 'Items: bought here, carried by your hero'), buttonsRow);
+  }
+
   /** Paths to draw: the selected group's remaining route, a barracks default path, and the path being drawn. */
   function overlay() {
     /** @type {{ points: number[][], color: number }[]} */
@@ -760,9 +921,11 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
         selectedGroup,
         pathCount: pathPoints.length,
         ability,
+        item: itemAim,
       });
       if ('command' in result) {
         ability = null;
+        itemAim = null;
         // A placed building ends build mode at once, so a second tap cannot place a second one.
         if (endsBuildMode(result.command)) {
           building = null;

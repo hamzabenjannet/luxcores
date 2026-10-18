@@ -59,6 +59,7 @@ const data = {
   mapgen: /** @type {any} */ (raw).mapgen,
   heroes: /** @type {any} */ (raw).heroes,
   abilities: /** @type {any} */ (raw).abilities,
+  items: /** @type {any} */ (raw).items,
 };
 
 /** The menu is skipped when the address says what to do. */
@@ -136,7 +137,7 @@ $('hud-core').style.color = viewerTeam === 0 ? 'var(--blue)' : 'var(--red)';
 $('hud-enemy').style.color = viewerTeam === 0 ? 'var(--red)' : 'var(--blue)';
 
 const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('view'));
-const scene = createScene(canvas, raw.mapgen, view, raw.balance.hpFactor, viewerTeam, data.heroes.roster.map((/** @type {{ name: string }} */ r) => r.name));
+const scene = createScene(canvas, raw.mapgen, view, raw.balance.hpFactor, viewerTeam, data.heroes.roster.map((/** @type {{ name: string }} */ r) => r.name), data.items.list.map((/** @type {{ name: string }} */ i) => i.name));
 const controls = createControls({
   root: $('controls'),
   view,

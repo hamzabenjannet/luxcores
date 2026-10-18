@@ -251,7 +251,7 @@ func _load_server_rules() -> Dictionary:
 	if str(_spec.get("specVersion", "")) != GameLogic.SPEC_VERSION:
 		return _failure("This server simulates spec %s and this client implements spec %s." % [str(_spec.get("specVersion", "?")), GameLogic.SPEC_VERSION])
 	_data = {}
-	for key in ["buildings", "balance", "mapgen", "heroes", "abilities"]:
+	for key in ["buildings", "balance", "mapgen", "heroes", "abilities", "items"]:
 		var file_response := await _request("/data/%s.json" % key, HTTPClient.METHOD_GET)
 		if not file_response.ok:
 			return file_response
