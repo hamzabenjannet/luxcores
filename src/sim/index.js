@@ -7,6 +7,7 @@ export { createState, spawnEntity, KIND, NEUTRAL } from './state.js';
 export { step, PIPELINE } from './step.js';
 export { normalizeData, SPEC_VERSION } from './config.js';
 export { hashState } from './hash.js';
+export { exportState, importState } from './checkpoint.js';
 export { Recorder, playReplay, HASH_INTERVAL } from './replay.js';
 export { compareEnvelopes } from './commands.js';
 export { generateMap, isConnected } from './mapgen.js';

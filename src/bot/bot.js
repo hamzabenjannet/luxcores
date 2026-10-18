@@ -63,6 +63,19 @@ export function createBot({ playerId, team, config, seed }) {
       const cmd = decide(view);
       return cmd ? [{ tick: view.tick(), playerId, seq: seq++, cmd }] : [];
     },
+    /** The bot's own memory as plain data, for a checkpoint. */
+    saveState() {
+      return { rng: rng.s, seq, rotation };
+    },
+    /**
+     * Restores what `saveState` returned.
+     * @param {{ rng: number, seq: number, rotation: number }} saved
+     */
+    loadState(saved) {
+      rng.s = saved.rng;
+      seq = saved.seq;
+      rotation = saved.rotation;
+    },
   };
 
   /**
