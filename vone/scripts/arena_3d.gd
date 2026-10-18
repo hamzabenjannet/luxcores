@@ -24,9 +24,9 @@ func _ready() -> void:
 func set_world_root(world: Node3D) -> void:
 	_world_root = world
 
-func set_balance(balance: Dictionary) -> void:
+func set_balance(balance: Dictionary, heroes: Dictionary = {}) -> void:
 	if is_instance_valid(_world_root):
-		_world_root.call("set_balance", balance)
+		_world_root.call("set_balance", balance, heroes)
 
 func set_world(layout: Dictionary, world_snapshot: Dictionary, _team: int) -> void:
 	_map = layout

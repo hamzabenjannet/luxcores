@@ -42,7 +42,12 @@ func _run() -> void:
 			"hp": 10000,
 			"attack": (kind % 3) + 1,
 		})
-	scene.call("set_balance", {"hpFactor": {"core": 1, "default": 10}})
+	var balance := {"hpFactor": {"core": 1, "default": 10}}
+	var heroes := {"roster": [{"id": 1, "name": "Test Hero"}]}
+	scene.call("set_balance", balance)
+	if touch_overlay != null:
+		touch_overlay.call("set_balance", balance, heroes)
+		_check("3D overlay forwards balance and hero roster", scene.get("_hero_names"), ["Test Hero"])
 	var layout := {
 		"width": 96,
 		"height": 112,
