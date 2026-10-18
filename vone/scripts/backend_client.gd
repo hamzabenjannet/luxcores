@@ -90,6 +90,9 @@ func connect_match(options: Dictionary) -> Dictionary:
 		var seed := int(options.get("seed", 0))
 		if seed > 0:
 			create_body["seed"] = seed
+		var entropy_text := str(options.get("entropy", "")).strip_edges()
+		if entropy_text.is_valid_int() and int(entropy_text) >= 0 and int(entropy_text) <= 100:
+			create_body["entropyPctPerMinute"] = int(entropy_text)
 		match_response = await _request("/api/matches", HTTPClient.METHOD_POST, create_body, true)
 	else:
 		# A bot match has no slot to take, so an existing one is watched instead of joined.

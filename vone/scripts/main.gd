@@ -25,6 +25,7 @@ var _match_input: LineEdit
 var _resolution_width: SpinBox
 var _resolution_height: SpinBox
 var _seed_input: SpinBox
+var _entropy_input: LineEdit
 var _mode_selector: OptionButton
 var _status_label: Label
 var _match_label: Label
@@ -155,6 +156,11 @@ func _build_interface() -> void:
 	_seed_input.prefix = "Seed "
 	_seed_input.custom_minimum_size = Vector2(180, 52)
 	match_options.add_child(_seed_input)
+	_entropy_input = LineEdit.new()
+	_entropy_input.placeholder_text = "Entropy %/min (default)"
+	_entropy_input.tooltip_text = "Percent of the maximum HP that buildings, creeps and heroes lose per minute, 0 to 100. The host of a match sets it."
+	_entropy_input.custom_minimum_size = Vector2(220, 52)
+	match_options.add_child(_entropy_input)
 	_home.add_child(match_options)
 	var connect_button := _make_button("CONNECT / CREATE MATCH", Color("#315f95"))
 	connect_button.pressed.connect(_connect_match)
@@ -437,6 +443,7 @@ func _connect_match() -> void:
 		"vs_bot": _mode_selector.selected == 0,
 		"bot_vs_bot": _mode_selector.selected == 1,
 		"seed": int(_seed_input.value),
+		"entropy": _entropy_input.text,
 	})
 	if not result.ok:
 		_set_status(str(result.get("message", "Could not connect to the match.")))
@@ -461,10 +468,11 @@ func _connect_match() -> void:
 	_set_match_phase(str(_current_match.get("status", "lobby")))
 	_update_start_button()
 	_refresh_palette()
+	var entropy_text := "Entropy %d%% per minute." % int(_current_match.get("entropyPctPerMinute", _data.balance.economy.entropyPctPerMinute))
 	if _is_host:
-		_set_status("Lobby connected. Start the match when ready.")
+		_set_status("Lobby connected. %s Start the match when ready." % entropy_text)
 	else:
-		_set_status("Lobby connected. Waiting for the host to start the match.")
+		_set_status("Lobby connected. %s Waiting for the host to start the match." % entropy_text)
 	_arena.set_world(_current_map, _current_snapshot, _viewer_team)
 	_update_world_label()
 

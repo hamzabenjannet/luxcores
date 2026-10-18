@@ -7,15 +7,16 @@
 /**
  * @param {HTMLElement} root
  * @param {import('../net/server-session.js').ServerSession} session
- * @param {{ shareLink: string }} opts
+ * @param {{ shareLink: string, entropyDefault?: number }} opts  `entropyDefault` is the rate of data/balance.json, shown when the host chose none
  */
-export function showLobby(root, session, { shareLink }) {
+export function showLobby(root, session, { shareLink, entropyDefault = 1 }) {
   root.hidden = false;
   const card = document.createElement('div');
   card.className = 'card';
   const title = div('title', 'Lobby');
   const idLine = div('subtitle', `Match ${session.matchId}`);
   const players = div('players');
+  const rules = div('subtitle');
   const status = div('status');
   const copy = document.createElement('button');
   copy.textContent = 'Copy Invite Link';
@@ -38,13 +39,14 @@ export function showLobby(root, session, { shareLink }) {
       status.textContent = err instanceof Error ? err.message : String(err);
     }
   });
-  card.append(title, idLine, players, status, copy, start);
+  card.append(title, idLine, players, rules, status, copy, start);
   root.replaceChildren(card);
 
   function update() {
     const match = session.getMatch();
     const names = match.botVsBot ? ['Bot Blue', 'Bot Red'] : match.players.map((/** @type {any} */ p) => p.name);
     if (match.vsBot) names.push('Bot');
+    rules.textContent = `Entropy ${match.entropyPctPerMinute ?? entropyDefault}% per minute${session.isHost ? '' : ' (set by the host)'}`;
     players.replaceChildren(...names.map((/** @type {string} */ n) => div('player', n)));
     const ready = match.botVsBot || match.vsBot || match.players.length >= 2;
     start.hidden = !session.isHost;

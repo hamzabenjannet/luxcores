@@ -12,6 +12,7 @@
  * @property {boolean} vsBot
  * @property {boolean} botVsBot
  * @property {number | undefined} seed
+ * @property {number | undefined} entropy  entropy rate in percent of the maximum HP per minute, for a match this player creates; undefined keeps the default
  */
 
 const NAME_KEY = 'luxcores.playerName';
@@ -36,10 +37,10 @@ function remember(name) {
 
 /**
  * @param {HTMLElement} root
- * @param {{ server: string, error?: string }} opts
+ * @param {{ server: string, error?: string, entropyDefault?: number }} opts  `entropyDefault` is the rate of data/balance.json
  * @returns {Promise<MenuChoice>}
  */
-export function showMenu(root, { server, error }) {
+export function showMenu(root, { server, error, entropyDefault = 1 }) {
   root.hidden = false;
   root.replaceChildren();
   return new Promise((resolve) => {
@@ -54,17 +55,31 @@ export function showMenu(root, { server, error }) {
     const seed = /** @type {HTMLInputElement} */ (document.createElement('input'));
     seed.placeholder = 'Map seed (optional)';
     seed.inputMode = 'numeric';
+    const entropy = /** @type {HTMLInputElement} */ (document.createElement('input'));
+    entropy.inputMode = 'numeric';
+    entropy.placeholder = `${entropyDefault} (default)`;
+    entropy.title = 'Percent of the maximum HP that buildings, creeps and heroes lose per minute, 0 to 100. The host of a match sets it.';
     const matchId = /** @type {HTMLInputElement} */ (document.createElement('input'));
     matchId.placeholder = 'Match id to join';
-    card.append(label('Name', name), label('Seed', seed));
+    card.append(label('Name', name), label('Seed', seed), label('Entropy % per minute', entropy));
 
     /** @param {Partial<MenuChoice>} part */
     const choose = (part) => {
       const chosen = name.value.trim() || 'Guest';
       remember(chosen);
       const seedValue = Number(seed.value);
+      const entropyValue = Number(entropy.value);
+      const entropyChosen = entropy.value.trim() !== '' && Number.isSafeInteger(entropyValue) && entropyValue >= 0 && entropyValue <= 100;
       root.hidden = true;
-      resolve({ name: chosen, matchId: 'new', vsBot: false, botVsBot: false, seed: seed.value.trim() !== '' && Number.isSafeInteger(seedValue) ? seedValue : undefined, ...part });
+      resolve({
+        name: chosen,
+        matchId: 'new',
+        vsBot: false,
+        botVsBot: false,
+        seed: seed.value.trim() !== '' && Number.isSafeInteger(seedValue) ? seedValue : undefined,
+        entropy: entropyChosen ? entropyValue : undefined,
+        ...part,
+      });
     };
 
     card.append(

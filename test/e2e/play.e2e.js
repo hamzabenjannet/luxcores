@@ -215,6 +215,7 @@ test('the menu and lobby work by hand: a bot match, then a match for two humans'
     await solo.click('#menu button:has-text("Play Against Bot")');
     await solo.waitForSelector('#menu .card .title:has-text("Lobby")');
     assert.deepEqual(await solo.$$eval('#menu .player', (n) => n.map((x) => x.textContent)), ['Halo', 'Bot']);
+    assert.ok((await solo.$$eval('#menu .subtitle', (n) => n.map((x) => x.textContent))).includes('Entropy 1% per minute'), 'the lobby shows the default entropy rate');
     await solo.click('#menu button:has-text("Start Match")');
     await solo.waitForSelector('.palette:not([hidden])', { timeout: 30_000 });
     await solo.waitForFunction(() => document.getElementById('hud-core')?.textContent?.startsWith('Core'));
@@ -224,6 +225,7 @@ test('the menu and lobby work by hand: a bot match, then a match for two humans'
     const host = await plain('/');
     await host.fill('#menu input[placeholder="Your name"]', 'Host');
     await host.fill('#menu input[placeholder^="Map seed"]', '42');
+    await host.fill('#menu input[placeholder$="(default)"]', '7');
     await host.click('#menu button:has-text("Host a Match for Two")');
     await host.waitForSelector('#menu .card .title:has-text("Lobby")');
     assert.equal(await host.isDisabled('#menu button:has-text("Start Match")'), true, 'one human cannot start a match for two');
@@ -236,6 +238,8 @@ test('the menu and lobby work by hand: a bot match, then a match for two humans'
     await guest.click('#menu button:has-text("Join Match")');
     await guest.waitForSelector('#menu .card .title:has-text("Lobby")');
     assert.equal(await guest.isHidden('#menu button:has-text("Start Match")'), true, 'only the host starts');
+    assert.ok((await guest.$$eval('#menu .subtitle', (n) => n.map((x) => x.textContent))).includes('Entropy 7% per minute (set by the host)'), 'the guest sees the host\'s entropy rate');
+    assert.ok((await host.$$eval('#menu .subtitle', (n) => n.map((x) => x.textContent))).includes('Entropy 7% per minute'));
     await host.waitForFunction(() => [...document.querySelectorAll('#menu button')].some((b) => b.textContent === 'Start Match' && !(/** @type {HTMLButtonElement} */ (b)).disabled));
     await host.click('#menu button:has-text("Start Match")');
     for (const page of [host, guest]) await page.waitForSelector('.palette:not([hidden])', { timeout: 30_000 });
