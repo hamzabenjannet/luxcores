@@ -11,7 +11,7 @@
 
 import { TICK_HZ, idiv } from '../fixed.js';
 import { nextRange } from '../rng.js';
-import { syncCore } from '../lux.js';
+import { addPending, syncCore } from '../lux.js';
 import { KIND } from '../state.js';
 
 /**
@@ -37,8 +37,6 @@ export function isDay(state) {
 
 /** @param {import('../state.js').SimState} state */
 export function run(state) {
-  const { pendingSettleTicks } = state.config.balance.economy;
-
   // Settle. Entries are appended in settleTick order, so the due ones are at the front.
   state.teams.forEach((team, t) => {
     let due = 0;
@@ -77,10 +75,7 @@ export function run(state) {
     }
   }
   state.teams.forEach((team, t) => {
-    if (income[t] > 0) {
-      team.pending.push({ settleTick: state.tick + pendingSettleTicks, amount: income[t] });
-      team.pendingLux += income[t];
-    }
+    addPending(state, t, income[t]);
     team.ticksSinceSpend++;
   });
 }

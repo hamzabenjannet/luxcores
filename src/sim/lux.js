@@ -42,6 +42,18 @@ export function credit(state, team, amount) {
 }
 
 /**
+ * Adds lux to the income buffer: it settles into the Core after `pendingSettleTicks` (GDD 3.3).
+ * @param {import('./state.js').SimState} state
+ * @param {number} team
+ * @param {number} amount milli-lux
+ */
+export function addPending(state, team, amount) {
+  if (amount <= 0) return;
+  state.teams[team].pending.push({ settleTick: state.tick + state.config.balance.economy.pendingSettleTicks, amount });
+  state.teams[team].pendingLux += amount;
+}
+
+/**
  * Pays from the Core. Refused when it would leave less than `core.minLeftAfterSpendLux`
  * (1 lux, GDD 3.4). A payment resets the no-spend timer of the meltdown rule.
  * @param {import('./state.js').SimState} state

@@ -45,6 +45,7 @@ export const ENTITY_HASH_FIELDS = Object.freeze([
   'arrivalTick', 'projectileDamage', 'projectileProc',
   'projectileProcChance', 'projectileProcValue', 'groupId',
   'heroType', 'shieldHp', 'shieldTicks', 'cd0', 'cd1', 'cd2', 'cd3',
+  'itemId', 'speedMod', 'speedTicks',
 ]);
 
 /** Team fields included in the hash, in this exact order. */
@@ -97,6 +98,10 @@ export const TEAM_HASH_FIELDS = Object.freeze([
  * @property {number} cd1 ranged
  * @property {number} cd2 area
  * @property {number} cd3 shield
+ * @property {number} itemId ground items: item id plus one, 0 for other kinds
+ * @property {number} speedMod attack speed change from an item, added to the base speed while `speedTicks` runs
+ * @property {number} speedTicks ticks left on the attack speed change
+ * @property {number[]} items loot bags: how many of each item id the bag holds; empty for other kinds
  * @property {number[][]} waypoints barracks: default path for new groups, as [x, z] pairs in units
  * @property {boolean[]} [visibleTo] derived per-team visibility, excluded from the hash
  */
@@ -140,6 +145,8 @@ export const TEAM_HASH_FIELDS = Object.freeze([
  * @property {'human'|'bot'} kind
  * @property {number} heroLock   bit i set while roster hero i is locked by the rotation (GDD 7.1)
  * @property {number} heroCooldown ticks until the player may pick a hero again after the last one died
+ * @property {number} funnelLux milli-lux that Energy Grab may still funnel, 0 when it is not active (GDD 8.2)
+ * @property {number[]} items inventory: how many of each item id the player holds (GDD 8.1)
  */
 
 /**
@@ -198,7 +205,7 @@ export function createState({ seed, players, config }) {
     rng: createRng(seed),
     nextId: 1,
     teams,
-    players: players.map((p) => ({ heroLock: 0, heroCooldown: 0, ...p })),
+    players: players.map((p) => ({ heroLock: 0, heroCooldown: 0, funnelLux: 0, items: emptyCounts(config), ...p })),
     entities: [],
     groups: [],
     orders: [],
@@ -271,7 +278,17 @@ export function entityDefaults() {
     arrivalTick: 0, projectileDamage: 0, projectileProc: 0,
     projectileProcChance: 0, projectileProcValue: 0, groupId: 0, waypoints: [],
     heroType: 0, shieldHp: 0, shieldTicks: 0, cd0: 0, cd1: 0, cd2: 0, cd3: 0,
+    itemId: 0, speedMod: 0, speedTicks: 0, items: [],
   };
+}
+
+/**
+ * An inventory with no items: one zero per item id.
+ * @param {import('./config.js').SimConfig} config
+ * @returns {number[]}
+ */
+export function emptyCounts(config) {
+  return config.items.list.map(() => 0);
 }
 
 /**

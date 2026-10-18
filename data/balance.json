@@ -65,7 +65,9 @@
     "groundDespawnTicks": 600,
     "lootBagDespawnTicks": 600,
     "creepDropPct": 10,
-    "mapSpawnIntervalTicks": 1200
+    "mapSpawnIntervalTicks": 1200,
+    "pickupRadiusMilliTiles": 600,
+    "useRangeTiles": 5
   },
   "tower": {
     "targetOverrideTicks": 60

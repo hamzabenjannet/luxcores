@@ -16,4 +16,5 @@ export { createRng, nextInt } from './rng.js';
 export { TICK_HZ, UNITS_PER_TILE, MILLI } from './fixed.js';
 export { heroOf, canPickHero, abilityOf, SLOT_TYPES } from './heroes.js';
 export { ORDER_TYPE } from './creeps.js';
+export { itemOf, countOf, roomOf } from './items.js';
 export { laneRoute } from './creeps.js';

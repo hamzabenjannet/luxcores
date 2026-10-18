@@ -1,13 +1,14 @@
 // @ts-check
 /**
  * System: combat
- * Scope: tower, hero and creep basic attacks, simultaneous damage, and attack procs. GDD 3.5, 5.0, 7.4, 9
- * Milestone: M3, M4 (creeps)
+ * Scope: tower, hero and creep basic attacks, simultaneous damage, attack procs and the Energy Grab funnel. GDD 3.5, 5.0, 7.4, 8.2, 9
+ * Milestone: M3, M4 (creeps), M6 (funnel)
  */
 
 import { chancePct } from '../rng.js';
 import { dist2, idiv, isqrt, MILLI, TICK_HZ, UNITS_PER_TILE } from '../fixed.js';
 import { dealDamage } from '../damage.js';
+import { addPending } from '../lux.js';
 import { KIND, findEntity, spawnEntity } from '../state.js';
 import { meleeReach } from '../reach.js';
 import { towerCanTarget } from './behavior.js';
@@ -98,7 +99,7 @@ export function run(state) {
     const rules = balance.attackTypes[type];
     const range = rules.reachTiles > 0 ? rules.reachTiles : meleeReach(state, target);
     if (dist2(attacker.x, attacker.z, target.x, target.z) > range * range) continue;
-    attacker.attackCooldown = attackInterval(stats.attackSpeed) - 1;
+    attacker.attackCooldown = attackInterval(stats.attackSpeed + speedChange(attacker)) - 1;
     const damage = idiv(stats.damagePerHit * MILLI * rules.damagePct, 100);
     dispatchAttack(state, hits, attacker, target, damage, rules);
     if (isHero) readyHeroes.push({ attacker, target });
@@ -122,7 +123,7 @@ export function run(state) {
     const type = attackType(tower);
     if (!type) continue;
     const rules = balance.attackTypes[type];
-    tower.attackCooldown = attackInterval(state.config.buildings.tower.attackSpeed) - 1;
+    tower.attackCooldown = attackInterval(state.config.buildings.tower.attackSpeed + speedChange(tower)) - 1;
     const baseDamage = idiv(state.config.buildings.tower.damagePerHit * MILLI * rules.damagePct, 100);
     const damage = idiv(baseDamage * (100 + tower.powerDamagePct), 100);
     dispatchAttack(state, hits, tower, target, damage, rules);
@@ -131,8 +132,11 @@ export function run(state) {
 
   /** @type {number[]} */
   const damageById = [];
+  /** @type {{ targetId: number, owner: number, damage: number }[]} */
+  const funnels = [];
   for (const hit of hits) {
     damageById[hit.target.id] = (damageById[hit.target.id] ?? 0) + hit.damage;
+    if (isFunnelHit(hit)) funnels.push({ targetId: hit.target.id, owner: hit.source.owner, damage: hit.damage });
     if (hit.procChance > 0 && chancePct(state.rng, hit.procChance)) {
       if (hit.proc === 'stun') hit.target.stunTicks = Math.max(hit.target.stunTicks, hit.procValue);
       else if (hit.proc === 'knockback') applyKnockback(hit.source, hit.target, hit.procValue);
@@ -141,8 +145,53 @@ export function run(state) {
   for (const target of state.entities) {
     const damage = damageById[target.id] ?? 0;
     if (damage === 0) continue;
+    const before = target.hp;
     dealDamage(state, target, damage);
+    if (funnels.length > 0) funnel(state, target, before - target.hp, damage, funnels);
   }
+}
+
+/**
+ * Energy Grab (GDD 3.5, 8.2): the HP a hero's basic attack removed from an enemy becomes lux in the
+ * hero owner's pending pool, at the HP factor of the target, until the item's budget runs out.
+ * When several funneling attacks hit one target in a tick, each gets its share of the HP removed.
+ * @param {import('../state.js').SimState} state
+ * @param {import('../state.js').Entity} target
+ * @param {number} removed milli-HP the target lost this tick, after shields
+ * @param {number} total milli-HP of damage aimed at the target this tick
+ * @param {{ targetId: number, owner: number, damage: number }[]} funnels
+ */
+function funnel(state, target, removed, total, funnels) {
+  if (removed <= 0) return;
+  const { hpFactor } = state.config.balance;
+  const factor = target.kind === KIND.CORE ? hpFactor.core : hpFactor.default;
+  for (const f of funnels) {
+    if (f.targetId !== target.id) continue;
+    const player = state.players.find((p) => p.id === f.owner);
+    if (!player || player.funnelLux <= 0) continue;
+    const lux = Math.min(idiv(idiv(removed * f.damage, total), factor), player.funnelLux);
+    player.funnelLux -= lux;
+    addPending(state, player.team, lux);
+  }
+}
+
+/**
+ * Whether a hit comes from a hero's basic attack on an enemy: the hero itself, its splash, or a
+ * projectile it fired (a projectile carries its shooter's `heroType`).
+ * @param {{ source: import('../state.js').Entity, target: import('../state.js').Entity }} hit
+ */
+function isFunnelHit(hit) {
+  const { source, target } = hit;
+  if (target.team < 0 || target.team === source.team) return false;
+  return source.kind === KIND.HERO || (source.kind === KIND.PROJECTILE && source.heroType > 0);
+}
+
+/**
+ * Attack speed an item adds to the entity while its effect runs (GDD 8.2).
+ * @param {import('../state.js').Entity} entity
+ */
+function speedChange(entity) {
+  return entity.speedTicks > 0 ? entity.speedMod : 0;
 }
 
 /**
@@ -225,6 +274,7 @@ function spawnProjectile(state, source, target, damage, rules) {
     projectileProc: PROC_CODE[/** @type {keyof typeof PROC_CODE} */ (rules.proc)] ?? PROC_CODE.none,
     projectileProcChance: rules.procPct,
     projectileProcValue: rules.stunTicks ?? rules.knockbackMilliTiles ?? 0,
+    heroType: source.kind === KIND.HERO ? source.heroType : 0,
   });
 }
 

@@ -13,6 +13,7 @@ import { tryCancelQueue, tryMergeGroups, tryOrderCreeps, trySetBarracksPath, try
 import { tryCastAbility, tryPickHero } from './heroes.js';
 import { tryHeroAttack } from './systems/combat.js';
 import { tryHeroMove } from './systems/movement.js';
+import { tryOrderItem, tryPickUp, tryUseItem } from './items.js';
 
 /**
  * @typedef {Object} CommandEnvelope
@@ -66,6 +67,9 @@ export const HANDLERS = {
   castAbility: tryCastAbility,
   heroAttack: tryHeroAttack,
   heroMove: tryHeroMove,
+  orderItem: tryOrderItem,
+  useItem: tryUseItem,
+  pickUp: tryPickUp,
 };
 
 /**

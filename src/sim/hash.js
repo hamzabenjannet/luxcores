@@ -13,7 +13,8 @@
  *   5. entity count              i64 LE
  *      per entity, in ascending id order: ENTITY_HASH_FIELDS, each i64 LE,
  *      then the path length and each path tile index as i64 LE, then the
- *      waypoint count and each waypoint's x and z as i64 LE
+ *      waypoint count and each waypoint's x and z as i64 LE, then the item
+ *      count and each item count as i64 LE (loot bags hold items, the rest 0)
  *   6. group count               i64 LE
  *      per group, in ascending id order: id, owner, team, custom, wpIndex,
  *      then the waypoint count and each waypoint's x and z, all i64 LE
@@ -21,7 +22,8 @@
  *      per order, in ascending id order: id, barracksId, owner, type,
  *      ticksLeft, held, then the mix length and each mix value, all i64 LE
  *   8. player count              i64 LE
- *      per player, in list order: id, heroLock, heroCooldown, each i64 LE
+ *      per player, in list order: id, heroLock, heroCooldown, funnelLux, then
+ *      the inventory length and each item count, all i64 LE
  *
  * Every hashed value must be a safe integer; anything else throws, which
  * catches floats leaking into sim state.
@@ -100,6 +102,8 @@ export function hashState(state) {
     put(e.movePath.length, `entity ${e.id}.movePath.length`);
     for (let i = 0; i < e.movePath.length; i++) put(e.movePath[i], `entity ${e.id}.movePath[${i}]`);
     putWaypoints(e.waypoints, `entity ${e.id}`);
+    put(e.items.length, `entity ${e.id}.items.length`);
+    for (let i = 0; i < e.items.length; i++) put(e.items[i], `entity ${e.id}.items[${i}]`);
   }
 
   put(state.groups.length, 'groups.length');
@@ -117,7 +121,9 @@ export function hashState(state) {
 
   put(state.players.length, 'players.length');
   for (const p of state.players) {
-    for (const v of [p.id, p.heroLock, p.heroCooldown]) put(v, `player ${p.id}`);
+    for (const v of [p.id, p.heroLock, p.heroCooldown, p.funnelLux]) put(v, `player ${p.id}`);
+    put(p.items.length, `player ${p.id}.items.length`);
+    for (let i = 0; i < p.items.length; i++) put(p.items[i], `player ${p.id}.items[${i}]`);
   }
 
   return h.digest();

@@ -4,12 +4,15 @@
  * Barracks queues. Each barracks works on the first order of its queue that is not held, and
  * finishes it after `productionTicksPerGroup` ticks. A finished creep group that would push its
  * owner over the creep cap is held in the barracks and spawns when the cap has room. A held
- * group never blocks the queue, so later orders skip ahead (GDD 9). Items (M6) and heroes (M5)
- * share this queue; a finished hero order puts the hero next to the barracks (GDD 7.1). A barracks in its recycle channel stops producing.
+ * group never blocks the queue, so later orders skip ahead (GDD 9). Items and heroes share this
+ * queue. A finished hero order puts the hero next to the barracks (GDD 7.1). A finished item order
+ * is held until its owner has a hero and a free slot (GDD 8.1). A barracks in its recycle channel
+ * stops producing.
  */
 
 import { creepCount, findById, ORDER_TYPE, spawnGroup } from '../creeps.js';
 import { spawnHero } from '../heroes.js';
+import { deliverHeldItems } from '../items.js';
 
 /** @param {import('../state.js').SimState} state */
 export function run(state) {
@@ -24,6 +27,8 @@ export function run(state) {
     spawnGroup(state, order, barracks);
     state.orders.splice(state.orders.indexOf(order), 1);
   }
+
+  for (const player of state.players) deliverHeldItems(state, player.id);
 
   /** @type {number[]} */
   const busy = []; // barracks that already advanced an order this tick
@@ -45,6 +50,11 @@ export function run(state) {
     } else if (order.type === ORDER_TYPE.hero) {
       spawnHero(state, order, barracks);
       state.orders.splice(state.orders.indexOf(order), 1);
+      deliverHeldItems(state, order.owner);
+    } else if (order.type === ORDER_TYPE.item) {
+      order.ticksLeft = 0;
+      order.held = 1;
+      deliverHeldItems(state, order.owner);
     }
   }
 }

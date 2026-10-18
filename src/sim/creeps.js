@@ -17,7 +17,7 @@ import { buildBlockedGrid } from './physics/pathfinding.js';
 import { KIND, spawnEntity } from './state.js';
 
 /** Order type codes in `Order.type`. The codes are part of the hash: append only. */
-export const ORDER_TYPE = Object.freeze({ creeps: 1, hero: 2 });
+export const ORDER_TYPE = Object.freeze({ creeps: 1, hero: 2, item: 3 });
 
 /**
  * Binary search by id in a list sorted by ascending id (entities, groups, orders).
@@ -116,6 +116,7 @@ export function tryOrderCreeps(state, playerId, cmd) {
  */
 export function orderCost(state, order) {
   if (order.type === ORDER_TYPE.hero) return order.mix[1] * MILLI; // [rosterId, lux]
+  if (order.type === ORDER_TYPE.item) return state.config.items.list[order.mix[0]].costLux; // [itemId]
   return order.mix.length * state.config.balance.creep.costLux;
 }
 
