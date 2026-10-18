@@ -111,7 +111,7 @@ Open for the owners:
 
 ## M6 (Items)
 
-Done on 2026-10-18 in the sim, the server snapshot, the web client and the Godot client. `src/sim/items.js` holds the shop, the inventory, the four effects, the loot bag and the pickup; `systems/items.js` runs the map spawns, the despawn and the pickup; `systems/combat.js` funnels lux for Energy Grab and applies Haste and Sluggish to the attack interval; `systems/cleanup.js` drops the loot bag and rolls the creep drops. GDD 8.4 states the rules that the GDD left open, and they await the owners' approval (`SPEC_VERSION` stays 0.10.0, so every golden replay was re-recorded and `items-seed-616161` was added). The acceptance checks are tests in `test/items.test.js`:
+Done on 2026-10-18 in the sim, the server snapshot, the web client and the Godot client. `src/sim/items.js` holds the shop, the inventory, the four effects, the loot bag and the pickup; `systems/items.js` runs the map spawns, the despawn and the pickup; `systems/combat.js` funnels lux for Energy Grab and applies Haste and Sluggish to the attack interval; `systems/cleanup.js` drops the loot bag and rolls the creep drops. GDD 8.4 states the rules that the GDD left open, and Hamza confirmed them on 2026-10-19 (`SPEC_VERSION` stays 0.10.0, so every golden replay was re-recorded and `items-seed-616161` was added). The acceptance checks are tests in `test/items.test.js`:
 
 - Energy Boost is refused on the Lumen Core, on an enemy and out of reach, and keeps the item. On an own hero or building it adds 150 HP to the HP and the maximum HP.
 - Energy Grab funnels exactly 50 lux into the pending pool and then ends, a second use is refused while it runs, damage taken by a shield funnels nothing, and the effect ends with the hero.
@@ -124,7 +124,7 @@ Both clients show the item bar (one button per item with its count), a shop row 
 
 Open for the owners:
 
-- **Approve GDD 8.4.** The details most likely to matter: the inventory is a count per item, a bag or a creep death drops on the spot, a second Haste or Sluggish replaces the first, a creep that dies from entropy still rolls a drop, and Energy Grab ends when the hero dies.
+- **GDD 8.4.** Hamza confirmed its open choices on 2026-10-19: inventory as a count, replace on a second Haste or Sluggish, a hidden inventory, drops from every creep death, Energy Grab ending with the hero, Boost raising the maximum HP, and a stun blocking item use.
 - **Hama's review of the item interface.** The item bar sits under the ability buttons and the shop row sits in the barracks panel. The ground items are small gems with a name label; Hama may want models and a different place for the quick slots.
 - **No bot items.** GDD 12.1 gives the bot no items. A bot hero picks up what it walks over, which changes the balance a little `[UNVERIFIED]`.
 

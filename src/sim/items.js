@@ -121,6 +121,7 @@ export function tryUseItem(state, playerId, cmd) {
   const item = itemOf(state, cmd.inventorySlot);
   const hero = heroOf(state, playerId);
   if (!player || !item || !hero || player.items[item.id] < 1) return false;
+  if (hero.stunTicks > 0) return false; // a stun stops items as it stops abilities (GDD 8.4)
   const target = targetFor(state, hero, playerId, item.target, cmd.targetId);
   if (!target) return false;
   const effect = item.effect;

@@ -392,6 +392,21 @@ test('a hero death drops the bag and no random item, even when the inventory is 
   assert.equal(bags(s).length, 0, 'nothing to drop');
 });
 
+test('a stunned hero cannot use items, and can again when the stun ends', () => {
+  const s = fresh();
+  const b = withBarracks(s);
+  const h = withHero(s, b);
+  s.players[0].items = [0, 0, 2, 0];
+  h.stunTicks = 10;
+  send(s, 0, { t: 'useItem', inventorySlot: ITEM.haste });
+  assert.equal(s.players[0].items[ITEM.haste], 2, 'refused under a stun, item kept');
+  assert.equal(h.speedMod, 0);
+  run(s, 12);
+  send(s, 0, { t: 'useItem', inventorySlot: ITEM.haste });
+  assert.equal(s.players[0].items[ITEM.haste], 1);
+  assert.equal(h.speedMod, 300);
+});
+
 test('items need a living hero to be used, and a missing count refuses the use', () => {
   const s = fresh();
   const b = withBarracks(s);
