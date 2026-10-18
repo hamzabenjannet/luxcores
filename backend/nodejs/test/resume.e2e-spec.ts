@@ -33,11 +33,11 @@ const readLog = async (path: string): Promise<LoggedEvent[]> =>
     .map((line) => JSON.parse(line) as LoggedEvent);
 
 /** Starts a match against the bot, builds one solar plant for the human, and waits until `tick`. */
-async function playUntil(t: TestApp, seed: number, tick: number) {
+async function playUntil(t: TestApp, seed: number, tick: number, entropyPctPerMinute?: number) {
   const halo = await guest(t.url, 'Halo');
   const created = await api(t.url, '/api/matches', {
     token: halo.token,
-    body: { name: 'Resumable', vsBot: true, seed },
+    body: { name: 'Resumable', vsBot: true, seed, ...(entropyPctPerMinute === undefined ? {} : { entropyPctPerMinute }) },
   });
   const matchId: string = created.body.id;
   const socket = await connectSocket(t.url, halo.token);
@@ -88,6 +88,38 @@ describe('resuming matches after a restart', () => {
       await t.close();
     }
   }, 60_000);
+
+  it('keeps the entropy rate of a match across a restart: the log holds it, the rebuild reproduces every hash and the replay verifies', async () => {
+    const first = await createTestApp({ MATCH_MAX_TICKS: '5000' });
+    let second: TestApp | undefined;
+    try {
+      const { halo, matchId } = await playUntil(first, 5, 140, 60);
+      await first.shutdown();
+      const before = await readLog(logPath(first, matchId));
+      expect(before[0].data).toMatchObject({ options: { entropyPctPerMinute: 60 } });
+      const hashes = before.filter((e) => e.type === 'hash');
+      expect(hashes.length).toBeGreaterThan(3);
+
+      second = await createTestApp({ MATCH_MAX_TICKS: '5000', JSON_DB_PATH: first.dbPath, CHECKPOINT_EVERY_TICKS: '0' });
+      await second.app.get(MatchRunnerService).resumed;
+      const socket = await connectSocket(second.url, halo.token);
+      const joined = await ack(socket, 'match:join', { matchId });
+      expect(joined).toMatchObject({ ok: true, status: 'running' });
+      // The solar plant lost HP at 1 percent of its maximum each second, which only the 60 percent rate explains.
+      const solar = joined.snapshot.entities.find((e: { kind: number; team: number }) => e.kind === 2 && e.team === 0);
+      expect(solar.hp).toBeLessThan(solar.maxHp);
+      await waitFor<Snapshot>(socket, 'match:snapshot', (x) => x.tick >= joined.snapshot.tick + 40, 30_000);
+      const stopped = await api(second.url, `/api/matches/${matchId}/stop`, { method: 'POST', token: halo.token });
+      const verify = await api(second.url, `/api/replays/${stopped.body.replayId}/verify`, { method: 'POST', token: halo.token });
+      expect(verify.body).toMatchObject({ ok: true, firstMismatchTick: null });
+      const record = await api(second.url, `/api/replays/${stopped.body.replayId}`, { token: halo.token });
+      expect(record.body.replay.options).toEqual({ entropyPctPerMinute: 60 });
+      socket.close();
+    } finally {
+      await second?.close();
+      await first.close();
+    }
+  }, 90_000);
 
   it('rebuilds a running match at the next start, with every entity, the bot and the command counter', async () => {
     const first = await createTestApp({ MATCH_MAX_TICKS: '5000' });
