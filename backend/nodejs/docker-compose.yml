@@ -2,9 +2,9 @@
 # it defaults to a JSON file and an in-process event bus.
 #
 #   docker compose --profile postgres up -d     # then DATABASE_DRIVER=postgres, POSTGRES_URL below
-#   docker compose --profile mongodb up -d      # then DATABASE_DRIVER=mongodb, MONGODB_URL below
+#   docker compose --profile mongodb up -d      # then MONGODB_URL below (DATABASE_DRIVER=auto picks it)
 #   docker compose --profile rabbitmq up -d     # then RABBITMQ_URL below
-#   docker compose --profile redis up -d        # reserved for the planned event cache; the server does not read REDIS_URL yet
+#   docker compose --profile redis up -d        # then REDIS_URL below: match log buffer, match leases, room relay
 #
 # Postgres:  POSTGRES_URL=postgres://luxcores:luxcores@localhost:5432/luxcores
 # MongoDB:   MONGODB_URL=mongodb://localhost:27017

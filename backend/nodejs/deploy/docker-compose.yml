@@ -1,10 +1,16 @@
-# Production stack for one VPS: the API, PostgreSQL, RabbitMQ, Redis and Caddy, which
+# Production stack for one VPS: the API, MongoDB, Redis, RabbitMQ, PostgreSQL and Caddy, which
 # terminates TLS with a certificate it fetches and renews by itself.
 #
 #   cp .env.example .env      # fill in every value
 #   docker compose up -d --build
+#   docker compose up -d --scale api=2    # optional: a second API server shares the matches
 #
-# Only Caddy publishes ports. The database and the broker stay on the internal network.
+# Only Caddy publishes ports. The databases and the broker stay on the internal network.
+#
+# The API works with any of these services missing. MongoDB is the main database and holds the
+# match events, Redis buffers the match log and carries the match leases, RabbitMQ carries one
+# command queue per match, and PostgreSQL is only probed for now. When one is down at start-up the
+# API runs without it until the next restart, on the JSON file for the database.
 name: luxcores
 
 services:
@@ -17,10 +23,12 @@ services:
     stop_grace_period: 20s
     environment:
       NODE_ENV: production
-      DATABASE_DRIVER: postgres
+      DATABASE_DRIVER: auto # MongoDB, because MONGODB_URL is set; the JSON file if it cannot be reached
+      MONGODB_URL: mongodb://luxcores:${MONGO_PASSWORD:?set MONGO_PASSWORD}@mongodb:27017/?authSource=admin
+      MONGODB_DB: luxcores
+      # PostgreSQL will hold profiles, teams and guilds later. The server only checks that it answers.
       POSTGRES_URL: postgres://luxcores:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/luxcores
       RABBITMQ_URL: amqp://luxcores:${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD}@rabbitmq:5672
-      # The server does not read this yet. It is reserved for the planned event cache.
       REDIS_URL: redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD}@redis:6379
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
       ADMIN_API_KEY: ${ADMIN_API_KEY:?set ADMIN_API_KEY}
@@ -29,10 +37,27 @@ services:
     # The write-ahead log of every running match lives here, so a restart or a redeploy resumes the matches.
     volumes: [api-data:/app/backend/data]
     depends_on:
+      mongodb: { condition: service_healthy }
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
       redis: { condition: service_healthy }
     expose: ['3000']
+
+  mongodb:
+    image: mongodb/mongodb-community-server:7.0-ubuntu2204
+    restart: unless-stopped
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME: luxcores
+      MONGODB_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?set MONGO_PASSWORD}
+    volumes: [mongo-data:/data/db]
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - mongosh --quiet -u luxcores -p "$$MONGODB_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.adminCommand('ping').ok" | grep -q 1
+      interval: 5s
+      timeout: 10s
+      retries: 12
+      start_period: 15s
 
   postgres:
     image: postgres:16-alpine
@@ -59,7 +84,8 @@ services:
       RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_PASSWORD}
     volumes: [rabbitmq-data:/var/lib/rabbitmq]
     healthcheck:
-      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      # Passes when the AMQP port answers, not only when the Erlang node is up: the API connects as soon as this is healthy.
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'check_port_connectivity']
       interval: 10s
       timeout: 10s
       retries: 10
@@ -68,7 +94,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    # Append-only persistence, so events that wait in the cache survive a restart of the container.
+    # Append-only persistence, so the match log that waits in the cache survives a restart of the container.
     command: ['redis-server', '--appendonly', 'yes', '--requirepass', '${REDIS_PASSWORD:?set REDIS_PASSWORD}']
     volumes: [redis-data:/data]
     healthcheck:
@@ -96,6 +122,7 @@ services:
 
 volumes:
   api-data:
+  mongo-data:
   postgres-data:
   rabbitmq-data:
   redis-data:
