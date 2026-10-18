@@ -32,3 +32,5 @@ The live status of the repo stays in `docs/HANDOVER.md`. This folder keeps the h
 | `handover-2026-10-16-economy.md` | Handover | State after those four steps: verified claims, what is not verified and what to remember |
 | `2026-10-18-align-clients.md` | Prompt | Request to align the web and Godot clients at M3 before M4, with the owner's two answers |
 | `handover-2026-10-18-alignment.md` | Handover | State after the alignment: bots on the server, protocol changes, parity tests, what is verified and what is not |
+| `2026-10-18-m4-creeps.md` | Prompt | Request for the placement fix and M4 (creeps) |
+| `handover-2026-10-18-m4.md` | Handover | State after the placement fix and M4: changes, checks, decisions and open items |

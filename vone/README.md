@@ -1,6 +1,6 @@
 # Luxcores Godot Client
 
-The Godot client renders match maps and server snapshots. Match simulation, command validation, and updates run on the backend through its plain WebSocket API (`/ws`). The client stands at milestone M3 of the web reference and matches the web client rule for rule. It covers the economy, buildings, tower upgrades, combat visuals and hero orders.
+The Godot client renders match maps and server snapshots. Match simulation, command validation, and updates run on the backend through its plain WebSocket API (`/ws`). The client stands at milestone M4 of the web reference and matches the web client rule for rule. It covers the economy, buildings, tower upgrades, creep orders and groups, combat visuals and hero orders.
 
 ## Run
 
@@ -21,7 +21,9 @@ A Match ID in the field joins that match instead. An ID of a bot match joins as 
 - Draws the map, lanes, vents, item spawns and every entity with its name and lux count (GDD 13.1), like the web client.
 - Shows tower attack types (a colored cap), upgrade levels (`P2 S1`), stuns, recycle progress, aim lines from towers and heroes to their targets, and projectiles.
 - Builds all six buildings with a tower attack type, upgrades towers (power and shell), recycles and cancels a recycle.
-- Resolves taps through `scripts/game_logic.gd`: a tap builds, selects an own building, or, once a hero exists, moves it or attacks an enemy. Heroes appear in M5, so those two orders are tested with fixtures and not yet with a live match.
+- Orders creeps from a barracks: 1 to 5 creeps, melee, ranged, area or mixed, with the queue listed and a cancel button per order (by order id).
+- Selects a creep group by tapping one of its creeps, then offers Path, Merge, Split and Lane Route. Path mode takes up to 10 waypoints with Undo, Go, Cancel and Reuse Last, and a barracks keeps a default path for new groups. The arena draws the selected group's route.
+- Resolves taps through `scripts/game_logic.gd`. A tap builds, selects an own building or creep group, adds a waypoint in path mode or picks the group to join in merge mode. Once a hero exists, a tap moves it or attacks an enemy. Heroes appear in M5, so fixtures test those two orders and no live match has run them yet.
 
 ## Staying in Step with the Web Client
 
@@ -34,10 +36,10 @@ A Match ID in the field joins that match instead. An ID of a bot match joins as 
 Run these from the repo root. Each needs Godot 4.6 (`GODOT_BIN`, `godot` on the PATH, or the macOS app).
 
 ```bash
-# Pure game logic against the shared fixtures: 44 checks, no server needed.
+# Pure game logic against the shared fixtures: 63 checks, no server needed.
 Godot --headless --path vone --script res://tests/run_tests.gd
 
-# The real main scene against a running backend: 22 checks.
+# The real main scene against a running backend: 41 checks.
 Godot --headless --path vone --script res://tests/live_match.gd -- --server=http://127.0.0.1:3000
 
 # Both, with a throwaway backend, as part of the browser tests.
@@ -46,6 +48,17 @@ npm run test:e2e
 
 `tests/screenshot_fixture.gd` draws a hand-made snapshot with every M3 entity and saves a PNG. It needs a window, so it runs without `--headless`. See the script header for the command.
 
+## Two Humans From a Built Package
+
+To test a match between two people with an exported game, run one backend and give both clients its address:
+
+1. On the host computer, run `npm run serve:install` once and `npm run serve` from the repo root. The backend listens on every network interface (`HOST` defaults to `0.0.0.0`) at port 3000. Find the computer's LAN address, for example `192.168.1.20`.
+2. In Godot, open Project, Export. Add the platform presets you need and install the export templates when the editor asks. Godot 4.6 needs templates that match its exact version. Export a build for each tester.
+3. Start the build on both devices. Enter `http://192.168.1.20:3000` as the Backend URL, then a player name. A web build needs the page and the backend on the same origin or `CORS_ORIGIN` set on the backend (see `backend/nodejs/README.md`).
+4. The first player picks **Host a match for two**, connects, and shares the Match ID shown on screen (the Copy button helps). The second player pastes it into the Match ID field and connects, and then the host starts the match.
+
+An Android or iOS build can reach the backend only over the LAN address, and a plain `http://` address needs cleartext traffic allowed in the export preset. `[UNVERIFIED]`: I have not exported or run a package; only the editor and headless runs are tested.
+
 ## Not Done Yet
 
-Creep orders, hero production and abilities (M4 to M6), rendering polish, instancing, and mobile touch gestures such as pinch zoom and path mode (M7 and M8) remain future work. The web client and `src/sim/` stay the executable reference for the rules.
+Hero production and abilities, items (M5 and M6), rendering polish, instancing, and mobile touch gestures such as pinch zoom and path mode (M7 and M8) remain future work. The web client and `src/sim/` stay the executable reference for the rules.

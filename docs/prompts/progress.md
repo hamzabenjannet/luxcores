@@ -2,6 +2,12 @@
 
 Newest first. One entry per milestone or notable change. Add the commit hash and the verification, not just the intent.
 
+## 2026-10-18: M4 (Creeps) and the Placement Fix
+
+- Placement tests and the Godot snapping fix. `fa69b77` The M4 sim: barracks queues, groups, paths, the lane route and creep combat. Then the web client controls, and the Godot client controls (hashes in `git log`).
+- Verified: 153 root tests, 10 e2e tests, 63 Godot parity and 41 Godot live checks, and Chromium equals Node for a bot match with creeps at tick 5000. Counts are in `docs/HANDOVER.md`.
+- Next: M5 (heroes), built in both clients together. The owners test two humans with a built Godot package. See `handover-2026-10-18-m4.md`.
+
 ## 2026-10-18: Web and Godot Clients Aligned at M3
 
 - `d7f018d` A server-run test bot, bot-vs-bot lobbies, spectators, and combat fields in snapshots. `6f37669` The web client plays only through the server, with a menu, build controls and M3 visuals. `ccb16a9` Godot client at M3 with shared parity cases. A later commit adds the menu click-through test.
