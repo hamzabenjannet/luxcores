@@ -12,7 +12,7 @@
 import { dist2, idiv, isqrt, MILLI, UNITS_PER_TILE } from './fixed.js';
 import { ATTACK_CODE, ownedBuilding } from './buildings.js';
 import { ORDER_TYPE, spawnSpots } from './creeps.js';
-import { dealDamage } from './damage.js';
+import { creditDrain, dealDamage } from './damage.js';
 import { spend } from './lux.js';
 import { meleeReach } from './reach.js';
 import { KIND, findEntity, spawnEntity } from './state.js';
@@ -162,7 +162,7 @@ function hittable(hero, target) {
  * @param {any} ability
  */
 function strike(state, hero, target, ability) {
-  dealDamage(state, target, ability.damage * MILLI);
+  creditDrain(state, hero.team, target, dealDamage(state, target, ability.damage * MILLI));
   if (ability.stunTicks) target.stunTicks = Math.max(target.stunTicks, ability.stunTicks);
   alertTowers(state, hero, target);
 }

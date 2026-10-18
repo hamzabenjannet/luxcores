@@ -5,6 +5,7 @@
  * `hp` equals `coreLux`, and `maxHp` is the highest HP the Core has held.
  */
 
+import { idiv } from './fixed.js';
 import { KIND } from './state.js';
 
 /**
@@ -42,6 +43,21 @@ export function credit(state, team, amount) {
 }
 
 /**
+ * Adds to an end-of-match counter that is kept in milli-lux. The amount comes in tenths of a milli-lux and
+ * the part below a whole milli-lux waits in a remainder field, so many small amounts never lose a fraction.
+ * @param {import('./state.js').Team} team
+ * @param {'statDrained' | 'statEntropy'} field
+ * @param {'statDrainedTenths' | 'statEntropyTenths'} remainderField
+ * @param {number} tenths
+ */
+export function addStat(team, field, remainderField, tenths) {
+  const total = team[remainderField] + tenths;
+  const whole = idiv(total, 10);
+  team[remainderField] = total - whole * 10;
+  team[field] += whole;
+}
+
+/**
  * Adds lux to the income buffer: it settles into the Core after `pendingSettleTicks` (GDD 3.3).
  * @param {import('./state.js').SimState} state
  * @param {number} team
@@ -66,6 +82,7 @@ export function spend(state, team, amount) {
   const keep = state.config.balance.core.minLeftAfterSpendLux;
   if (t.coreLux - amount < keep) return false;
   t.coreLux -= amount;
+  t.statSpent += amount;
   t.ticksSinceSpend = 0;
   syncCore(state, team);
   return true;

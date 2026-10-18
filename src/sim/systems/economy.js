@@ -75,6 +75,7 @@ export function run(state) {
     }
   }
   state.teams.forEach((team, t) => {
+    team.statCollected += income[t];
     addPending(state, t, income[t]);
     team.ticksSinceSpend++;
   });

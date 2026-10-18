@@ -7,7 +7,7 @@
 
 import { chancePct } from '../rng.js';
 import { dist2, idiv, isqrt, MILLI, TICK_HZ, UNITS_PER_TILE } from '../fixed.js';
-import { dealDamage } from '../damage.js';
+import { creditDrain, dealDamage } from '../damage.js';
 import { addPending } from '../lux.js';
 import { KIND, findEntity, spawnEntity } from '../state.js';
 import { meleeReach } from '../reach.js';
@@ -132,11 +132,14 @@ export function run(state) {
 
   /** @type {number[]} */
   const damageById = [];
-  /** @type {{ targetId: number, owner: number, damage: number }[]} */
-  const funnels = [];
+  /** Who is owed what a hit removed: the team that drains it and, for Energy Grab, the player that funnels it. */
+  /** @type {{ targetId: number, team: number, owner: number, damage: number, funnel: boolean }[]} */
+  const credits = [];
   for (const hit of hits) {
     damageById[hit.target.id] = (damageById[hit.target.id] ?? 0) + hit.damage;
-    if (isFunnelHit(hit)) funnels.push({ targetId: hit.target.id, owner: hit.source.owner, damage: hit.damage });
+    if (hit.target.team >= 0 && hit.target.team !== hit.source.team) {
+      credits.push({ targetId: hit.target.id, team: hit.source.team, owner: hit.source.owner, damage: hit.damage, funnel: isFunnelHit(hit) });
+    }
     if (hit.procChance > 0 && chancePct(state.rng, hit.procChance)) {
       if (hit.proc === 'stun') hit.target.stunTicks = Math.max(hit.target.stunTicks, hit.procValue);
       else if (hit.proc === 'knockback') applyKnockback(hit.source, hit.target, hit.procValue);
@@ -145,32 +148,35 @@ export function run(state) {
   for (const target of state.entities) {
     const damage = damageById[target.id] ?? 0;
     if (damage === 0) continue;
-    const before = target.hp;
-    dealDamage(state, target, damage);
-    if (funnels.length > 0) funnel(state, target, before - target.hp, damage, funnels);
+    const removed = dealDamage(state, target, damage);
+    if (credits.length > 0) settle(state, target, removed, damage, credits);
   }
 }
 
 /**
- * Energy Grab (GDD 3.5, 8.2): the HP a hero's basic attack removed from an enemy becomes lux in the
- * hero owner's pending pool, at the HP factor of the target, until the item's budget runs out.
- * When several funneling attacks hit one target in a tick, each gets its share of the HP removed.
+ * Shares the HP that a target lost among the hits that aimed at it. Each source team counts its share as
+ * drained lux (GDD 13.2). Energy Grab (GDD 3.5, 8.2) also turns a hero's share into lux in the owner's
+ * pending pool, at the HP factor of the target, until the item's budget runs out.
  * @param {import('../state.js').SimState} state
  * @param {import('../state.js').Entity} target
  * @param {number} removed milli-HP the target lost this tick, after shields
  * @param {number} total milli-HP of damage aimed at the target this tick
- * @param {{ targetId: number, owner: number, damage: number }[]} funnels
+ * @param {{ targetId: number, team: number, owner: number, damage: number, funnel: boolean }[]} credits
  */
-function funnel(state, target, removed, total, funnels) {
+function settle(state, target, removed, total, credits) {
   if (removed <= 0) return;
   const { hpFactor } = state.config.balance;
   const factor = target.kind === KIND.CORE ? hpFactor.core : hpFactor.default;
-  for (const f of funnels) {
-    if (f.targetId !== target.id) continue;
-    const player = state.players.find((p) => p.id === f.owner);
+  for (const c of credits) {
+    if (c.targetId !== target.id) continue;
+    const share = idiv(removed * c.damage, total);
+    creditDrain(state, c.team, target, share);
+    if (!c.funnel) continue;
+    const player = state.players.find((p) => p.id === c.owner);
     if (!player || player.funnelLux <= 0) continue;
-    const lux = Math.min(idiv(idiv(removed * f.damage, total), factor), player.funnelLux);
+    const lux = Math.min(idiv(share, factor), player.funnelLux);
     player.funnelLux -= lux;
+    state.teams[player.team].statFunneled += lux;
     addPending(state, player.team, lux);
   }
 }

@@ -23,6 +23,7 @@ export function run(state) {
       if (order.barracksId === e.id && order.held === 0) refund += idiv(orderCost(state, order) * state.config.balance.economy.recycleQueueRefundPct, 100);
     }
     credit(state, e.team, refund);
+    state.teams[e.team].statRecycled += refund;
     e.hp = 0; // the cleanup system removes it, in the same tick
   }
 }

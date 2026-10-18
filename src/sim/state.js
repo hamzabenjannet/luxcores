@@ -51,7 +51,17 @@ export const ENTITY_HASH_FIELDS = Object.freeze([
 /** Team fields included in the hash, in this exact order. */
 export const TEAM_HASH_FIELDS = Object.freeze([
   'coreLux', 'pendingLux', 'ticksSinceSpend',
+  'statCollected', 'statSpent', 'statDrained', 'statFunneled', 'statRecycled', 'statEntropy',
+  'statDrainedTenths', 'statEntropyTenths',
 ]);
+
+/** The end-of-match counters of a team, in milli-lux (GDD 13.2). They only count and never decide anything. */
+export function emptyStats() {
+  return {
+    statCollected: 0, statSpent: 0, statDrained: 0, statFunneled: 0, statRecycled: 0, statEntropy: 0,
+    statDrainedTenths: 0, statEntropyTenths: 0,
+  };
+}
 
 /**
  * @typedef {Object} Entity
@@ -135,6 +145,14 @@ export const TEAM_HASH_FIELDS = Object.freeze([
  * @property {number} coreLux          settled lux in the Core, milli-lux
  * @property {number} pendingLux       sum of the pending pool, milli-lux
  * @property {number} ticksSinceSpend  for the nuclear meltdown rule
+ * @property {number} statCollected    lux the collectors produced, milli-lux (GDD 13.2)
+ * @property {number} statSpent        lux paid for buildings, upgrades, creeps, heroes, abilities and items
+ * @property {number} statDrained      enemy lux destroyed by this team's damage
+ * @property {number} statFunneled     enemy lux that Energy Grab moved to this team's pending pool
+ * @property {number} statRecycled     refunds received for recycled buildings
+ * @property {number} statEntropy      lux this team's entities lost to entropy
+ * @property {number} statDrainedTenths  tenths of a milli-lux that `statDrained` has not counted yet, so no fraction is lost
+ * @property {number} statEntropyTenths  the same for `statEntropy`
  * @property {Array<{settleTick:number, amount:number}>} pending  income buffer entries
  */
 
@@ -193,6 +211,7 @@ export function createState({ seed, players, config }) {
       coreLux: config.balance.core.startPerPlayerLux * members,
       pendingLux: 0,
       ticksSinceSpend: 0,
+      ...emptyStats(),
       pending: [],
     });
   }

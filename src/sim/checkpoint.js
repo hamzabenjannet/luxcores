@@ -13,7 +13,7 @@
  * and a restored state recomputes it at once, so both agree.
  */
 
-import { emptyCounts, entityDefaults } from './state.js';
+import { emptyCounts, emptyStats, entityDefaults } from './state.js';
 import { run as runVisibility } from './systems/visibility.js';
 
 /**
@@ -41,6 +41,7 @@ export function importState(data, config) {
   );
   // A checkpoint written before a milestone added a field lacks it. Give it the starting value.
   state.entities = state.entities.map((e) => ({ ...entityDefaults(), ...e }));
+  state.teams = state.teams.map((t) => ({ ...emptyStats(), ...t }));
   state.players = state.players.map((p) => ({ heroLock: 0, heroCooldown: 0, funnelLux: 0, items: emptyCounts(config), ...p }));
   runVisibility(state);
   return state;

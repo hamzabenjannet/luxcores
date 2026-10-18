@@ -11,6 +11,7 @@
 import { TICK_HZ, idiv } from '../fixed.js';
 import { KIND } from '../state.js';
 import { isBuildingKind } from '../buildings.js';
+import { addStat } from '../lux.js';
 
 const SECONDS_PER_MINUTE_X_PERCENT = 60 * 100;
 
@@ -24,6 +25,8 @@ export function run(state) {
     const numerator = e.maxHp * pct + e.entropyRemainder;
     const loss = idiv(numerator, SECONDS_PER_MINUTE_X_PERCENT);
     e.entropyRemainder = numerator - loss * SECONDS_PER_MINUTE_X_PERCENT;
-    e.hp = Math.max(0, e.hp - loss);
+    const lost = Math.min(e.hp, loss);
+    e.hp -= lost;
+    addStat(state.teams[e.team], 'statEntropy', 'statEntropyTenths', idiv(lost * 10, state.config.balance.hpFactor.default));
   }
 }
