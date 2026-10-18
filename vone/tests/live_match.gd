@@ -191,6 +191,11 @@ func _run() -> void:
 	_check("the hero bar shows", await _until(func(): return _main._hero_bar.visible and _main._hero_name_label.text.begins_with("Prism")), true)
 	_check("Prism is locked in the rotation", int(_main._viewer_player().get("heroLock", 0)), 2)
 	_check("the roster says a hero is on the field", await _until(func(): return _main._hero_box.get_child_count() > 0 and _main._hero_box.get_child(0).text == "Hero: Your hero is on the field."), true)
+	_check("the camera does not follow at first", _main._arena.is_following(), false)
+	_main._follow_button.pressed.emit()
+	_check("the Follow button locks the camera on the hero", _main._arena.is_following(), true)
+	_main._world_3d.call("pan_camera", Vector2(10, 0))
+	_check("dragging the map unlocks the camera", _main._arena.is_following(), false)
 	_main._ability_buttons[3].pressed.emit() # shield on the hero
 	_check("the shield covers the hero", await _until(func(): return int(_find(GameLogic.KIND_HERO, 0)[0].get("shieldHp", 0)) > 0), true)
 	_check("the label shows the shield", _main._hero_name_label.text.ends_with("SHIELD"), true)

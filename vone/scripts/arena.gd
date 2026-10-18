@@ -77,6 +77,13 @@ func set_paths(new_paths: Array) -> void:
 	paths = new_paths
 	queue_redraw()
 
+## The 2D view has no camera to move, so following does nothing here.
+func set_follow(_on: bool) -> void:
+	pass
+
+func is_following() -> bool:
+	return false
+
 func set_selection(building: String, entity_id := -1) -> void:
 	selected_building = building
 	selected_entity_id = entity_id

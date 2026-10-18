@@ -38,6 +38,11 @@ var _map_height := 112
 var _camera_target := Vector3.ZERO
 var _base_camera_size := 192.0
 var _camera_initialized := false
+## While true the camera eases toward the viewer's hero. Dragging the map turns it off.
+var _following := false
+var _viewer_team := 0
+var _follow_point := Vector3.ZERO
+var _has_follow_point := false
 
 func _ready() -> void:
 	_camera.current = true
@@ -82,10 +87,11 @@ func set_balance(balance: Dictionary, heroes: Dictionary = {}, items: Dictionary
 	for entry in items.get("list", []):
 		_item_names.append(String(entry.name))
 
-func set_world(layout: Dictionary, world_snapshot: Dictionary, _team: int) -> void:
+func set_world(layout: Dictionary, world_snapshot: Dictionary, team: int) -> void:
 	var map_changed := layout != _layout
 	_layout = layout
 	_snapshot = world_snapshot
+	_viewer_team = team
 	var next_width := int(layout.get("width", 96))
 	var next_height := int(layout.get("height", 112))
 	if next_width != _map_width or next_height != _map_height:
@@ -95,8 +101,32 @@ func set_world(layout: Dictionary, world_snapshot: Dictionary, _team: int) -> vo
 		map_changed = true
 	if map_changed:
 		_configure_map()
+	_remember_hero_point()
 	_render_entities()
 	_render_paths()
+
+## The ground point of the viewer's living hero, which the camera follows.
+func _remember_hero_point() -> void:
+	_has_follow_point = false
+	for entity in _snapshot.get("entities", []):
+		if int(entity.get("kind", 0)) == GameLogic.KIND_HERO and int(entity.get("owner", -1)) == _viewer_team and int(entity.get("hp", 0)) > 0:
+			_follow_point = Vector3(
+				float(entity.get("x", 0)) / GameLogic.UNITS_PER_TILE - float(_map_width) * 0.5, 0.0,
+				float(entity.get("z", 0)) / GameLogic.UNITS_PER_TILE - float(_map_height) * 0.5)
+			_has_follow_point = true
+			return
+
+func set_follow(on: bool) -> void:
+	_following = on
+
+func is_following() -> bool:
+	return _following
+
+func _process(delta: float) -> void:
+	if _following and _has_follow_point:
+		# Ease toward the hero, a little faster than it walks; the easing follows the frame time.
+		_camera_target = _camera_target.lerp(_follow_point, 1.0 - exp(-minf(delta, 0.1) * 8.0))
+		_position_camera()
 
 func set_selection(entity_id: int) -> void:
 	_selected_entity_id = entity_id
@@ -124,6 +154,7 @@ func camera_ray_direction(viewport_position: Vector2) -> Vector3:
 func pan_camera(screen_delta: Vector2) -> void:
 	var viewport_height := maxf(1.0, get_viewport().get_visible_rect().size.y)
 	var units_per_pixel := _camera.size / viewport_height
+	_following = false
 	var shift := (-_camera.global_basis.x * screen_delta.x - _camera.global_basis.y * screen_delta.y) * units_per_pixel
 	shift.y = 0.0
 	_camera_target += shift

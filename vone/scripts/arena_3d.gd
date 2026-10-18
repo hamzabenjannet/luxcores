@@ -34,6 +34,14 @@ func set_world(layout: Dictionary, world_snapshot: Dictionary, _team: int) -> vo
 	if is_instance_valid(_world_root):
 		_world_root.call("set_world", layout, world_snapshot, _team)
 
+## The camera follows the viewer's hero while this is on. Dragging the map turns it off.
+func set_follow(on: bool) -> void:
+	if is_instance_valid(_world_root):
+		_world_root.call("set_follow", on)
+
+func is_following() -> bool:
+	return is_instance_valid(_world_root) and bool(_world_root.call("is_following"))
+
 func set_selection(_building: String, entity_id: int = -1) -> void:
 	if is_instance_valid(_world_root):
 		_world_root.call("set_selection", entity_id)

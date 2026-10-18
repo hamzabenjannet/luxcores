@@ -43,6 +43,7 @@ var _shop_key := ""
 var _summary_box: VBoxContainer
 var _hero_bar: HBoxContainer
 var _hero_name_label: Label
+var _follow_button: Button
 var _ability_buttons: Array = []
 var _item_bar: HBoxContainer
 var _item_buttons: Array = []
@@ -267,6 +268,10 @@ func _build_interface() -> void:
 	_hero_name_label.add_theme_font_size_override("font_size", 18)
 	_hero_name_label.custom_minimum_size.x = 120
 	_hero_bar.add_child(_hero_name_label)
+	_follow_button = _make_button("Follow", Color("#24364a"))
+	_follow_button.custom_minimum_size = Vector2(90, 52)
+	_follow_button.pressed.connect(_toggle_follow)
+	_hero_bar.add_child(_follow_button)
 	for ability_def in GameLogic.ABILITY_SLOTS:
 		var ability_button := _make_button(String(ability_def.letter), Color("#24364a"))
 		ability_button.custom_minimum_size = Vector2(0, 52)
@@ -944,6 +949,7 @@ func _refresh_hero_bar() -> void:
 		_item_aim = -1
 		return
 	_hero_bar.visible = true
+	_follow_button.flat = not _arena.is_following()
 	_hero_name_label.text = GameLogic.entity_text(hero, _data.balance.hpFactor, _hero_names(), _item_names())
 	_refresh_item_bar()
 	var states := GameLogic.ability_states(hero, _data.abilities, _viewer_core_lux_milli(), int(_data.balance.core.minLeftAfterSpendLux), _tick_hz)
@@ -953,6 +959,11 @@ func _refresh_hero_bar() -> void:
 		var dim: bool = not bool(state.ready) or bool(state.poor)
 		button.modulate = Color(1, 1, 1, 0.5 if dim else 1.0)
 		button.flat = _ability != int(state.slot)
+
+## The camera follows the hero while on; dragging the map turns it off.
+func _toggle_follow() -> void:
+	_arena.set_follow(not _arena.is_following())
+	_refresh_hero_bar()
 
 ## The item quick slots under the ability buttons: the short name and how many the hero holds.
 func _refresh_item_bar() -> void:
