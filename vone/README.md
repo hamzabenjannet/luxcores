@@ -4,7 +4,7 @@ The Godot client renders match maps and server snapshots. Match simulation, comm
 
 ## Run
 
-Open `vone/project.godot` in Godot 4.6 and run the project. It starts in `scenes/main3d.tscn`, with the configure/connect menu over the 3D arena. The window defaults to 600 × 1200. Set its width and height on the connection screen, then select Apply Size. Godot scales the interface uniformly as the window changes size and keeps its portrait proportions. Start the backend from the repo root with `npm run serve:install` (once) and `npm run serve`, then enter its HTTP address on the connection screen. Use `http://127.0.0.1:3000` when both processes run on one computer. A phone must use the computer's LAN address.
+Open `vone/project.godot` in Godot 4.6 and run the project. It starts in `scenes/main3d.tscn`, with the configure/connect menu over the 3D arena. On a desktop the window opens maximized and follows every resize: the interface scales with the window (project setting `canvas_items` with the `expand` aspect) and the 3D view fills it, so there is no size to enter. The smallest window is 320 × 480. Start the backend from the repo root with `npm run serve:install` (once) and `npm run serve`, then enter its HTTP address on the connection screen. Use `http://127.0.0.1:3000` when both processes run on one computer. A phone must use the computer's LAN address.
 
 Choose a player name and a mode:
 

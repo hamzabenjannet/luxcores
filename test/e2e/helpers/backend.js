@@ -159,7 +159,7 @@ export async function startBackend(extraEnv = {}, again) {
  * @typedef {Object} Env
  * @property {import('playwright-core').Browser} browser
  * @property {string[]} errors  console and page errors of every page opened with `open`
- * @property {() => Promise<import('playwright-core').BrowserContext>} newContext  a fresh browser profile, like a second phone
+ * @property {(overrides?: import('playwright-core').BrowserContextOptions) => Promise<import('playwright-core').BrowserContext>} newContext  a fresh browser profile, like a second phone; `overrides` replace the phone settings
  * @property {(context: import('playwright-core').BrowserContext, query: string) => Promise<import('playwright-core').Page>} open  loads the game with ?test=1 and waits for the match to exist
  * @property {(path: string) => Promise<import('playwright-core').Page>} plain  loads a page of the backend with no waiting and no test hook
  */
@@ -178,7 +178,7 @@ export async function withBackend(body, extraEnv = {}) {
     browser = await chromium.connect(PW_WS_ENDPOINT);
     const live = browser;
     /** @type {string[]} */ const errors = [];
-    const newContext = () => live.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    const newContext = (/** @type {import('playwright-core').BrowserContextOptions} */ overrides = {}) => live.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, ...overrides });
     const watch = async (/** @type {import('playwright-core').BrowserContext} */ context) => {
       const page = await context.newPage();
       page.on('console', (m) => { if (m.type() === 'error') errors.push(`console error: ${m.text()}`); });

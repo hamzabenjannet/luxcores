@@ -8,13 +8,8 @@ const TEAM_BLUE := Color("#3d8bff")
 const TEAM_RED := Color("#ff4d4d")
 ## Start-menu modes, in the order of the selector.
 const MODES := ["Play against bot", "Watch bot against bot", "Host a match for two"]
-const DEFAULT_WINDOW_WIDTH := 600
-const DEFAULT_WINDOW_HEIGHT := 1200
-const PREVIOUS_DEFAULT_WINDOW_HEIGHT := 800
-const MIN_WINDOW_WIDTH := 320
-const MIN_WINDOW_HEIGHT := 480
-const MAX_WINDOW_WIDTH := 3840
-const MAX_WINDOW_HEIGHT := 2160
+## The smallest window the interface still fits in. The window opens maximized and follows every resize.
+const MIN_WINDOW_SIZE := Vector2i(320, 480)
 
 var _backend: Node
 var _home: VBoxContainer
@@ -22,8 +17,6 @@ var _game: VBoxContainer
 var _server_input: LineEdit
 var _name_input: LineEdit
 var _match_input: LineEdit
-var _resolution_width: SpinBox
-var _resolution_height: SpinBox
 var _seed_input: SpinBox
 var _entropy_input: LineEdit
 var _mode_selector: OptionButton
@@ -89,10 +82,8 @@ func _ready() -> void:
 	_backend.match_status_changed.connect(_on_match_status)
 	_backend.match_ended.connect(_on_match_ended)
 	_backend.message_received.connect(_set_status)
-	get_window().size_changed.connect(_on_window_resized)
 	_build_interface()
-	_restore_window_size()
-	_on_window_resized()
+	_maximize_window()
 
 func configure_3d_world(world: Node3D) -> void:
 	_world_3d = world
@@ -130,17 +121,6 @@ func _build_interface() -> void:
 	_add_field(_home, "Backend URL", "https://luxcores.webrit.cloud", "_server_input")
 	_add_field(_home, "Player name", "Halo", "_name_input")
 	_add_field(_home, "Match ID (blank to use the mode below)", "", "_match_input")
-	var resolution_row := HBoxContainer.new()
-	resolution_row.add_theme_constant_override("separation", 10)
-	_resolution_width = _make_resolution_input("W ", DEFAULT_WINDOW_WIDTH, MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH)
-	resolution_row.add_child(_resolution_width)
-	_resolution_height = _make_resolution_input("H ", DEFAULT_WINDOW_HEIGHT, MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT)
-	resolution_row.add_child(_resolution_height)
-	var apply_resolution_button := _make_button("APPLY SIZE", Color("#34577a"))
-	apply_resolution_button.custom_minimum_size.x = 120
-	apply_resolution_button.pressed.connect(_apply_window_size)
-	resolution_row.add_child(apply_resolution_button)
-	_home.add_child(resolution_row)
 	var match_options := HBoxContainer.new()
 	_mode_selector = OptionButton.new()
 	for mode in MODES:
@@ -357,70 +337,14 @@ func _set_dark_theme() -> void:
 	theme.set_stylebox("normal", "SpinBox", _panel_style(Color("#111d2b")))
 	self.theme = theme
 
-func _make_resolution_input(prefix_text: String, default_value: int, minimum: int, maximum: int) -> SpinBox:
-	var input := SpinBox.new()
-	input.min_value = minimum
-	input.max_value = maximum
-	input.step = 10
-	input.value = default_value
-	input.prefix = prefix_text
-	input.custom_minimum_size = Vector2(130, 52)
-	input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	return input
-
-func _restore_window_size() -> void:
-	var settings := ConfigFile.new()
-	var error := settings.load("user://luxcores.cfg")
-	if error != OK and error != ERR_FILE_NOT_FOUND:
-		_set_status("Could not load saved window size (error %d)." % error)
-		return
-	var screen_size := DisplayServer.screen_get_size()
-	var width := int(settings.get_value("display", "width", mini(DEFAULT_WINDOW_WIDTH, screen_size.x)))
-	var height := int(settings.get_value("display", "height", mini(DEFAULT_WINDOW_HEIGHT, screen_size.y)))
-	if width == DEFAULT_WINDOW_WIDTH and height == PREVIOUS_DEFAULT_WINDOW_HEIGHT:
-		height = mini(DEFAULT_WINDOW_HEIGHT, screen_size.y)
-	if not _is_valid_window_size(width, height):
-		_set_status("Saved window size is outside the supported range. Using 600 × 1200.")
-		width = mini(DEFAULT_WINDOW_WIDTH, screen_size.x)
-		height = mini(DEFAULT_WINDOW_HEIGHT, screen_size.y)
-	_resolution_width.value = width
-	_resolution_height.value = height
-	get_window().size = Vector2i(width, height)
-
-func _on_window_resized() -> void:
-	if not is_instance_valid(_resolution_width) or not is_instance_valid(_resolution_height):
-		return
-	var window_size := get_window().size
-	_resolution_width.value = window_size.x
-	_resolution_height.value = window_size.y
-
-func _apply_window_size() -> void:
-	var width := int(_resolution_width.value)
-	var height := int(_resolution_height.value)
-	if not _is_valid_window_size(width, height):
-		_set_status("Window width must be %d–%d and height %d–%d." % [
-			MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH, MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT,
-		])
-		return
-	var settings := ConfigFile.new()
-	var load_error := settings.load("user://luxcores.cfg")
-	if load_error != OK and load_error != ERR_FILE_NOT_FOUND:
-		_set_status("Could not load user settings (error %d)." % load_error)
-		return
-	settings.set_value("display", "width", width)
-	settings.set_value("display", "height", height)
-	var save_error := settings.save("user://luxcores.cfg")
-	if save_error != OK:
-		_set_status("Could not save window size (error %d)." % save_error)
-		return
-	get_window().size = Vector2i(width, height)
-	_set_status("Window size set to %d × %d." % [width, height])
-
-func _is_valid_window_size(width: int, height: int) -> bool:
-	return (
-		width >= MIN_WINDOW_WIDTH and width <= MAX_WINDOW_WIDTH
-		and height >= MIN_WINDOW_HEIGHT and height <= MAX_WINDOW_HEIGHT
-	)
+## Opens at the largest window the screen allows. The scene stretches with the window (project.godot:
+## canvas_items with an expanding aspect), so the interface and the 3D view follow every resize. Phones and
+## the web build already fill the screen, and a headless run has no window to change.
+func _maximize_window() -> void:
+	var window := get_window()
+	window.min_size = MIN_WINDOW_SIZE
+	if OS.has_feature("pc") and DisplayServer.get_name() != "headless":
+		window.mode = Window.MODE_MAXIMIZED
 
 func _panel_style(color: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()

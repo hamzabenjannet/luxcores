@@ -77,6 +77,37 @@ test('a human builds, upgrades and recycles through the controls, against a bot'
   }, { MATCH_MAX_TICKS: '2400' });
 });
 
+test('the canvas follows the window and draws at the full pixel ratio on a desktop, capped at 2 on a phone', { timeout: 180_000, skip }, async () => {
+  await withBackend(async ({ errors, newContext, open }) => {
+    const size = (/** @type {import('playwright-core').Page} */ page) => page.evaluate(() => {
+      const c = /** @type {HTMLCanvasElement} */ (document.getElementById('view'));
+      return { width: c.width, height: c.height, cssWidth: c.clientWidth, cssHeight: c.clientHeight, ratio: window.devicePixelRatio };
+    });
+
+    // A desktop screen: a mouse, no touch, 3 device pixels per CSS pixel.
+    const desktop = await open(await newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 3, isMobile: false, hasTouch: false }), `name=Desk&match=new&vsBot=1&autostart=1&seed=${SEED}`);
+    await until(desktop, () => /** @type {any} */ (window).__luxTest.screenOf !== undefined); // the scene exists after the first snapshot
+    let s = await size(desktop);
+    assert.equal(s.ratio, 3);
+    assert.equal(s.width, 1280 * 3, 'the canvas has every device pixel');
+    assert.equal(s.height, 720 * 3);
+
+    // Resizing the window resizes the canvas, and the aspect of the view follows.
+    await desktop.setViewportSize({ width: 900, height: 1000 });
+    await until(desktop, () => /** @type {HTMLCanvasElement} */ (document.getElementById('view')).width === 900 * 3);
+    s = await size(desktop);
+    assert.deepEqual([s.width, s.height, s.cssWidth, s.cssHeight], [2700, 3000, 900, 1000]);
+
+    // A phone keeps the cap of 2 although the screen has 3 device pixels per CSS pixel.
+    const phone = await open(await newContext({ deviceScaleFactor: 3 }), `name=Phone&match=new&vsBot=1&autostart=1&seed=${SEED}`);
+    await until(phone, () => /** @type {any} */ (window).__luxTest.screenOf !== undefined);
+    s = await size(phone);
+    assert.equal(s.ratio, 3);
+    assert.equal(s.width, 390 * 2);
+    assert.deepEqual(errors, [], 'the pages must log no console or page errors');
+  }, { MATCH_MAX_TICKS: '600' });
+});
+
 test('a human buys items at a barracks, receives them with the hero and uses them, through the controls', { timeout: 180_000, skip }, async () => {
   await withBackend(async ({ errors, newContext, open }) => {
     const page = await open(await newContext(), `name=Shopper&match=new&vsBot=1&autostart=1&seed=${SEED}`);

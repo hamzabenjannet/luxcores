@@ -14,6 +14,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { KIND } from '../../sim/index.js';
 import { createLabels } from './labels.js';
+import { pixelRatioFor } from './pixel-ratio.js';
 import { createEntityMeshes } from './entity-meshes.js';
 import { createOverlay } from './overlay.js';
 
@@ -33,7 +34,7 @@ const VIEW_TILES_WIDE = 32;
  */
 export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0, heroNames = [], itemNames = []) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const coarse = window.matchMedia('(pointer: coarse)');
   const scene = new THREE.Scene();
   // scene.background (sRGB-aware Color) instead of setClearColor: the clear
   // color is linear and the OutputPass would brighten it to grey.
@@ -111,7 +112,11 @@ export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0, hero
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
 
+  /** Follows the window and the screen: a resize, or a move to a screen with another pixel density. */
   function resize() {
+    const ratio = pixelRatioFor(window.devicePixelRatio, coarse.matches);
+    renderer.setPixelRatio(ratio);
+    composer.setPixelRatio(ratio);
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
     renderer.setSize(w, h, false);
