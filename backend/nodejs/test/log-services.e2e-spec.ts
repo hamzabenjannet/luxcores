@@ -123,7 +123,7 @@ describe.skipIf(!REDIS || !MONGO)('match log on Redis and MongoDB', () => {
       expect((await api(first.url, '/api/health')).body.database).toMatchObject({ driver: 'mongodb', active: 'json', degraded: true });
       await first.shutdown();
       expect(await redis.exists(`lux:match:${matchId}:events`), 'the stream holds the log').toBe(1);
-      expect(await eventFiles(first)).not.toContain(`${matchId}.ndjson`);
+      expect(await eventFiles(first), 'with no store behind Redis, a file copy keeps the log safe').toContain(`${matchId}.ndjson`);
 
       second = await createTestApp(settings({ ...away, JSON_DB_PATH: first.dbPath }));
       await second.app.get(MatchRunnerService).resumed;
@@ -134,6 +134,25 @@ describe.skipIf(!REDIS || !MONGO)('match log on Redis and MongoDB', () => {
       await api(second.url, `/api/matches/${matchId}/stop`, { method: 'POST', token: halo.token });
       socket.close();
       expect(await redis.exists(`lux:match:${matchId}:events`), 'the stream is deleted with the match').toBe(0);
+    } finally {
+      await second?.close();
+      await first.close();
+    }
+  }, 120_000);
+
+  it('resumes from the file copy when Redis comes back empty and MongoDB is away', async () => {
+    const away = { MONGODB_URL: 'mongodb://127.0.0.1:1', DATABASE_TIMEOUT_MS: '500' };
+    const first = await createTestApp(settings(away));
+    let second: TestApp | undefined;
+    try {
+      const { halo, matchId } = await play(first, 24, 90);
+      await first.shutdown();
+      await redis.del([`lux:match:${matchId}:events`, `lux:match:${matchId}:cp`]); // a cache that restarted without persistence
+      second = await createTestApp(settings({ ...away, JSON_DB_PATH: first.dbPath }));
+      await second.app.get(MatchRunnerService).resumed;
+      const socket = await connectSocket(second.url, halo.token);
+      expect(await ack(socket, 'match:join', { matchId })).toMatchObject({ ok: true, status: 'running' });
+      socket.close();
     } finally {
       await second?.close();
       await first.close();

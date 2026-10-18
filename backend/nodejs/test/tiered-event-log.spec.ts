@@ -57,7 +57,7 @@ class MemorySink implements BufferSink {
 const cp = (tick: number): Omit<Checkpoint, 'seq'> => ({ matchId: 'm', tick, hash: `h${tick}`, state: {}, bots: [] });
 const hashEvent = (tick: number) => ({ type: 'hash' as const, tick, data: { hash: `h${tick}` } });
 
-function make(options: { buffer?: MemorySink; store?: MemorySink; file?: MemorySink; keep?: boolean } = {}) {
+function make(options: { buffer?: MemorySink; store?: MemorySink; file?: MemorySink; keep?: boolean; mirror?: boolean } = {}) {
   const file = options.file ?? new MemorySink('file');
   const log = new TieredEventLog({
     file,
@@ -67,6 +67,7 @@ function make(options: { buffer?: MemorySink; store?: MemorySink; file?: MemoryS
     drainMs: 3_600_000, // the tests drive the moves by hand
     retryMs: 50,
     keepStoredEvents: options.keep ?? false,
+    mirrorToFile: options.mirror,
   });
   return { log, file };
 }
@@ -94,6 +95,18 @@ describe('TieredEventLog', () => {
     await log.flush();
     expect(buffer.writes).toBe(1);
     expect(store.writes + file.writes).toBe(0);
+  });
+
+  it('copies every write to the file as well when asked, for a buffer with no store behind it', async () => {
+    const buffer = new MemorySink('redis');
+    const { log, file } = make({ buffer, mirror: true });
+    log.append('m', hashEvent(20));
+    await log.flush();
+    expect(buffer.events.get('m')?.size).toBe(1);
+    expect(file.events.get('m')?.size).toBe(1);
+    buffer.up = false; // the cache restarts empty: the file still has the log
+    buffer.events.clear();
+    expect((await log.read('m')).map((e) => e.tick)).toEqual([20]);
   });
 
   it('falls back from the buffer to the store to the file, one place per write', async () => {

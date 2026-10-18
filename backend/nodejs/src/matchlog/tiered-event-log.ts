@@ -27,6 +27,11 @@ export interface TieredLogOptions {
   maxPending?: number;
   /** Entries per move from the buffer to the store. */
   drainBatch?: number;
+  /**
+   * Also write every batch to the file while the buffer takes the writes. Set it when there is no store:
+   * a cache that restarts empty must not be the only copy of a running match.
+   */
+  mirrorToFile?: boolean;
 }
 
 /** Longest the shutdown waits for the buffer to empty into the store. */
@@ -192,6 +197,9 @@ export class TieredEventLog extends EventLog {
         await tier.sink.write(batch);
         this.markUp(tier);
         this.lastWrote = tier.sink.name;
+        if (this.options.mirrorToFile && tier !== this.file) {
+          await this.file.sink.write(batch).catch((err: Error) => this.logger.warn(`Match log: the file copy failed: ${err.message}`));
+        }
         return;
       } catch (err) {
         this.markDown(tier, err);

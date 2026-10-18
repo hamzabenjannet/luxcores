@@ -40,6 +40,7 @@ import { TieredEventLog } from './tiered-event-log.js';
           drainMs: 1000,
           retryMs: 5000,
           keepStoredEvents: retentionDays > 0,
+          mirrorToFile: !mongo,
         });
         const places = [redis ? 'Redis' : '', mongo ? 'MongoDB' : '', 'files'].filter(Boolean).join(' + ');
         new Logger('MatchLog').log(`Match log: ${places}`);
