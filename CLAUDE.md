@@ -27,7 +27,7 @@ npm run gen:sin                      # regenerate src/sim/sin-table.js (rarely)
 npm run serve                        # backend on :3000 serving the game page and every match; run `npm run serve:install` once
 ```
 
-The repo needs Node 22 or newer and Python 3 for the prose checker. There is no build step, and `npm test` needs no install. Two dependency sets are approved: `playwright-core` 1.58.2 (dev, pinned) for `npm run test:e2e`, and the NestJS stack in `backend/nodejs/package.json` (owners, 2026-10-16). Ask the owners before you add anything else.
+The repo needs Node 22 or newer and Python 3 for the prose checker. There is no build step, and `npm test` needs no install. Two dependency sets are approved: `playwright-core` 1.58.2 (dev, pinned) for `npm run test:e2e`, and the NestJS stack in `backend/nodejs/package.json` (owners, 2026-10-16). The Redis client `@redis/client` 6.3.0 was added on 2026-10-18 with Hamza's approval; Hama has yet to confirm it. Ask the owners before you add anything else.
 
 ## Simulation Rules (`src/sim/`)
 
@@ -170,7 +170,9 @@ npm run lint && npm run typecheck
 
 - The server runs the repo's sim through `SimService`, which loads `src/sim/index.js` at start-up. Never copy or reimplement a rule in the backend; a rule change belongs in `src/sim/` and the GDD.
 - Give every route body and response a DTO with `@ApiProperty` and validation decorators, and cover each new route in an end-to-end test.
-- Services use the abstract `DataStore`, never a driver. Add a method to the contract and to all three adapters (`json`, `mongodb`, `postgres`), and extend `test/store-contract.spec.ts`.
+- Services use the abstract `DataStore`, never a driver. Add a method to the contract and to all three adapters (`json`, `mongodb`, `postgres`), and extend `test/store-contract.spec.ts`. The server wraps a database in `ResilientStore`, so every path must also work on the JSON file; a service that is unreachable at start-up stays off until the next restart, and none of them may stop the server from starting.
+- Redis, RabbitMQ and MongoDB are optional layers behind ports (`EventLog`, `MatchOwnership`, `CommandBus`, `DataStore`). Give a new use of one of them an in-process fallback and a test that cuts the service while it works (`test/helpers/tcp-proxy.ts`). Start every Redis key with the configured prefix (`RedisHandle.prefix`).
+- A match resumes only if everything it needs is plain data in the sim state, the bot memory (`saveState`) or the log, because a second server rebuilds the match from them.
 - `COMMAND_TYPES` in `src/game/command-types.ts` must list the sim commands. A test fails when the lists drift.
 - A running match is rebuilt from its write-ahead log (`src/matchlog`) after a restart. Anything that changes what the sim does for the same commands (a rule, the data files, a bot) breaks a replay from the seed, so a match resumes from its newest checkpoint instead and the new rules apply from there; its replay is then flagged `reproducible: false`. A match with no checkpoint yet ends as a draw. The sim state, `exportState` in `src/sim/checkpoint.js`, and the bot memory (`saveState`) must stay plain data, or checkpoints stop working. Log new match events through `EventLog`, never straight to a file or a store, and keep `append` non-blocking.
 - Never commit `.env` or `data/db.json`. Secrets come from the environment. In production the server refuses to start without `JWT_SECRET` and `ADMIN_API_KEY`.

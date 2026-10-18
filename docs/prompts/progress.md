@@ -2,6 +2,12 @@
 
 Newest first. One entry per milestone or notable change. Add the commit hash and the verification, not just the intent.
 
+## 2026-10-18: Architecture Phases B to E and Resume Across Edits
+
+- `45251cf` sim checkpoints. `7b5e711` checkpoints in the server and the tiered match log. `22bd1dc` storage with the JSON fallback. `e4cf63c` and `1a0a5bc` Redis Stream buffer and MongoDB events. `645a04c` leases, command queues and room relay. Then the later commits of that day: start-up window, deploy stack, docs.
+- Verified: 135 backend unit and 88 end-to-end tests on real containers, twice; 162 root tests; 11 root end-to-end tests; the production stack with two API containers through a `docker kill` of the owner and a stop of MongoDB.
+- Next: the owners decide on delta snapshots and placement by load, then M5. See `handover-2026-10-18-architecture-b-e.md`.
+
 ## 2026-10-18: Spacing, Tick Cap, Redis and Architecture Phase A
 
 - `4606040` Units never overlap (a collision bug let units walk through older buildings), group spacing, a melee gap and the 10000-tick stalemate cap. `122bf40` Redis in the Compose files. Then phase A of the architecture plan: the match log, automatic resume and rejoining clients.

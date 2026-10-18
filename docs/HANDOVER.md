@@ -24,7 +24,8 @@ Milestones M1 (map generation), M2 (economy), M3 (combat and physics) and M4 (cr
 | Web client | Plays only through the server: a start menu (bot, bots to watch, two humans), a lobby card, a build palette, a selection panel (tower upgrades, recycle), hero orders and a result banner. It draws the map, every entity with its name and lux count, tower attack types, aim lines and projectiles, picks tiles by ray-casting, and pans by drag. It never steps the sim |
 | Backend (`backend/nodejs/`) | NestJS 12 multiplayer server: guest auth with JWT guards, players, lobbies, a server-authoritative match runner at 20 Hz, Socket.IO `/game` namespace, replays with server-side verify, static routes for the game files, Swagger at `/api/docs`, JSON file database with MongoDB and PostgreSQL adapters, RabbitMQ events with an in-process fallback. See `backend/nodejs/README.md` |
 | Bots | `src/bot/bot.js` follows the GDD 12.1 rotation (collector, barracks, tower, creep group of 5) and upgrades towers; the server runs it for a `vsBot` or `botVsBot` lobby, and its commands go into the replay. Heroes arrive with M5. `node tools/run-bots.js --soak 100` plays 100 seeds twice and compares the hashes. Golden replays `bots-seed-777` (5 000 ticks), `bots-seed-3-victory` (a creep rush, tick 3699) and `bots-seed-4-stalemate` (no winner, ends at the 10 000-tick limit) pin bot matches. A match nobody has won ends as a draw at `match.stalemateTicks` (10 000); `MATCH_MAX_TICKS` raises it for the server and the tools |
-| Match log and resume | Every running match has a write-ahead log (`backend/nodejs/src/matchlog`): seed, every command, a hash every 20 ticks. The server rebuilds running matches from it at start-up, after a crash or a graceful stop (`MATCH_ON_SHUTDOWN`). Clients rejoin by themselves and continue their command count (`nextSeq`). See `backend/nodejs/README.md`, Match Log and Resume |
+| Match log and resume | Every running match has a write-ahead log (`backend/nodejs/src/matchlog`): seed, every command, a hash every 20 ticks and a checkpoint every 400. The log goes to a Redis Stream, MongoDB or files, whichever works. The server rebuilds running matches from it at start-up, after a crash, a graceful stop (`MATCH_ON_SHUTDOWN`) or a change of the rules. Clients rejoin by themselves and continue their command count (`nextSeq`). See `backend/nodejs/README.md`, Match Log and Resume |
+| Several servers | Redis leases say which server runs a match, and RabbitMQ holds one command queue per match, so a client on one server plays a match on another and a dead server's matches are adopted. See `backend/nodejs/README.md`, Running Several Servers |
 | Spectators | Any signed-in player may join the room of a `botVsBot` match and receives every event, with no commands. A human match stays closed to strangers |
 | Entity labels | Every entity and map marker shows its name and, for entities, its lux count under it (`render/labels.js`) |
 | Project memory (`docs/prompts/`) | Tracked in git: prompt history, handovers, progress and knowledge notes; see its README |
@@ -157,41 +158,53 @@ A nuclear plant earns 5 lux/s. It earns 600 lux in the 120 s before it melts dow
 - Projectiles live one tick and snapshots arrive every second tick, so clients draw an aim line from `targetId` to show each shot. Delta snapshots and interpolation belong to M7.
 - The client compares the sim spec version with the server but not the data hash, because `crypto.subtle` needs a secure context and a LAN address is not one.
 
-## Server Architecture Plan
+## Server Architecture
 
-Decided with the owners on 2026-10-18. The server stays the only endpoint that clients talk to (Socket.IO and plain WebSocket). Behind it, each service is optional, and the server falls back when one is away, down to a JSON file and in-process queues, so it always runs alone.
+Decided with the owners on 2026-10-18 and built the same day. The server stays the only endpoint that clients talk to (Socket.IO and plain WebSocket). Behind it, each service is optional. A service that is down as the server starts stays off until the next restart, and the database falls back to a JSON file, so the server always runs alone. Details and the settings are in `backend/nodejs/README.md` (Storage, Match Log and Resume, Running Several Servers).
 
 | Layer | Used when available | Fallback |
 |---|---|---|
-| Commands per match | RabbitMQ queue `match.<id>.commands`, one consumer owns the match | direct in-process call |
-| Event log (commands, hashes, lifecycle) | Redis Stream per match, flushed in the background to MongoDB (`match_events`, indexed by match) | append-only NDJSON file per match |
-| Main storage | MongoDB | JSON file |
-| Relational data later (profiles, teams, guilds) | PostgreSQL, adapter stays as it is and is tried at start-up | skipped |
-| Cross-node socket rooms (later) | Socket.IO Redis Streams adapter | one node |
+| Commands for a match that another server runs | RabbitMQ queue `luxcores.match.<id>.commands`, with a direct reply-to | a local match takes commands by a direct call, which is also the fast path with a broker |
+| Event log (commands, hashes, lifecycle, checkpoints) | Redis Stream per match, moved in the background to MongoDB (`match_events`, indexed by match, with a TTL) | NDJSON file per match, and a file copy of every write while Redis has no MongoDB behind it |
+| Main storage | MongoDB | JSON file, which mirrors players and matches while MongoDB works and is copied back afterwards |
+| Relational data later (profiles, teams, guilds) | PostgreSQL, tried at start-up and otherwise untouched | skipped |
+| Who runs a match | Redis lease per match, so several servers share the matches and a dead server's matches are adopted | the one server owns every match |
+| Room events between servers | Redis Pub/Sub, one channel per match, only while another server follows the room | the one server |
 
 Decisions:
 
-- A running match resumes automatically after a restart.
-- Redis Streams, not a custom RabbitMQ bridge, carries socket traffic between nodes, because Socket.IO has no official RabbitMQ adapter.
-- Events are commands, hashes and lifecycle, and snapshots stay live-only.
+- A running match resumes automatically after a restart, and also after a change of the data files or the code, from its newest checkpoint. The replay of such a match is marked `reproducible: false`.
+- Redis Pub/Sub carries room events between servers, not the Socket.IO Redis Streams adapter, because it also serves the plain WebSocket gateway and needs no extra dependency. Pub/Sub keeps no history, which suits snapshots.
+- Events are commands, hashes and lifecycle, and snapshots stay live-only. A checkpoint is state, saved beside the events.
 - Mongo holds one events collection indexed by match, not a collection per match.
-- The JSON file stays as the fallback store.
+- When MongoDB fails during the run, the server switches to the JSON file until the next restart and does not switch back by itself, so the two stores never diverge while the server runs.
+- The only new dependency is `@redis/client` 6.3.0. Hamza approved the Redis layer on 2026-10-18. CLAUDE.md asks for both owners to approve a dependency, and Hama has not confirmed this one yet.
 
 | Phase | Scope | State |
 |---|---|---|
-| A | The `EventLog` port and its file implementation, the runner writes the log, `SimService.rebuild`, automatic resume, `nextSeq` for rejoining clients (web and Godot), a volume in the production stack | Done and verified (below) |
-| B | MongoDB as main store with the fallback choice at start-up, `match_events`, indexes | Next |
-| C | Redis Stream buffer and the Mongo flusher, tests that kill Redis mid-match | Planned |
-| D | RabbitMQ per-match command queues, queue lifecycle, broker-outage test | Planned |
-| E | Match ownership across nodes and worker processes, cross-node socket fan-out | Planned, see Capacity |
+| A | The `EventLog` port and its file implementation, the runner writes the log, `SimService.rebuild`, automatic resume, `nextSeq` for rejoining clients (web and Godot), a volume in the production stack | Done and verified |
+| B | MongoDB as main store with the fallback to the JSON file, `ResilientStore`, the `auto` driver, the PostgreSQL probe | Done and verified |
+| C | Redis Stream buffer, the Mongo flusher, `match_events`, outage tests | Done and verified |
+| D | RabbitMQ per-match command queues, queue lifecycle, broker-outage fallback | Done and verified |
+| E | Match leases, adoption of orphaned matches, cross-server join, command, stop and room events | Done and verified for two servers. Not built: placement by load, delta snapshots |
+| Checkpoints | Sim state and bot memory saved at tick 20 and every 400 ticks, resume across a change of rules | Done and verified |
 
-Phase A was checked in four ways. The rebuild fails loudly when a bot or a hash disagrees with the log. Two deliberate breaks of it (skipping the bot sync, dropping the command counter) each failed a test. A `SIGKILL` of the real server, with a browser page that rejoined and kept playing, passed twice in a row. The production image resumed a match across `docker stop` and `docker start` on a volume.
+How it was checked:
+
+- Unit and end-to-end tests on real containers (MongoDB 7.0, Redis 7, RabbitMQ 3.13, PostgreSQL 16) cover every sink, the planner, the leases, the relay and the bus. Outages were made with a TCP proxy that cuts and restores a service while events flow.
+- A resume after an edit of a data file and of the bot code keeps the match running with the human's buildings.
+- In the production Compose stack with two API containers: a client on one container played a match run by the other, `docker kill` of the owner handed the match to the other container within about ten seconds, `docker stop` of MongoDB left the match running on the JSON file, and the restart afterwards copied the changes back. See `backend/nodejs/deploy/README.md`, What Is Verified.
+- Earlier, phase A passed a `SIGKILL` of the real server with a browser page that rejoined, twice in a row.
+
+Not verified `[UNVERIFIED]`: three or more servers, a Linux host, a managed Redis or MongoDB, a network partition between a server and Redis, and any load beyond the benchmark below.
 
 ### Capacity
 
-The owners' target is about 100 simultaneous 5v5 matches per node. A measured 1v1 bot match (seed 4, up to 50 creeps, two bots) costs 0.86 ms per tick on average (p99 1.2 ms, worst 10 ms) and 0.08 ms per snapshot, which is about 18 ms of CPU per second per match. One Node process uses one core, so one process runs roughly 33 such matches at 60% load. Snapshots weigh about 19.5 KB each, 10 per second per client.
+The owners' target is about 100 simultaneous 5v5 matches per node. A measured 1v1 bot match (seed 4, up to 50 creeps, two bots) costs 0.86 ms per tick on average (p99 1.2 ms, worst 10 ms) and 0.08 ms per snapshot, which is about 18 ms of CPU per second per match. One Node process uses one core, so one process runs roughly 33 such matches at 60% load. Snapshots weigh about 19.5 KB each, 10 per second per client. Checkpoints add little: about 70 KB of JSON every 400 ticks per match, and a copy of the state in memory.
 
-Extrapolating to 5v5 `[UNVERIFIED]`, because the sim has no teams of 5 or heroes yet: five times the units would cost about 5 ms per tick (the targeting loops grow with the square of the unit count) and about 100 KB per snapshot. That is 100 ms of CPU per second per match, so one core carries 6 or 7 matches, and 100 matches need 15 or more cores. Ten clients per match at 100 KB and 10 snapshots per second is 10 MB/s per match, far too much. Two things follow. The match runner has to run in worker processes or threads, one per core, which the queue-per-match ownership of phase D and E supports. And snapshots need the delta, fog-filtered form of `docs/TECH_ARCHITECTURE.md` section 13.1 and a compact encoding before 5v5 at that scale. Neither is built.
+Extrapolating to 5v5 `[UNVERIFIED]`, because the sim has no teams of 5 or heroes yet: five times the units would cost about 5 ms per tick (the targeting loops grow with the square of the unit count) and about 100 KB per snapshot. That is 100 ms of CPU per second per match, so one core carries 6 or 7 matches, and 100 matches need 15 or more cores. Ten clients per match at 100 KB and 10 snapshots per second is 10 MB/s per match, far too much.
+
+What the architecture now offers: one server process per core (`docker compose up -d --scale api=N`), sharing the matches through Redis and RabbitMQ, which was tested with two. Two things are still missing before 5v5 at that scale: delta, fog-filtered and compact snapshots (`docs/TECH_ARCHITECTURE.md` section 13.1), which change the protocol of both clients and need parity cases; and placement by load, because a new match runs on whichever server received the start request. Both are for the owners to schedule.
 
 ## Queued by the Owners
 
