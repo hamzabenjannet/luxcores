@@ -168,8 +168,11 @@ describe('resuming matches after a restart', () => {
       const { halo, matchId } = await playUntil(first, 7, 70);
       await first.shutdown();
       const path = logPath(first, matchId);
-      const tampered = (await readFile(path, 'utf8')).replace(/"hash":"[0-9a-f]{8}"/, '"hash":"deadbeef"');
-      await writeFile(path, tampered);
+      // The last hash is the one after the checkpoint, so a strict resume has to reproduce it.
+      const text = await readFile(path, 'utf8');
+      const hashes = [...text.matchAll(/"hash":"[0-9a-f]{8}"/g)];
+      const last = hashes[hashes.length - 1];
+      await writeFile(path, `${text.slice(0, last.index)}"hash":"deadbeef"${text.slice((last.index ?? 0) + last[0].length)}`);
       second = await createTestApp({ MATCH_MAX_TICKS: '6000', JSON_DB_PATH: first.dbPath });
       await second.app.get(MatchRunnerService).resumed;
       const match = await api(second.url, `/api/matches/${matchId}`, { token: halo.token });

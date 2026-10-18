@@ -20,14 +20,23 @@ interface Base {
   tick: number;
 }
 
-/** Everything needed to rebuild the sim: seed, players and which data it ran with. */
+/**
+ * Which rules a server runs: the spec version, the data files and the code of the sim and the
+ * bot. Two servers with the same fingerprint compute the same match from the same commands.
+ */
+export interface Fingerprint {
+  specVersion: string;
+  dataHash: string;
+  /** Absent in logs written before checkpoints existed. */
+  codeHash?: string;
+}
+
+/** Everything needed to rebuild the sim: seed, players and which rules it ran with. */
 export interface StartedEvent extends Base {
   type: 'started';
-  data: {
+  data: Fingerprint & {
     seed: number;
     players: LoggedPlayer[];
-    specVersion: string;
-    dataHash: string;
     mapgenVersion: number;
   };
 }
@@ -44,15 +53,39 @@ export interface HashEvent extends Base {
   data: { hash: string };
 }
 
-/** A match came back after a restart, at this tick. For the audit trail only. */
+/**
+ * A match came back after a restart, at this tick, under these rules. A fingerprint that
+ * differs from the one before it marks the point where a code or data change took effect.
+ */
 export interface ResumedEvent extends Base {
   type: 'resumed';
-  data: { at: string };
+  data: Fingerprint & {
+    at: string;
+    /** `replay` rebuilt from the seed, `checkpoint` from a saved state, `checkpoint-changed` from a saved state under other rules. */
+    mode: 'replay' | 'checkpoint' | 'checkpoint-changed';
+  };
 }
 
 export interface FinishedEvent extends Base {
   type: 'finished';
   data: { result: MatchResultDto; endedTick: number };
+}
+
+/**
+ * A running state saved so a match can resume without a replay, and under changed rules.
+ * It is not an event: the log keeps only the newest two per match.
+ */
+export interface Checkpoint {
+  matchId: string;
+  /** Position in the event log: the sequence number of the first event that follows this checkpoint. */
+  seq: number;
+  tick: number;
+  /** State hash when saved. A strict resume must reproduce it. */
+  hash: string;
+  /** `exportState` of the sim. */
+  state: Record<string, unknown>;
+  /** The memory of each bot (`saveState`). */
+  bots: { playerId: number; memory: unknown }[];
 }
 
 export type MatchEvent =

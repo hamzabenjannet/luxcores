@@ -13,6 +13,11 @@ export class ReplayRecordDto {
   @ApiProperty({ example: 1234567 }) seed!: number;
   @ApiProperty({ example: '0.10.0' }) specVersion!: string;
   @ApiProperty({ example: 2400 }) ticks!: number;
+  @ApiPropertyOptional({
+    description:
+      'False when the match resumed from a checkpoint under changed data or code, so its replay no longer verifies from the seed. Absent otherwise.',
+  })
+  reproducible?: boolean;
   @ApiProperty({ type: ReplayPayloadDto }) replay!: ReplayPayloadDto;
 }
 

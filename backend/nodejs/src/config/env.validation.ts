@@ -8,9 +8,18 @@ import {
   Max,
   Min,
   MinLength,
+  ValidateBy,
   ValidateIf,
   validateSync,
 } from 'class-validator';
+
+/** Passes zero too. A checkpoint tick must be a multiple of the hash interval, so the sim's derived caches agree. */
+function IsMultipleOf(divisor: number): PropertyDecorator {
+  return ValidateBy({
+    name: 'isMultipleOf',
+    validator: { validate: (value: unknown) => typeof value === 'number' && value % divisor === 0, defaultMessage: () => `$property must be a multiple of ${divisor}` },
+  });
+}
 
 enum NodeEnv {
   Development = 'development',
@@ -76,6 +85,7 @@ class EnvironmentVariables {
   @IsOptional() @IsInt() @Min(10) @Max(5000) EVENT_LOG_FLUSH_MS?: number;
   @IsOptional() @IsIn(['true', 'false']) EVENT_LOG_KEEP_FINISHED?: string;
   @IsOptional() @IsInt() @Min(1) @Max(20) SNAPSHOT_EVERY_TICKS?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(100000) @IsMultipleOf(20) CHECKPOINT_EVERY_TICKS?: number;
   @IsOptional() @IsInt() @Min(1) RATE_LIMIT_PER_MINUTE?: number;
   @IsOptional() @IsInt() @Min(1) RATE_LIMIT_AUTH_PER_MINUTE?: number;
   @IsOptional() @IsInt() @Min(0) @Max(10) TRUST_PROXY?: number;

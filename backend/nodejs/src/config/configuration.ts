@@ -24,6 +24,8 @@ export interface AppConfig {
     repoRoot: string;
     matchMaxTicks: number;
     snapshotEveryTicks: number;
+    /** Ticks between two checkpoints of a running match, a multiple of 20. 0 turns checkpoints off. */
+    checkpointEveryTicks: number;
     /** What a graceful shutdown does to live matches: `resume` keeps them for the next start, `end` draws them. */
     onShutdown: 'resume' | 'end';
   };
@@ -75,6 +77,7 @@ export default (): AppConfig => {
       // 0 means the default in data/balance.json (match.stalemateTicks); MATCH_MAX_TICKS overrides it.
       matchMaxTicks: int(env.MATCH_MAX_TICKS, 0),
       snapshotEveryTicks: int(env.SNAPSHOT_EVERY_TICKS, 2),
+      checkpointEveryTicks: int(env.CHECKPOINT_EVERY_TICKS, 400),
       onShutdown: env.MATCH_ON_SHUTDOWN === 'end' ? 'end' : 'resume',
     },
     eventLog: {

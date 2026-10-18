@@ -143,7 +143,12 @@ export interface SimRecorder {
 
 /** A bot driven by the server: it reads the state and returns the commands it wants this tick. */
 export interface SimBot {
+  readonly playerId: number;
   think(state: SimState): SimCommandEnvelope[];
+  /** The bot's own memory as plain data, for a checkpoint. */
+  save(): unknown;
+  /** Restores what `save` returned. */
+  load(memory: unknown): void;
 }
 
 export interface BotApi {
@@ -152,7 +157,11 @@ export interface BotApi {
     team: number;
     config: unknown;
     seed: number;
-  }): { think(view: unknown): SimCommandEnvelope[] };
+  }): {
+    think(view: unknown): SimCommandEnvelope[];
+    saveState(): unknown;
+    loadState(saved: unknown): void;
+  };
 }
 
 export interface WorldViewApi {
@@ -175,6 +184,8 @@ export interface SimApi {
   }): SimState;
   step(state: SimState, envelopes: SimCommandEnvelope[]): void;
   hashState(state: SimState): string;
+  exportState(state: SimState): Record<string, unknown>;
+  importState(data: Record<string, unknown>, config: unknown): SimState;
   generateMap(seed: number, mapgen: unknown): SimMapLayout;
   playReplay(
     replay: SimReplay,

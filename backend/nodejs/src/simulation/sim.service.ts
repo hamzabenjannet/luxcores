@@ -1,10 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash } from 'node:crypto';
-import { access, readFile } from 'node:fs/promises';
+import { access, readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { AppConfig } from '../config/configuration.js';
+import type { Fingerprint } from '../matchlog/match-event.js';
+import type { ResumeAttempt } from '../matchlog/match-resume.js';
 import type {
   BotApi,
   SimCommandEnvelope,
@@ -40,6 +42,8 @@ export class SimService {
 
   /** sha256 over the data files, computed the way `test/helpers/load-data.js` does. */
   dataHash!: string;
+  /** sha256 over the sim, the bot and the world view: the code that decides what a match does. */
+  codeHash!: string;
 
   constructor(private readonly appConfig: ConfigService<AppConfig, true>) {}
 
@@ -76,15 +80,21 @@ export class SimService {
       raw[key] = JSON.parse(text);
     }
     this.dataHash = sha.digest('hex');
+    this.codeHash = await hashCode(root);
     this.mapgenRaw = raw.mapgen;
     this.config = this.api.normalizeData(raw);
     this.logger.log(
-      `Simulation spec ${this.specVersion} loaded from ${root}, data ${this.dataHash.slice(0, 8)}`,
+      `Simulation spec ${this.specVersion} loaded from ${root}, data ${this.dataHash.slice(0, 8)}, code ${this.codeHash.slice(0, 8)}`,
     );
   }
 
   get specVersion(): string {
     return this.api.SPEC_VERSION;
+  }
+
+  /** The rules this server runs. A match log written under other rules cannot be replayed from the seed. */
+  get fingerprint(): Fingerprint {
+    return { specVersion: this.specVersion, dataHash: this.dataHash, codeHash: this.codeHash };
   }
 
   get tickHz(): number {
@@ -133,40 +143,77 @@ export class SimService {
       seed,
     });
     return {
+      playerId,
       think: (state) =>
         bot.think(this.worldViewApi.localWorldView(state, team)),
+      save: () => bot.saveState(),
+      load: (memory) => bot.loadState(memory),
+    };
+  }
+
+  /** The state and the bots' memory as plain data. The runner logs it as a checkpoint. */
+  exportState(state: SimState, bots: SimBot[]): { state: Record<string, unknown>; bots: { playerId: number; memory: unknown }[] } {
+    return {
+      state: this.api.exportState(state),
+      bots: bots.map((bot) => ({ playerId: bot.playerId, memory: bot.save() })),
     };
   }
 
   /**
-   * Rebuilds a running match from its log: the same seed and players, the logged commands at their
-   * ticks, up to `targetTick`. The bots think on every tick as they did live, so their own state
-   * (build rotation, counters, random numbers) ends up exactly where it was. Throws when the sim
-   * disagrees with the log: a bot that would have issued other commands, or a state hash that
-   * differs. That means the data or the code changed since the match began, and the match
-   * cannot be resumed.
+   * Rebuilds a running match from one attempt of its resume plan, up to `targetTick`: from a checkpoint
+   * (the saved state and the bots' memory) or from the seed, then the logged commands tick by tick. The
+   * bots think on every tick as they did live, so their own state (build rotation, counters, random
+   * numbers) ends up where it was.
    *
-   * It yields to the event loop every `YIELD_EVERY` ticks, so rebuilding a long match does not
-   * stall the matches that run.
+   * A strict attempt throws when the sim disagrees with the log: a bot that would issue other commands,
+   * a state hash that differs, or a checkpoint that does not hash to its saved value. A lenient attempt
+   * (the rules changed since the log was written) applies the logged commands under the current rules
+   * and checks nothing, because the numbers cannot match any more.
+   *
+   * It yields to the event loop every `YIELD_EVERY` ticks, so rebuilding a long match does not stall
+   * the matches that run.
    */
   async rebuild(opts: {
     seed: number;
+    /** The rules the match began under, kept in the replay header. */
+    began: { dataHash: string; mapgenVersion: number };
     players: SimPlayer[];
     bots: SimBot[];
-    commands: SimCommandEnvelope[];
-    hashes: Record<number, string>;
+    attempt: ResumeAttempt;
     targetTick: number;
   }): Promise<{ state: SimState; recorder: SimRecorder }> {
-    const { state, recorder } = this.createMatch(opts.seed, opts.players);
+    const { attempt } = opts;
+    const { checkpoint } = attempt;
+    let state: SimState;
+    if (checkpoint) {
+      state = this.api.importState(checkpoint.state, this.config);
+      if (attempt.strict && this.hash(state) !== checkpoint.hash) {
+        throw new Error(`The checkpoint at tick ${checkpoint.tick} does not hash to its saved value`);
+      }
+      for (const bot of opts.bots) {
+        const saved = checkpoint.bots.find((b) => b.playerId === bot.playerId);
+        if (saved) bot.load(saved.memory);
+      }
+    } else {
+      state = this.api.createState({ seed: opts.seed, players: opts.players, config: this.config });
+    }
+    const recorder = new this.api.Recorder({
+      seed: opts.seed,
+      players: opts.players,
+      dataHash: opts.began.dataHash,
+      mapgenVersion: opts.began.mapgenVersion,
+    });
+    recorder.replay.commands.push(...attempt.before.commands);
+    Object.assign(recorder.replay.hashes, attempt.before.hashes);
+    recorder.replay.ticks = state.tick;
+
     const byTick = new Map<number, SimCommandEnvelope[]>();
-    for (const e of opts.commands) {
+    for (const e of attempt.commands) {
       const list = byTick.get(e.tick);
       if (list) list.push(e);
       else byTick.set(e.tick, [e]);
     }
-    const botIds = new Set(
-      opts.players.filter((p) => p.kind === 'bot').map((p) => p.id),
-    );
+    const botIds = new Set(opts.bots.map((bot) => bot.playerId));
     const brief = (list: SimCommandEnvelope[]): string =>
       JSON.stringify(
         list
@@ -177,16 +224,18 @@ export class SimService {
     while (state.tick < opts.targetTick && !state.outcome) {
       const logged = byTick.get(state.tick) ?? [];
       const regenerated = opts.bots.flatMap((bot) => bot.think(state));
-      const loggedBots = logged.filter((e) => botIds.has(e.playerId));
-      if (brief(regenerated) !== brief(loggedBots)) {
-        throw new Error(
-          `A bot would issue other commands at tick ${state.tick} than the log holds`,
-        );
+      if (attempt.strict) {
+        const loggedBots = logged.filter((e) => botIds.has(e.playerId));
+        if (brief(regenerated) !== brief(loggedBots)) {
+          throw new Error(
+            `A bot would issue other commands at tick ${state.tick} than the log holds`,
+          );
+        }
       }
       this.step(state, logged);
       recorder.record(state, logged);
-      const expected = opts.hashes[state.tick];
-      if (expected !== undefined && expected !== this.hash(state)) {
+      const expected = attempt.hashes[state.tick];
+      if (attempt.strict && expected !== undefined && expected !== this.hash(state)) {
         throw new Error(`The state hash differs from the log at tick ${state.tick}`);
       }
       if (++sinceYield >= YIELD_EVERY) {
@@ -216,4 +265,21 @@ export class SimService {
   playReplay(replay: SimReplay): ReturnType<SimApi['playReplay']> {
     return this.api.playReplay(replay, this.config);
   }
+}
+
+/** sha256 over every file that decides what a match does, in a fixed order. */
+async function hashCode(root: string): Promise<string> {
+  const files: string[] = [];
+  const walk = async (dir: string): Promise<void> => {
+    for (const entry of (await readdir(dir, { withFileTypes: true })).sort((a, b) => (a.name < b.name ? -1 : 1))) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) await walk(path);
+      else if (entry.name.endsWith('.js')) files.push(path);
+    }
+  };
+  await walk(join(root, 'src', 'sim'));
+  files.push(join(root, 'src', 'bot', 'bot.js'), join(root, 'src', 'shared', 'world-view.js'));
+  const sha = createHash('sha256');
+  for (const file of files) sha.update(file.slice(root.length)).update('\0').update(await readFile(file)).update('\0');
+  return sha.digest('hex');
 }

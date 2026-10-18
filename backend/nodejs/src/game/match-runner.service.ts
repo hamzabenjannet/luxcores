@@ -19,6 +19,7 @@ import {
 import { MatchesService } from '../matches/matches.service.js';
 import { EventLog } from '../matchlog/event-log.js';
 import type { LoggedPlayer } from '../matchlog/match-event.js';
+import { type ResumeAttempt, planResume } from '../matchlog/match-resume.js';
 import { ReplaysService } from '../replays/replays.service.js';
 import { SimService } from '../simulation/sim.service.js';
 import type {
@@ -38,6 +39,8 @@ import type {
 const MAX_CATCHUP_TICKS = 5;
 /** Commands queued per match between two ticks. More are dropped. */
 const MAX_INBOX = 200;
+/** The first checkpoint of a match comes this early, so a change of rules loses almost nothing. */
+const FIRST_CHECKPOINT_TICK = 20;
 
 export interface RunnerPlayer {
   /** Absent for the bot. */
@@ -96,6 +99,8 @@ interface Run {
   lastSeq: Map<number, number>;
   /** True when the log already ends with this match's `finished` event (a match that ended while the server was down). */
   loggedEnd?: boolean;
+  /** False once the match has run under changed rules: its replay no longer verifies from the seed. */
+  reproducible: boolean;
   startedAt: number;
   timer?: NodeJS.Timeout;
   ending: boolean;
@@ -120,6 +125,7 @@ export class MatchRunnerService
   private readonly tickMs: number;
   private readonly maxTicks: number;
   private readonly snapshotEvery: number;
+  private readonly checkpointEvery: number;
   private readonly onShutdown: 'resume' | 'end';
   private readonly keepFinishedLogs: boolean;
   private closing = false;
@@ -138,6 +144,7 @@ export class MatchRunnerService
     // MATCH_MAX_TICKS wins; without it the data file decides, so one number serves the server and the tools.
     this.maxTicks = game.matchMaxTicks > 0 ? game.matchMaxTicks : this.sim.stalemateTicks;
     this.snapshotEvery = game.snapshotEveryTicks;
+    this.checkpointEvery = game.checkpointEveryTicks;
     this.onShutdown = game.onShutdown;
     this.keepFinishedLogs = config.get('eventLog', { infer: true }).keepFinished;
     this.tickMs = 1000 / this.sim.tickHz;
@@ -212,6 +219,7 @@ export class MatchRunnerService
       lastSeq: new Map(),
       startedAt: Date.now(),
       ending: false,
+      reproducible: true,
     };
     this.runs.set(match.id, run);
 
@@ -231,8 +239,7 @@ export class MatchRunnerService
       data: {
         seed: match.seed,
         players: players as LoggedPlayer[],
-        specVersion: this.sim.specVersion,
-        dataHash: this.sim.dataHash,
+        ...this.sim.fingerprint,
         mapgenVersion: this.sim.mapgenVersion,
       },
     });
@@ -356,43 +363,51 @@ export class MatchRunnerService
   /**
    * Rebuilds one match from its log and carries on. The match rewinds to the last event the log
    * holds, which is at most about a second behind the crash, and clients rejoin by themselves.
+   *
+   * It starts from the newest checkpoint and falls back to older ones and then to the seed. When the
+   * data files or the code changed since the log was written, only a checkpoint can carry the match
+   * over: its state is kept and the new rules apply from there on.
    */
   private async resume(match: MatchDto): Promise<void> {
-    const events = await this.log.read(match.id);
-    const started = events.find((e) => e.type === 'started');
-    if (!started || started.type !== 'started')
-      throw new Error('its log has no start event');
-    const { seed, players } = started.data;
-    const finishedEvent = events.find((e) => e.type === 'finished');
-    const commands: SimCommandEnvelope[] = [];
-    const hashes: Record<number, string> = {};
-    const lastSeq = new Map<number, number>();
-    let target = 0;
-    for (const e of events) {
-      if (e.type === 'command') {
-        commands.push({ tick: e.tick, playerId: e.data.playerId, seq: e.data.seq, cmd: e.data.cmd });
-        target = Math.max(target, e.tick + 1);
-        const human = players.some((p) => p.kind === 'human' && p.simId === e.data.playerId);
-        if (human) lastSeq.set(e.data.playerId, Math.max(lastSeq.get(e.data.playerId) ?? -1, e.data.seq));
-      } else if (e.type === 'hash') {
-        hashes[e.tick] = e.data.hash;
-        target = Math.max(target, e.tick);
-      } else if (e.type === 'finished') {
-        target = Math.max(target, e.data.endedTick);
+    const [events, checkpoints] = await Promise.all([this.log.read(match.id), this.log.checkpoints(match.id)]);
+    const plan = planResume(events, checkpoints, this.sim.fingerprint);
+    if (!plan) throw new Error('its log has no start event');
+    const { seed, players } = plan;
+    const simPlayers = players.map((p) => ({ id: p.simId, team: p.team, kind: p.kind }));
+
+    let rebuilt: Awaited<ReturnType<SimService['rebuild']>> | undefined;
+    let used: ResumeAttempt | undefined;
+    let bots: SimBot[] = [];
+    const failures: string[] = [];
+    for (const attempt of plan.attempts) {
+      bots = players.filter((p) => p.kind === 'bot').map((p) => this.sim.createBot(p.simId, p.team, seed));
+      try {
+        rebuilt = await this.sim.rebuild({
+          seed,
+          began: { dataHash: plan.started.data.dataHash, mapgenVersion: plan.started.data.mapgenVersion },
+          players: simPlayers,
+          bots,
+          attempt,
+          targetTick: plan.target,
+        });
+        used = attempt;
+        break;
+      } catch (err) {
+        const where = attempt.checkpoint ? `checkpoint at tick ${attempt.checkpoint.tick}` : 'the seed';
+        failures.push(`${where}: ${(err as Error).message}`);
+        this.logger.warn(`Match ${match.id}: rebuilding from ${where} failed: ${(err as Error).message}`);
       }
     }
-    const bots = players
-      .filter((p) => p.kind === 'bot')
-      .map((p) => this.sim.createBot(p.simId, p.team, seed));
-    const { state, recorder } = await this.sim.rebuild({
-      seed,
-      players: players.map((p) => ({ id: p.simId, team: p.team, kind: p.kind })),
-      bots,
-      commands,
-      hashes,
-      targetTick: target,
-    });
     if (this.closing) return;
+    if (!rebuilt || !used) {
+      throw new Error(
+        failures.length > 0
+          ? `no way to rebuild it worked (${failures.join('; ')})`
+          : 'the rules changed since it began, and it has no checkpoint to continue from',
+      );
+    }
+    const { state, recorder } = rebuilt;
+    const finishedEvent = plan.finished;
     const run: Run = {
       matchId: match.id,
       players: players as RunnerPlayer[],
@@ -400,15 +415,25 @@ export class MatchRunnerService
       recorder,
       inbox: [],
       bots,
-      lastSeq,
+      lastSeq: plan.lastSeq,
       startedAt: Date.now() - state.tick * this.tickMs,
       ending: false,
       loggedEnd: finishedEvent !== undefined,
+      reproducible: plan.reproducible,
     };
     this.runs.set(match.id, run);
     await this.log.continueNumbering(match.id);
-    this.log.append(match.id, { type: 'resumed', tick: state.tick, data: { at: new Date().toISOString() } });
-    this.logger.log(`Match ${match.id} resumed at tick ${state.tick}`);
+    const mode = used.checkpoint ? (used.strict ? 'checkpoint' : 'checkpoint-changed') : 'replay';
+    this.log.append(match.id, {
+      type: 'resumed',
+      tick: state.tick,
+      data: { ...this.sim.fingerprint, at: new Date().toISOString(), mode },
+    });
+    this.logger.log(
+      mode === 'checkpoint-changed'
+        ? `Match ${match.id} resumed at tick ${state.tick} from the checkpoint at tick ${used.checkpoint?.tick}, under rules that changed since it began`
+        : `Match ${match.id} resumed at tick ${state.tick} (${mode})`,
+    );
     if (finishedEvent?.type === 'finished' || state.outcome || state.tick >= this.maxTicks) {
       const stopped = finishedEvent?.type === 'finished' && finishedEvent.data.result.reason === MatchEndReason.Stopped;
       await this.finish(run, stopped ? MatchEndReason.Stopped : undefined);
@@ -440,13 +465,21 @@ export class MatchRunnerService
   }
 
   private pump(run: Run): void {
-    const behind =
-      Math.floor((Date.now() - run.startedAt) / this.tickMs) - run.state.tick;
-    const ticks = Math.min(Math.max(behind, 1), MAX_CATCHUP_TICKS);
-    for (let i = 0; i < ticks; i++) {
-      if (this.tick(run)) return; // the match ended
+    try {
+      const behind =
+        Math.floor((Date.now() - run.startedAt) / this.tickMs) - run.state.tick;
+      const ticks = Math.min(Math.max(behind, 1), MAX_CATCHUP_TICKS);
+      for (let i = 0; i < ticks; i++) {
+        if (this.tick(run)) return; // the match ended
+      }
+      this.schedule(run);
+    } catch (err) {
+      // A sim or bot that throws would otherwise take the whole process, and every other match, down with it.
+      this.logger.error(`Match ${run.matchId} failed at tick ${run.state.tick}: ${(err as Error).stack ?? err}`);
+      this.finish(run, MatchEndReason.Stopped).catch((e: Error) =>
+        this.logger.error(`Finishing ${run.matchId} failed: ${e.message}`),
+      );
     }
-    this.schedule(run);
   }
 
   /** Runs one tick. Returns true when the match is over. */
@@ -471,6 +504,18 @@ export class MatchRunnerService
         type: 'hash',
         tick: state.tick,
         data: { hash: this.sim.hash(state) },
+      });
+    }
+    if (
+      !state.outcome &&
+      this.checkpointEvery > 0 &&
+      (state.tick === FIRST_CHECKPOINT_TICK || state.tick % this.checkpointEvery === 0)
+    ) {
+      this.log.saveCheckpoint({
+        matchId: run.matchId,
+        tick: state.tick,
+        hash: this.sim.hash(state),
+        ...this.sim.exportState(state, run.bots),
       });
     }
     if (state.tick % this.snapshotEvery === 0) {
@@ -502,7 +547,7 @@ export class MatchRunnerService
     let replayId: string | undefined;
     try {
       replayId = (
-        await this.replays.saveFromMatch(run.matchId, run.recorder.replay)
+        await this.replays.saveFromMatch(run.matchId, run.recorder.replay, run.reproducible)
       ).id;
     } catch (err) {
       this.logger.error(

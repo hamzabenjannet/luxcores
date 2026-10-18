@@ -46,8 +46,17 @@ export class ReplaysService {
   }
 
   /** Stores a replay that the server recorded. */
-  saveFromMatch(matchId: string, replay: SimReplay): Promise<ReplayRecordDto> {
-    return this.save('system', replay as unknown as ReplayPayloadDto, matchId);
+  saveFromMatch(
+    matchId: string,
+    replay: SimReplay,
+    reproducible = true,
+  ): Promise<ReplayRecordDto> {
+    return this.save(
+      'system',
+      replay as unknown as ReplayPayloadDto,
+      matchId,
+      reproducible,
+    );
   }
 
   async list({ limit, offset }: PaginationQueryDto): Promise<ReplayListDto> {
@@ -99,10 +108,12 @@ export class ReplaysService {
     uploadedBy: string,
     replay: ReplayPayloadDto,
     matchId?: string,
+    reproducible = true,
   ): Promise<ReplayRecordDto> {
     const record: ReplayRecordDto = {
       id: randomUUID(),
       ...(matchId ? { matchId } : {}),
+      ...(reproducible ? {} : { reproducible }),
       uploadedBy,
       createdAt: new Date().toISOString(),
       seed: replay.seed,
