@@ -106,7 +106,7 @@ func _build_interface() -> void:
 	_home = VBoxContainer.new()
 	_home.add_theme_constant_override("separation", 14)
 	pages.add_child(_home)
-	_add_field(_home, "Backend URL", "http://127.0.0.1:3000", "_server_input")
+	_add_field(_home, "Backend URL", "https://luxcores.webrit.cloud", "_server_input")
 	_add_field(_home, "Player name", "Halo", "_name_input")
 	_add_field(_home, "Match ID (blank to use the mode below)", "", "_match_input")
 	var resolution_row := HBoxContainer.new()

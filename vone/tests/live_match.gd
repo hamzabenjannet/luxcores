@@ -20,7 +20,7 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
-	var server := _argument("server", "http://127.0.0.1:3000")
+	var server := _argument("server", "https://luxcores.webrit.cloud")
 	_main = load("res://scenes/main.tscn").instantiate()
 	root.add_child(_main)
 	await process_frame
