@@ -119,19 +119,28 @@ export function orderCost(state, order) {
 }
 
 /**
- * `cancelQueue` command: removes the order at `index` in a barracks queue (queue order, held
- * groups included) and refunds `recycleQueueRefundPct` of its cost.
+ * `cancelQueue` command: removes one order of a barracks queue (held groups included) and
+ * refunds `recycleQueueRefundPct` of its cost. The order is named by `orderId`, or by its
+ * `index` in the queue. Clients send the id, because the queue shifts when a group finishes
+ * and a stale index would hit the wrong order.
  * @param {import('./state.js').SimState} state
  * @param {number} playerId
- * @param {{ barracksId?: unknown, index?: unknown }} cmd
+ * @param {{ barracksId?: unknown, orderId?: unknown, index?: unknown }} cmd
  * @returns {boolean}
  */
 export function tryCancelQueue(state, playerId, cmd) {
   const barracks = ownedBuilding(state, playerId, cmd.barracksId);
-  if (!barracks || barracks.kind !== KIND.BARRACKS || !Number.isSafeInteger(cmd.index)) return false;
+  if (!barracks || barracks.kind !== KIND.BARRACKS) return false;
   const queue = state.orders.filter((o) => o.barracksId === barracks.id);
-  const order = queue[/** @type {number} */ (cmd.index)];
-  if (!order || /** @type {number} */ (cmd.index) < 0) return false;
+  let order;
+  if (cmd.orderId !== undefined) {
+    if (!Number.isSafeInteger(cmd.orderId)) return false;
+    order = queue.find((o) => o.id === cmd.orderId);
+  } else {
+    if (!Number.isSafeInteger(cmd.index) || /** @type {number} */ (cmd.index) < 0) return false;
+    order = queue[/** @type {number} */ (cmd.index)];
+  }
+  if (!order) return false;
   state.orders.splice(state.orders.indexOf(order), 1);
   credit(state, barracks.team, idiv(orderCost(state, order) * state.config.balance.economy.recycleQueueRefundPct, 100));
   return true;

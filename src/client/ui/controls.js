@@ -1,7 +1,8 @@
 // @ts-check
 /**
  * Player controls of the web client: a build palette, a panel for the selected
- * building (recycle, tower upgrades) and hero orders. Every action becomes a
+ * building (recycle, tower upgrades, creep orders and queue), creep groups (path,
+ * merge, split) and hero orders. Every action becomes a
  * command for the server; the UI only pre-checks the obvious refusals so the
  * player gets instant feedback. The sim result is final (CLAUDE.md, Client Rules).
  *
@@ -25,6 +26,9 @@ export const PALETTE = /** @type {const} */ ([
 /** Tower attack types in the order of the selector. */
 export const ATTACK_TYPES = /** @type {const} */ (['melee', 'ranged', 'area']);
 
+/** Attack choices of a creep order; Mixed cycles melee, ranged, area. */
+export const ORDER_TYPES = /** @type {const} */ (['melee', 'ranged', 'area', 'mixed']);
+
 /** How close a tap must land to an entity to pick it, in tiles. */
 const PICK_RADIUS_TILES = 1.0;
 
@@ -38,6 +42,57 @@ const BUILDING_KINDS = new Set([KIND.SOLAR, KIND.WIND, KIND.GEOTHERMAL, KIND.NUC
  */
 export function canAfford(coreLuxMilli, costLux, minLeftLux) {
   return coreLuxMilli - costLux * MILLI >= minLeftLux * MILLI;
+}
+
+/**
+ * The attack types of a creep order. A uniform order repeats one type; Mixed cycles melee, ranged, area.
+ * @param {number} count 1 to 5
+ * @param {string} type one of ORDER_TYPES
+ * @returns {string[]}
+ */
+export function mixFor(count, type) {
+  const cycle = ['melee', 'ranged', 'area'];
+  return Array.from({ length: count }, (_, i) => (type === 'mixed' ? cycle[i % cycle.length] : type));
+}
+
+/** Initial of an attack code, as the queue text shows it: M, R or A. */
+const ATTACK_INITIAL = /** @type {Record<number, string>} */ ({ 1: 'M', 2: 'R', 3: 'A' });
+
+/**
+ * The lines of a barracks queue, in queue order. A held group shows HELD; others show seconds left.
+ * @param {readonly import('../../sim/state.js').Order[]} orders
+ * @param {number} barracksId
+ * @param {number} tickHz
+ * @returns {{ index: number, orderId: number, text: string }[]}
+ */
+export function queueLines(orders, barracksId, tickHz) {
+  return orders.filter((o) => o.barracksId === barracksId).map((o, index) => ({
+    index,
+    orderId: o.id,
+    text: `Group of ${o.mix.length} ${o.mix.map((c) => ATTACK_INITIAL[c] ?? '?').join('')} ${o.held ? 'HELD' : `${(Math.max(0, o.ticksLeft) / tickHz).toFixed(1)}s`}`,
+  }));
+}
+
+/**
+ * Buttons of the group panel. Split needs 2 or more creeps; the lane route button shows only after a custom path.
+ * @param {number} size creeps in the group
+ * @param {boolean} custom whether the group has a custom path
+ * @returns {{ id: string, label: string }[]}
+ */
+export function groupActions(size, custom) {
+  const out = [{ id: 'path', label: 'Path' }, { id: 'merge', label: 'Merge' }];
+  if (size >= 2) out.push({ id: 'split', label: 'Split' });
+  if (custom) out.push({ id: 'lane', label: 'Lane Route' });
+  return out;
+}
+
+/**
+ * Creeps in a group.
+ * @param {readonly import('../../sim/state.js').Entity[]} entities
+ * @param {number} groupId
+ */
+export function groupSize(entities, groupId) {
+  return entities.filter((e) => e.kind === KIND.CREEP && e.groupId === groupId).length;
 }
 
 /**
@@ -65,7 +120,7 @@ export function pickEntity(entities, ground) {
 /**
  * What a tap does, as a command to send or a message to show. Pure: no DOM, no network.
  *
- * @typedef {{ command: import('../../sim/commands.js').Command } | { message: string } | { select: number | null } | { building: string | null }} TapResult
+ * @typedef {{ command: import('../../sim/commands.js').Command } | { message: string } | { select: number | null } | { selectGroup: number } | { addWaypoint: number[] }} TapResult
  *
  * @param {{
  *   ground: { x: number, z: number },
@@ -76,6 +131,9 @@ export function pickEntity(entities, ground) {
  *   coreLuxMilli: number,
  *   data: { buildings: any, balance: any, mapgen: any },
  *   vents: readonly { team: number, tileX: number, tileZ: number }[],
+ *   mode?: 'path' | 'merge' | null, // path mode adds waypoints, merge mode picks the group to join
+ *   selectedGroup?: number | null,
+ *   pathCount?: number,             // waypoints already placed in path mode
  * }} ctx
  * @returns {TapResult}
  */
@@ -95,9 +153,21 @@ export function resolveTap(ctx) {
     return { command: building === 'tower' ? { t: 'build', building, tileX, tileZ, attack } : { t: 'build', building, tileX, tileZ } };
   }
 
+  if (ctx.mode === 'path') {
+    if ((ctx.pathCount ?? 0) >= data.balance.creep.maxWaypoints) return { message: `A path holds at most ${data.balance.creep.maxWaypoints} waypoints.` };
+    return { addWaypoint: [Math.round(ground.x * UNITS_PER_TILE), Math.round(ground.z * UNITS_PER_TILE)] };
+  }
+
   const picked = pickEntity(entities, ground);
+  if (ctx.mode === 'merge') {
+    if (picked && picked.kind === KIND.CREEP && picked.owner === viewerTeam && picked.groupId !== ctx.selectedGroup) {
+      return { command: { t: 'mergeGroups', intoGroupId: /** @type {number} */ (ctx.selectedGroup), fromGroupId: picked.groupId } };
+    }
+    return { message: 'Tap one of your other groups to merge.' };
+  }
   const hero = entities.find((e) => e.kind === KIND.HERO && e.owner === viewerTeam);
   if (picked && BUILDING_KINDS.has(picked.kind) && picked.owner === viewerTeam) return { select: picked.id };
+  if (picked && picked.kind === KIND.CREEP && picked.owner === viewerTeam) return { selectGroup: picked.groupId };
   if (picked && hero && picked.id !== hero.id && picked.team !== viewerTeam) return { command: { t: 'heroAttack', targetId: picked.id } };
   if (hero) return { command: { t: 'heroMove', x: Math.round(ground.x * UNITS_PER_TILE), z: Math.round(ground.z * UNITS_PER_TILE) } };
   return { select: null };
@@ -133,17 +203,31 @@ export function actionsFor(e, towerData) {
  *   view: import('../../shared/world-view.js').WorldView,
  *   viewerTeam: number,
  *   spectator: boolean,
+ *   tickHz: number,
  *   data: { buildings: any, balance: any, mapgen: any },
  *   send: (cmd: import('../../sim/commands.js').Command) => Promise<{ accepted: boolean, reason?: string }>,
  * }} opts
  */
-export function createControls({ root, view, viewerTeam, spectator, data, send }) {
+export function createControls({ root, view, viewerTeam, spectator, tickHz, data, send }) {
   /** @type {string | null} */
   let building = null;
   let attack = 'ranged';
   /** @type {number | null} */
   let selected = null;
+  /** @type {number | null} */
+  let selectedGroup = null;
+  /** @type {'path' | 'merge' | null} */
+  let mode = null;
+  /** @type {{ type: 'group' | 'barracks', id: number } | null} */
+  let pathTarget = null;
+  /** @type {number[][]} */
+  let pathPoints = [];
+  /** @type {number[][]} */
+  let lastPath = [];
+  let orderCount = data.balance.creep.groupMax;
+  let orderType = 'mixed';
   let toastTimer = 0;
+  const minLeft = data.balance.core.minLeftAfterSpendLux;
 
   root.replaceChildren();
   const toast = el('div', 'toast');
@@ -164,6 +248,8 @@ export function createControls({ root, view, viewerTeam, spectator, data, send }
     b.addEventListener('click', () => {
       building = building === item.key ? null : item.key;
       selected = null;
+      selectedGroup = null;
+      mode = null;
       render();
     });
     buttons.set(item.key, b);
@@ -203,44 +289,216 @@ export function createControls({ root, view, viewerTeam, spectator, data, send }
     const lux = view.team(viewerTeam).coreLux;
     for (const [key, b] of buttons) {
       b.classList.toggle('active', building === key);
-      b.classList.toggle('poor', !canAfford(lux, data.buildings[key].costLux, data.balance.core.minLeftAfterSpendLux));
+      b.classList.toggle('poor', !canAfford(lux, data.buildings[key].costLux, minLeft));
     }
     attackRow.hidden = building !== 'tower';
     for (const b of attackRow.children) b.classList.toggle('active', /** @type {HTMLElement} */ (b).dataset.attack === attack);
     renderPanel();
   }
 
+  // The panel holds one section at a time: path mode, a selected group, or a selected building.
   const panelTitle = el('div', 'panel-title');
   const panelRow = el('div', 'panel-row');
-  panel.append(panelTitle, panelRow);
+  const orderRow = el('div', 'panel-row order-row');
+  const queueList = el('div', 'queue');
+  panel.append(panelTitle, panelRow, orderRow, queueList);
   let panelKey = '';
+  let orderKey = '';
+  let queueKey = '';
+  /** @type {Map<number, HTMLElement>} */
+  const queueStatus = new Map();
 
-  /** Updates the title every call, and rebuilds the buttons only when they change, so a click never lands on a replaced button. */
+  /**
+   * @param {string} label @param {() => void} onClick @param {string} [className]
+   */
+  function button(label, onClick, className = 'action') {
+    const b = /** @type {HTMLButtonElement} */ (el('button', className, label));
+    b.addEventListener('click', onClick);
+    return b;
+  }
+
+  function leavePathMode() {
+    mode = null;
+    pathTarget = null;
+    pathPoints = [];
+  }
+
+  /** Updates texts every call and rebuilds buttons only when their set changes, so a click never lands on a replaced button. */
   function renderPanel() {
+    if (mode === 'path') return renderPathBar();
+    const group = selectedGroup === null ? undefined : view.groups().find((g) => g.id === selectedGroup);
+    if (selectedGroup !== null && !group) {
+      selectedGroup = null;
+      if (mode === 'merge') mode = null;
+    }
+    if (group) return renderGroupPanel(group);
     const e = selected === null ? undefined : view.entities().find((x) => x.id === selected);
     if (!e) {
       selected = null;
-      panelKey = '';
+      panelKey = orderKey = queueKey = '';
       panel.hidden = true;
       return;
     }
+    renderBuildingPanel(e);
+  }
+
+  /** @param {number} sizeNow */
+  function pathTitle(sizeNow) {
+    return `Path: ${sizeNow}/${data.balance.creep.maxWaypoints} waypoints. Tap the map to add one.`;
+  }
+
+  function renderPathBar() {
+    panel.hidden = false;
+    orderRow.replaceChildren();
+    queueList.replaceChildren();
+    orderKey = queueKey = '';
+    panelTitle.textContent = pathTitle(pathPoints.length);
+    const key = `path|${pathPoints.length}|${lastPath.length}`;
+    if (key === panelKey) return;
+    panelKey = key;
+    panelRow.replaceChildren(
+      button('Undo', () => { pathPoints.pop(); render(); }),
+      button('Go', () => {
+        const target = pathTarget;
+        if (!target) return;
+        lastPath = pathPoints.map((p) => [p[0], p[1]]);
+        issue(target.type === 'group'
+          ? { t: 'setGroupPath', groupId: target.id, waypoints: pathPoints }
+          : { t: 'setBarracksPath', barracksId: target.id, waypoints: pathPoints });
+        leavePathMode();
+        render();
+      }),
+      button('Cancel', () => { leavePathMode(); render(); }),
+      ...(lastPath.length > 0 ? [button('Reuse Last', () => { pathPoints = lastPath.map((p) => [p[0], p[1]]); render(); })] : []),
+    );
+  }
+
+  /** @param {import('../../sim/state.js').Group} group */
+  function renderGroupPanel(group) {
+    panel.hidden = false;
+    orderRow.replaceChildren();
+    queueList.replaceChildren();
+    orderKey = queueKey = '';
+    const size = groupSize(view.entities(), group.id);
+    panelTitle.textContent = mode === 'merge'
+      ? `Group of ${size}: tap another of your groups to merge.`
+      : `Group of ${size}, ${group.custom ? 'custom path' : 'lane route'}`;
+    const actions = groupActions(size, group.custom === 1);
+    const key = `group|${group.id}|${mode}|${actions.map((a) => a.id).join(',')}`;
+    if (key === panelKey) return;
+    panelKey = key;
+    panelRow.replaceChildren(...actions.map((a) => button(a.label, () => {
+      if (a.id === 'path') {
+        mode = 'path';
+        pathTarget = { type: 'group', id: group.id };
+        pathPoints = [];
+      } else if (a.id === 'merge') {
+        mode = mode === 'merge' ? null : 'merge';
+      } else if (a.id === 'split') {
+        issue({ t: 'splitGroup', groupId: group.id });
+      } else {
+        issue({ t: 'setGroupPath', groupId: group.id, waypoints: [] });
+      }
+      render();
+    }, mode === 'merge' && a.id === 'merge' ? 'action active' : 'action')));
+  }
+
+  /** @param {import('../../sim/state.js').Entity} e */
+  function renderBuildingPanel(e) {
     panel.hidden = false;
     panelTitle.textContent = `${entityText(e, data.balance.hpFactor) ?? 'Entity'}${e.kind === KIND.TOWER ? ` (${ATTACK_NAMES[e.attack] ?? '?'})` : ''}`;
     const lux = view.team(viewerTeam).coreLux;
     const actions = actionsFor(e, data.buildings.tower).map((action) => ({
       ...action,
-      poor: action.costLux !== undefined && !canAfford(lux, action.costLux, data.balance.core.minLeftAfterSpendLux),
+      poor: action.costLux !== undefined && !canAfford(lux, action.costLux, minLeft),
     }));
     const key = `${e.id}|${actions.map((a) => `${a.id}:${a.poor}`).join(',')}`;
-    if (key === panelKey) return;
-    panelKey = key;
-    panelRow.replaceChildren(...actions.map((action) => {
-      const b = /** @type {HTMLButtonElement} */ (el('button', 'action', action.label));
-      if (action.costLux !== undefined) b.append(el('span', 'tool-cost', String(action.costLux)));
-      b.classList.toggle('poor', action.poor);
-      b.addEventListener('click', () => issue(action.command));
-      return b;
-    }));
+    if (key !== panelKey) {
+      panelKey = key;
+      panelRow.replaceChildren(...actions.map((action) => {
+        const b = button(action.label, () => issue(action.command));
+        if (action.costLux !== undefined) b.append(el('span', 'tool-cost', String(action.costLux)));
+        b.classList.toggle('poor', action.poor);
+        return b;
+      }));
+    }
+    if (e.kind === KIND.BARRACKS && e.recycle === 0) renderBarracks(e, lux);
+    else {
+      orderRow.replaceChildren();
+      queueList.replaceChildren();
+      orderKey = queueKey = '';
+    }
+  }
+
+  /**
+   * Order controls and the queue of a barracks.
+   * @param {import('../../sim/state.js').Entity} e @param {number} lux
+   */
+  function renderBarracks(e, lux) {
+    const cost = orderCount * data.balance.creep.costLux; // whole lux: the data files are not converted
+    const poor = !canAfford(lux, cost, minLeft);
+    const key = `${e.id}|${orderCount}|${orderType}|${poor}|${e.waypoints.length}`;
+    if (key !== orderKey) {
+      orderKey = key;
+      const counts = el('div', 'segments');
+      for (let n = data.balance.creep.groupMin; n <= data.balance.creep.groupMax; n++) {
+        const b = button(String(n), () => { orderCount = n; render(); }, n === orderCount ? 'segment active' : 'segment');
+        b.dataset.count = String(n);
+        counts.append(b);
+      }
+      const types = el('div', 'segments');
+      for (const t of ORDER_TYPES) {
+        const b = button(t.charAt(0).toUpperCase() + t.slice(1), () => { orderType = t; render(); }, t === orderType ? 'segment active' : 'segment');
+        b.dataset.orderType = t;
+        types.append(b);
+      }
+      const order = button(`Order ${orderCount}`, () => issue({ t: 'orderCreeps', barracksId: e.id, mix: mixFor(orderCount, orderType) }), poor ? 'action order poor' : 'action order');
+      order.append(el('span', 'tool-cost', String(cost)));
+      const path = button(e.waypoints.length > 0 ? 'Default Path' : 'Set Default Path', () => {
+        mode = 'path';
+        pathTarget = { type: 'barracks', id: e.id };
+        pathPoints = [];
+        render();
+      });
+      const rows = [counts, types, order, path];
+      if (e.waypoints.length > 0) rows.push(button('Clear Path', () => issue({ t: 'setBarracksPath', barracksId: e.id, waypoints: [] })));
+      orderRow.replaceChildren(...rows);
+    }
+    const lines = queueLines(view.orders(), e.id, tickHz);
+    const lineKey = `${e.id}|${view.orders().filter((o) => o.barracksId === e.id).map((o) => `${o.id}:${o.held}`).join(',')}`;
+    if (lineKey !== queueKey) {
+      queueKey = lineKey;
+      queueStatus.clear();
+      queueList.replaceChildren(...lines.map((line) => {
+        const row = el('div', 'queue-row');
+        const text = el('span', 'queue-text', line.text);
+        queueStatus.set(line.index, text);
+        row.append(text, button('✕', () => issue({ t: 'cancelQueue', barracksId: e.id, orderId: line.orderId }), 'action cancel'));
+        return row;
+      }));
+    } else {
+      for (const line of lines) {
+        const node = queueStatus.get(line.index);
+        if (node && node.textContent !== line.text) node.textContent = line.text;
+      }
+    }
+  }
+
+  /** Paths to draw: the selected group's remaining route, a barracks default path, and the path being drawn. */
+  function overlay() {
+    /** @type {{ points: number[][], color: number }[]} */
+    const paths = [];
+    const tiles = (/** @type {number[][]} */ list) => list.map((p) => [p[0] / UNITS_PER_TILE, p[1] / UNITS_PER_TILE]);
+    const group = selectedGroup === null ? undefined : view.groups().find((g) => g.id === selectedGroup);
+    if (group) {
+      const leader = view.entities().find((e) => e.kind === KIND.CREEP && e.groupId === group.id);
+      const from = leader ? [[leader.x, leader.z]] : [];
+      paths.push({ points: tiles([...from, ...group.waypoints.slice(group.wpIndex)]), color: 0xffd76a });
+    }
+    const e = selected === null ? undefined : view.entities().find((x) => x.id === selected);
+    if (e && e.kind === KIND.BARRACKS && e.waypoints.length > 0) paths.push({ points: tiles([[e.x, e.z], ...e.waypoints]), color: 0xffd76a });
+    if (mode === 'path') paths.push({ points: tiles(pathPoints), color: 0xffffff });
+    return paths;
   }
 
   return {
@@ -256,14 +514,35 @@ export function createControls({ root, view, viewerTeam, spectator, data, send }
         coreLuxMilli: view.team(viewerTeam).coreLux,
         data,
         vents: view.map().vents,
+        mode,
+        selectedGroup,
+        pathCount: pathPoints.length,
       });
-      if ('command' in result) await issue(result.command);
-      else if ('message' in result) say(result.message);
-      else if ('select' in result) selected = result.select;
+      if ('command' in result) {
+        await issue(result.command);
+        if (mode === 'merge') mode = null;
+      } else if ('message' in result) say(result.message);
+      else if ('addWaypoint' in result) pathPoints.push(result.addWaypoint);
+      else if ('selectGroup' in result) {
+        selectedGroup = result.selectGroup;
+        selected = null;
+        mode = null;
+      } else if ('select' in result) {
+        selected = result.select;
+        selectedGroup = null;
+      }
+      render();
+    },
+    /** Selects a creep group by id, as a tap on one of its creeps does. @param {number} id */
+    selectGroup(id) {
+      selectedGroup = id;
+      selected = null;
+      mode = null;
       render();
     },
     /** Called once per frame; refreshes affordability and the panel. */
     update: render,
+    overlay,
     say,
   };
 }

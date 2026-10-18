@@ -25,7 +25,7 @@ export function attachPointer(el, { groundAt, pan, onTap }) {
 
   el.addEventListener('pointerdown', (e) => {
     if (press) return;
-    press = { id: e.pointerId, x: e.clientX, y: e.clientY, at: performance.now(), anchor: groundAt(e.clientX, e.clientY), dragging: false };
+    press = { id: e.pointerId, x: e.clientX, y: e.clientY, at: e.timeStamp, anchor: groundAt(e.clientX, e.clientY), dragging: false };
     el.setPointerCapture(e.pointerId);
   });
 
@@ -39,7 +39,8 @@ export function attachPointer(el, { groundAt, pan, onTap }) {
 
   el.addEventListener('pointerup', (e) => {
     if (!press || e.pointerId !== press.id) return;
-    const tapped = !press.dragging && performance.now() - press.at <= TAP_MAX_MS;
+    // The event time stamps, not the handler times: a busy frame can delay the handlers and turn a quick tap into a slow one.
+    const tapped = !press.dragging && e.timeStamp - press.at <= TAP_MAX_MS;
     press = null;
     if (!tapped) return;
     const ground = groundAt(e.clientX, e.clientY);

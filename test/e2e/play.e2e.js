@@ -131,3 +131,81 @@ test('the menu and lobby work by hand: a bot match, then a match for two humans'
     await guest.screenshot({ path: join(SHOTS, 'menu-two-humans.png') });
   }, { MATCH_MAX_TICKS: '1200' });
 });
+
+test('a human orders creeps, then splits, merges and sends a group, through the controls', { timeout: 240_000, skip }, async () => {
+  // Two humans, so no bot defends and the creeps live long enough for a slow browser to finish the steps.
+  await withBackend(async ({ errors, newContext, open }) => {
+    const page = await open(await newContext(), `name=Halo&match=new&seed=${SEED}`);
+    const matchId = await luxTest(page, 'matchId');
+    const other = await open(await newContext(), `name=Prism&match=${matchId}`);
+    assert.equal(await luxTest(other, 'viewerTeam'), 1);
+    await page.evaluate(() => /** @type {any} */ (window).__luxTest.start());
+    await until(page, () => /** @type {any} */ (window).__luxTest.entities().length > 0);
+    const hook = (/** @type {string} */ expr) => page.evaluate(`(() => { const t = window.__luxTest; return ${expr}; })()`);
+
+    // A barracks through the palette, then select it: the panel offers orders.
+    const barracksTile = freeSpot(SEED, 0);
+    await page.click('button[data-building="barracks"]');
+    await tapTile(page, barracksTile);
+    await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 6 && e.team === 0));
+    await page.click('button[data-building="barracks"]'); // palette off
+    await tapTile(page, barracksTile);
+    await page.waitForSelector('.order-row .order');
+
+    // One group through the panel: 2 ranged creeps, 10 lux. The queue lists it.
+    await page.click('.order-row [data-count="2"]');
+    await page.click('.order-row [data-order-type="ranged"]');
+    await page.click('.order-row .order');
+    await page.waitForSelector('.queue-row');
+    // Queue a group of 5 and three of 1 through the hook, in one go. The last one starts about 10 s later, so the panel can cancel it.
+    const barracksId = await hook('t.entities().find((e) => e.kind === 6 && e.team === 0).id');
+    await hook(`t.send({ t: 'orderCreeps', barracksId: ${barracksId}, mix: ['melee', 'ranged', 'area', 'melee', 'ranged'] })`);
+    for (let i = 0; i < 3; i++) await hook(`t.send({ t: 'orderCreeps', barracksId: ${barracksId}, mix: ['melee'] })`);
+    await page.waitForFunction(() => document.querySelectorAll('.queue-row').length >= 4);
+    const luxOf = async () => Number(((await page.textContent('#hud-core')) ?? '').replace(/\D/g, ''));
+    const before = await luxOf();
+    await page.click('.queue-row:last-child .cancel');
+    await page.waitForFunction((was) => Number((document.getElementById('hud-core')?.textContent ?? '').replace(/\D/g, '')) >= was + 5, before);
+
+    // Every remaining order becomes its own group: 2, 5, 1 and 1 creeps.
+    await until(page, () => /** @type {any} */ (window).__luxTest.groups().length === 4, null, 60_000);
+    const sizeOf = (/** @type {number} */ id) => hook(`t.entities().filter((e) => e.groupId === ${id}).length`);
+    const ids = await hook('t.groups().map((g) => g.id)');
+    assert.deepEqual(await Promise.all(ids.map(sizeOf)), [2, 5, 1, 1]);
+    assert.equal(await hook('t.groups().every((g) => g.custom === 0 && g.waypoints.length >= 8)'), true, 'every group walks the lane route');
+    const tapCreep = async (/** @type {number} */ groupId) => {
+      const c = await hook(`t.entities().find((e) => e.groupId === ${groupId})`);
+      await hook(`t.tap(${c.x / 1000}, ${c.z / 1000})`);
+    };
+
+    // Tap a creep of the 5-group: its panel opens with Split, Merge and Path. Split 5 into 3 and 2: the odd creep stays.
+    await tapCreep(ids[1]);
+    await page.waitForSelector('.panel:not([hidden]) .action:has-text("Split")');
+    assert.match(await page.textContent('.panel-title') ?? '', /^Group of 5, lane route$/);
+    await page.click('.panel .action:has-text("Split")');
+    await until(page, () => /** @type {any} */ (window).__luxTest.groups().length === 5);
+    assert.equal(await sizeOf(ids[1]), 3, 'the original group kept the extra creep');
+
+    // Merge: select the 3-group, press Merge, tap a creep of a 1-group. B joins A.
+    await hook(`t.selectGroup(${ids[1]})`);
+    await page.click('.panel .action:has-text("Merge")');
+    await page.waitForSelector('.panel-title:has-text("tap another of your groups")');
+    await tapCreep(ids[2]);
+    await until(page, () => /** @type {any} */ (window).__luxTest.groups().length === 4);
+    assert.equal(await sizeOf(ids[1]), 4);
+
+    // Path mode: Path, two taps, Go. The group takes a custom path with two waypoints.
+    await hook(`t.selectGroup(${ids[1]})`);
+    await page.click('.panel .action:has-text("Path")');
+    // The camera shows tiles 32 to 64 across, so both taps land on screen.
+    await tapTile(page, { tileX: 40, tileZ: 84 });
+    await tapTile(page, { tileX: 44, tileZ: 80 });
+    await page.waitForSelector('.panel-title:has-text("Path: 2/10")');
+    await page.click('.panel .action:has-text("Go")');
+    await until(page, (id) => /** @type {any} */ (window).__luxTest.groups().some((/** @type {any} */ g) => g.id === id && g.custom === 1 && g.waypoints.length === 2), ids[1]);
+
+    mkdirSync(SHOTS, { recursive: true });
+    await page.screenshot({ path: join(SHOTS, 'creeps.png') });
+    assert.deepEqual(errors, [], 'the pages must log no console or page errors');
+  }, { MATCH_MAX_TICKS: '2400' });
+});

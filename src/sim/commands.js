@@ -30,7 +30,7 @@ import { tryHeroMove } from './systems/movement.js';
  *  | {t:'cancelRecycle', buildingId:number}
  *  | {t:'orderCreeps', barracksId:number, mix:('melee'|'ranged'|'area')[]}
  *  | {t:'orderItem', barracksId:number, itemId:number}
- *  | {t:'cancelQueue', barracksId:number, index:number}
+ *  | {t:'cancelQueue', barracksId:number, orderId?:number, index?:number}
  *  | {t:'setBarracksPath', barracksId:number, waypoints:number[][]}
  *  | {t:'setGroupPath', groupId:number, waypoints:number[][]}
  *  | {t:'mergeGroups', intoGroupId:number, fromGroupId:number}

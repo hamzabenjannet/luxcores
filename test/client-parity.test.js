@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { KIND, SPEC_VERSION } from '../src/sim/index.js';
 import { entityText, isDay } from '../src/client/entity-text.js';
-import { actionsFor, canAfford, resolveTap } from '../src/client/ui/controls.js';
+import { actionsFor, canAfford, groupActions, mixFor, queueLines, resolveTap } from '../src/client/ui/controls.js';
 import { ROOT, loadData } from './helpers/load-data.js';
 
 // The Godot client answers the same cases in vone/tests/run_tests.gd. A rule change in
@@ -39,6 +39,18 @@ test('panel action cases', () => {
   }
 });
 
+test('creep order mix cases', () => {
+  for (const c of fixture.mixFor) assert.deepEqual(mixFor(c.count, c.type), c.expect, JSON.stringify(c));
+});
+
+test('queue line cases', () => {
+  for (const c of fixture.queueLines) assert.deepEqual(queueLines(c.orders, c.barracksId, c.tickHz), c.expect);
+});
+
+test('group panel action cases', () => {
+  for (const c of fixture.groupActions) assert.deepEqual(groupActions(c.size, c.custom).map((a) => a.id), c.expect, JSON.stringify(c));
+});
+
 test('tap cases', () => {
   for (const c of fixture.resolveTap) {
     const actual = resolveTap({
@@ -50,6 +62,9 @@ test('tap cases', () => {
       coreLuxMilli: c.ctx.coreLuxMilli ?? 100_000,
       data,
       vents: c.ctx.vents ?? [],
+      mode: c.ctx.mode ?? null,
+      selectedGroup: c.ctx.selectedGroup ?? null,
+      pathCount: c.ctx.pathCount ?? 0,
     });
     assert.deepEqual(actual, c.expect, c.name);
   }

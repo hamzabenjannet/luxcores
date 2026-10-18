@@ -133,6 +133,27 @@ test('cancelling an order refunds it in full and counts held groups in the queue
   assert.deepEqual(s.orders[0].mix, [1, 1]);
 });
 
+test('cancelling by order id hits that order even after the queue shifted', () => {
+  const s = fresh();
+  const b = withBarracks(s);
+  order(s, b, ['melee']);
+  order(s, b, ['ranged', 'ranged']);
+  order(s, b, ['area', 'area', 'area']);
+  const [first, second, third] = s.orders.map((o) => o.id);
+  run(s, build); // the first group finishes and leaves the queue, so every index moves up by one
+  assert.deepEqual(s.orders.map((o) => o.id), [second, third]);
+  const lux = s.teams[0].coreLux;
+  send(s, 0, { t: 'cancelQueue', barracksId: b.id, orderId: first }); // already built: nothing to cancel
+  assert.equal(s.orders.length, 2);
+  send(s, 0, { t: 'cancelQueue', barracksId: b.id, orderId: third });
+  assert.deepEqual(s.orders.map((o) => o.id), [second], 'the named order went, not the one at its old index');
+  assert.equal(s.teams[0].coreLux, lux + 15 * MILLI);
+  send(s, 1, { t: 'cancelQueue', barracksId: b.id, orderId: second });
+  send(s, 0, { t: 'cancelQueue', barracksId: b.id, orderId: 'x' });
+  send(s, 0, { t: 'cancelQueue', barracksId: b.id });
+  assert.equal(s.orders.length, 1, 'a foreign player, a bad id and no id cancel nothing');
+});
+
 test('recycling a barracks refunds the queued orders, and a destroyed one loses them with no refund', () => {
   /** Core lux gained by recycling a barracks that holds the given orders. */
   const gain = (orders) => {

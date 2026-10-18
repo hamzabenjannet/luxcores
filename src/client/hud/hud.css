@@ -150,3 +150,14 @@ button:disabled { opacity: 0.4; }
   text-shadow: 0 0 12px rgba(61, 139, 255, 0.8);
 }
 #banner[hidden] { display: none; }
+
+/* Creep orders, groups and path mode */
+.order-row { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; align-items: stretch; }
+.order-row:empty { display: none; }
+.segments { display: flex; gap: 6px; }
+.segments .segment { flex: 1; }
+.action.active { border-color: var(--blue); background: #1b2c52; }
+.queue { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.queue:empty { display: none; }
+.queue-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+.queue-row .cancel { padding: 4px 10px; }

@@ -15,6 +15,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { KIND } from '../../sim/index.js';
 import { createLabels } from './labels.js';
 import { createEntityMeshes } from './entity-meshes.js';
+import { createOverlay } from './overlay.js';
 
 export const TEAM_COLORS = [0x3d8bff, 0xff4d4d]; // team 0 blue (player), team 1 red
 
@@ -73,6 +74,7 @@ export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0) {
 
   const labels = createLabels(scene, hpFactor, TEAM_COLORS);
   const entityMeshes = createEntityMeshes(scene, TEAM_COLORS);
+  const overlay = createOverlay(scene);
   addGeneratedLayout(scene, view, labels);
 
   // Lumen Cores: team 0 from mapgen.json, team 1 point-mirrored.
@@ -173,7 +175,7 @@ export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0) {
     composer.render();
   }
 
-  return { render, pan, groundAt, screenOf, camera, renderer };
+  return { render, pan, groundAt, screenOf, setPaths: overlay.update, camera, renderer };
 }
 
 /**

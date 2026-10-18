@@ -104,6 +104,8 @@ Object.assign(luxTest, {
   send: session.sendCommand,
   entityKinds: () => view.entities().map((e) => e.kind),
   entities: () => view.entities(),
+  groups: () => view.groups(),
+  orders: () => view.orders(),
 });
 session.onSnapshot((s) => {
   if (s.hash && testHashes) testHashes[s.tick] = s.hash;
@@ -133,10 +135,11 @@ const controls = createControls({
   view,
   viewerTeam,
   spectator,
+  tickHz: TICK_HZ,
   data,
   send: (cmd) => session.sendCommand(cmd),
 });
-Object.assign(luxTest, { screenOf: scene.screenOf });
+Object.assign(luxTest, { screenOf: scene.screenOf, selectGroup: controls.selectGroup, tap: (x, z) => controls.tap({ x, z }) });
 attachPointer(canvas, { groundAt: scene.groundAt, pan: scene.pan, onTap: (ground) => controls.tap(ground) });
 
 const banner = $('banner');
@@ -155,6 +158,7 @@ session.onChange(() => {
 startLoop((timeSec) => {
   scene.render(timeSec);
   controls.update();
+  scene.setPaths(controls.overlay());
   const secs = Math.floor(view.tick() / TICK_HZ);
   $('hud-clock').textContent = `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
   $('hud-phase').textContent = isDay(view.tick(), data.balance.dayNight) ? '☀' : '☾';
