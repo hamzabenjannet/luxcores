@@ -87,9 +87,9 @@ func connect_match(options: Dictionary) -> Dictionary:
 			"vsBot": bool(options.get("vs_bot", false)),
 			"botVsBot": bool(options.get("bot_vs_bot", false)),
 		}
-		var seed := int(options.get("seed", 0))
-		if seed > 0:
-			create_body["seed"] = seed
+		var map_seed := int(options.get("seed", 0))
+		if map_seed > 0:
+			create_body["seed"] = map_seed
 		var entropy_text := str(options.get("entropy", "")).strip_edges()
 		var entropy_tenths := GameLogic.entropy_from_text(entropy_text)
 		if entropy_tenths >= 0:
