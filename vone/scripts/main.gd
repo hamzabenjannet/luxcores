@@ -139,8 +139,8 @@ func _build_interface() -> void:
 	_seed_input.custom_minimum_size = Vector2(180, 52)
 	match_options.add_child(_seed_input)
 	_entropy_input = LineEdit.new()
-	_entropy_input.placeholder_text = "Entropy %/min (default)"
-	_entropy_input.tooltip_text = "Percent of the maximum HP that buildings, creeps and heroes lose per minute, 0 to 100. The host of a match sets it."
+	_entropy_input.placeholder_text = "Entropy %/s (default)"
+	_entropy_input.tooltip_text = "Percent of the maximum HP that buildings, creeps and heroes lose per second, 0 to 100 with one decimal. The host of a match sets it."
 	_entropy_input.custom_minimum_size = Vector2(220, 52)
 	match_options.add_child(_entropy_input)
 	_home.add_child(match_options)
@@ -404,7 +404,7 @@ func _connect_match() -> void:
 	_set_match_phase(str(_current_match.get("status", "lobby")))
 	_update_start_button()
 	_refresh_palette()
-	var entropy_text := "Entropy %d%% per minute." % int(_current_match.get("entropyPctPerMinute", _data.balance.economy.entropyPctPerMinute))
+	var entropy_text := "Entropy %s%% per second." % GameLogic.entropy_text(int(_current_match.get("entropyPermillePerSecond", _data.balance.economy.entropyPermillePerSecond)))
 	if _is_host:
 		_set_status("Lobby connected. %s Start the match when ready." % entropy_text)
 	else:

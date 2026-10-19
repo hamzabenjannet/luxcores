@@ -134,7 +134,7 @@ Done on 2026-10-19. Hamza asked for four things before M7, and all of them are b
 
 - **Decisions.** Every loose point of GDD 8.4 went to Hamza as a question and is recorded there. A stun blocks item use. The inventory and the Energy Grab budget reach only a player's own team: the room snapshot no longer carries them, and a `match:private` event goes to the team's own sockets (Socket.IO room per team, plain WebSocket by connection, and the Redis relay carries the team).
 - **Test ticks.** `tools/run-bots.js`, `run-headless.js` and the tests stop at 5 000 ticks. The game's own limit stays 10 000. The stalemate golden replay plays 5 000 ticks.
-- **Entropy rate.** `normalizeData(raw, options)` takes a per-match rate, the replay header, the `started` log event and the match record keep it, and the server applies it to the sim, the bots, a resume and the replay verify. The host types it in the start menu (web and Godot, URL parameter `entropy`), and the lobby shows it to the guest.
+- **Entropy rate.** `normalizeData(raw, options)` takes a per-match rate, the replay header, the `started` log event and the match record keep it, and the server applies it to the sim, the bots, a resume and the replay verify. The unit is tenths of a percent of max HP per second (2026-10-19, before that it was whole percent per minute). The host types percent per second with one decimal in the start menu (web and Godot, URL parameter `entropy`, for example `0.5`), and the lobby shows it to the guest.
 - **Resolution.** The web canvas fills the window and follows every resize, at the full device pixel ratio on a desktop and at most 2 on a touch device (`render/pixel-ratio.js`). The Godot window opens maximized and stretches with the window, and the width and height inputs are gone.
 
 M7 itself, with the four parts that Hamza chose:
@@ -199,7 +199,7 @@ The GDD was silent or ambiguous on these. Its v0.9.2 changelog records the ones 
 - **Vents:** only a geothermal collector needs a vent tile. Other buildings may stand on one.
 - **Wind:** a plant rolls its output when it is built and again every 200 ticks, from `state.rng`, in id order.
 - **Income rounding:** each source pays `rate / 20` per tick with integer math that adds up to exactly `rate` over 20 ticks, so there is no drift.
-- **Entropy:** HP leaves once per second (cumulative `floor(maxHp x pct x seconds / 6000)`), exact over a minute. It assumes a constant max HP, so the shell upgrade of M3 or later must change that formula.
+- **Entropy:** HP leaves once per second (`maxHp x tenths / 1000` plus a carried remainder, in tenths of a percent per second; the default is 1). A shell upgrade changes only future entropy, because the remainder carries.
 - **Day and night:** derived from the tick (`tick % 1200 < 800` is day), so they need no state. The match starts at dawn.
 - **Build rules:** a refused build costs nothing. The sim refuses a tile outside the team's build zone, off the map, or under a Core, building or blocker. It also refuses an unknown building or player, a tower without a valid attack type, any other building with one, and a geothermal collector off the team's vents. A tower is an ordinary building until M3 gives it a behavior.
 - **Hash layout:** entities carry four more fields (`born`, `roll`, `recycle`, `attack`) and the pending pool is hashed entry by entry. `SPEC_VERSION` stays at 0.10.0, so both golden replays were re-recorded.

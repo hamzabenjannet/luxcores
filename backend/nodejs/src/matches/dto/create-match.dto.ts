@@ -43,15 +43,15 @@ export class CreateMatchDto {
   @ApiPropertyOptional({
     example: 1,
     minimum: 0,
-    maximum: 100,
+    maximum: 1000,
     description:
-      'Entropy rate in percent of the maximum HP per minute; 0 turns entropy off. The default of data/balance.json applies when omitted.',
+      'Entropy rate in tenths of a percent of the maximum HP per second (1000 is 100 percent); 0 turns entropy off. The default of data/balance.json applies when omitted.',
   })
   @IsOptional()
   @IsInt()
   @Min(0)
-  @Max(100)
-  entropyPctPerMinute?: number;
+  @Max(1000)
+  entropyPermillePerSecond?: number;
 
   @ApiPropertyOptional({
     default: false,

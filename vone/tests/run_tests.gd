@@ -47,6 +47,10 @@ func _init() -> void:
 		_check("entity text %s" % JSON.stringify(c.entity), GameLogic.entity_text(c.entity, fixture.hpFactor, hero_names, item_names), expected)
 	for c in fixture.creepGroupLabels:
 		_check("creep group labels: %s" % String(c.name), _normalize(GameLogic.creep_group_labels(c.entities, fixture.hpFactor)), _normalize(c.expect))
+	for c in fixture.entropyFromText:
+		_check("entropy from text %s" % JSON.stringify(c.text), GameLogic.entropy_from_text(String(c.text)), int(c.expect))
+	for c in fixture.entropyText:
+		_check("entropy text %s" % JSON.stringify(c.tenths), GameLogic.entropy_text(int(c.tenths)), String(c.expect))
 	for c in fixture.secondsText:
 		_check("seconds text %s" % JSON.stringify(c), GameLogic.seconds_text(int(c.ticks), int(c.tickHz)), String(c.expect))
 	for c in fixture.abilityStates:

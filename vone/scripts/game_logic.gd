@@ -345,6 +345,25 @@ static func creep_group_labels(entities: Array, hp_factor: Dictionary) -> Array:
 		})
 	return out
 
+## The entropy rate a player typed, in percent of the maximum HP per second with at most one decimal,
+## as the tenths of a percent the server takes. Anything else, or an empty field, gives -1.
+## Examples: "0.1" gives 1, "5" gives 50, "100" gives 1000, "100.1" gives -1.
+static func entropy_from_text(text: String) -> int:
+	var re := RegEx.new()
+	re.compile("^(\\d{1,3})(?:\\.(\\d))?$")
+	var m := re.search(text.strip_edges())
+	if m == null:
+		return -1
+	var tenths := int(m.get_string(1)) * 10 + (int(m.get_string(2)) if m.get_string(2) != "" else 0)
+	return tenths if tenths <= 1000 else -1
+
+## An entropy rate as the percent per second a player reads. Examples: 1 gives "0.1", 15 gives "1.5", 50 gives "5".
+static func entropy_text(tenths: int) -> String:
+	@warning_ignore("integer_division")
+	var whole := tenths / 10
+	var tenth := tenths % 10
+	return str(whole) if tenth == 0 else "%d.%d" % [whole, tenth]
+
 ## Whether the day half of the cycle is on (GDD 4.1). The match starts at dawn.
 static func is_day(tick: int, day_night: Dictionary) -> bool:
 	var day := int(day_night.get("dayTicks", 800))

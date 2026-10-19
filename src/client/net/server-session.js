@@ -57,13 +57,13 @@
  *   vsBot?: boolean,         // with 'new': fill the second slot with a bot
  *   botVsBot?: boolean,      // with 'new': two bots play and this client only watches
  *   seed?: number,           // with 'new': map and RNG seed
- *   entropyPctPerMinute?: number, // with 'new': entropy rate of the match, 0 to 100; the host's choice
+ *   entropyPermillePerSecond?: number, // with 'new': entropy rate of the match in tenths of a percent per second, 0 to 1000; the host's choice
  *   specVersion: string,     // SPEC_VERSION of this client's sim
  *   recoveryCode?: string,   // move a profile to this device instead of signing in
  * }} opts
  * @returns {Promise<ServerSession>}
  */
-export async function joinServerMatch({ server, name, matchId, vsBot = false, botVsBot = false, seed, entropyPctPerMinute, specVersion, recoveryCode }) {
+export async function joinServerMatch({ server, name, matchId, vsBot = false, botVsBot = false, seed, entropyPermillePerSecond, specVersion, recoveryCode }) {
   const base = server.replace(/\/$/, '');
   const spec = await request(`${base}/api/game/spec`);
   if (spec.specVersion !== specVersion) {
@@ -76,7 +76,7 @@ export async function joinServerMatch({ server, name, matchId, vsBot = false, bo
   const existing = matchId === 'new' ? null : await request(`${base}/api/matches/${matchId}`, { token });
   let match =
     matchId === 'new'
-      ? await request(`${base}/api/matches`, { token, body: { name: `${name}'s match`, vsBot, botVsBot, ...(seed === undefined ? {} : { seed }), ...(entropyPctPerMinute === undefined ? {} : { entropyPctPerMinute }) } })
+      ? await request(`${base}/api/matches`, { token, body: { name: `${name}'s match`, vsBot, botVsBot, ...(seed === undefined ? {} : { seed }), ...(entropyPermillePerSecond === undefined ? {} : { entropyPermillePerSecond }) } })
       : existing.botVsBot
         ? existing
         : await request(`${base}/api/matches/${matchId}/join`, { token, method: 'POST' });

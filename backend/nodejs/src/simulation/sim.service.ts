@@ -124,9 +124,9 @@ export class SimService {
     return this.config.mapgen.version;
   }
 
-  /** The default entropy rate of `data/balance.json`, in percent of the maximum HP per minute. */
+  /** The default entropy rate of `data/balance.json`, in tenths of a percent of the maximum HP per second. */
   get defaultEntropyPct(): number {
-    return (this.config.balance as { economy: { entropyPctPerMinute: number } }).economy.entropyPctPerMinute;
+    return (this.config.balance as { economy: { entropyPermillePerSecond: number } }).economy.entropyPermillePerSecond;
   }
 
   /** Whether the options of a match are valid. */
@@ -136,10 +136,10 @@ export class SimService {
 
   /** The rules of a match: the data files with the match's own settings on top. */
   configFor(options?: SimMatchOptions): ReturnType<SimApi['normalizeData']> {
-    if (options?.entropyPctPerMinute === undefined || options.entropyPctPerMinute === this.defaultEntropyPct) return this.config;
-    const key = JSON.stringify({ entropyPctPerMinute: options.entropyPctPerMinute });
+    if (options?.entropyPermillePerSecond === undefined || options.entropyPermillePerSecond === this.defaultEntropyPct) return this.config;
+    const key = JSON.stringify({ entropyPermillePerSecond: options.entropyPermillePerSecond });
     let config = this.variants.get(key);
-    if (!config) this.variants.set(key, (config = this.api.normalizeData(this.raw, { entropyPctPerMinute: options.entropyPctPerMinute })));
+    if (!config) this.variants.set(key, (config = this.api.normalizeData(this.raw, { entropyPermillePerSecond: options.entropyPermillePerSecond })));
     return config;
   }
 

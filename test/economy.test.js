@@ -216,7 +216,7 @@ test('tower power upgrades count toward recycle refund', () => {
   send(s, 0, { t: 'recycle', buildingId: tower.id });
   run(s, 60);
   assert.equal(s.entities.some((entity) => entity.id === tower.id), false);
-  const hpAtCompletion = 200 * MILLI - 100;
+  const hpAtCompletion = 200 * MILLI - 600; // three seconds of entropy at 0.1% of 200 HP
   const refund = Math.trunc((Math.trunc(hpAtCompletion / 10) + tower.powerLux) * 60 / 100);
   assert.equal(luxOf(s, 0), bankBeforeRecycle + refund);
 });
@@ -321,15 +321,15 @@ test('recycle: only the owner, only buildings, and not twice at once', () => {
   assert.equal(solar.recycle, left - 1, 'a second recycle command does not restart the channel');
 });
 
-test('entropy: buildings lose 1% of max HP per minute, once a second, and the Core is exempt', () => {
+test('entropy: buildings lose 0.1% of max HP per second, once a second, and the Core is exempt', () => {
   const s = newMatch();
   const [solar] = build(s, 0, 'solar', freeTile(s, 0)); // born on tick 0
-  while (s.tick < 1200) step(s, []); // ticks 0 to 1199 have run: 59 whole seconds of entropy
-  assert.equal(solar.hp, 200 * MILLI - 1966, 'after 59 s: floor(200 HP x 1% x 59 / 60)');
-  step(s, []); // tick 1200 is the 60th second
-  assert.equal(solar.hp, 200 * MILLI - 2000, '1% of 200 HP is exactly 2 HP after a minute, with no drift');
-  while (s.tick < 2401) step(s, []);
-  assert.equal(solar.hp, 200 * MILLI - 4000, 'and exactly 2 HP more the next minute');
+  while (s.tick < 20) step(s, []); // ticks 0 to 19 have run: no whole second yet
+  assert.equal(solar.hp, 200 * MILLI, 'nothing is lost before the first second ends');
+  step(s, []); // tick 20 is the first second
+  assert.equal(solar.hp, 200 * MILLI - 200, '0.1% of 200 HP is 0.2 HP after one second');
+  while (s.tick < 1201) step(s, []);
+  assert.equal(solar.hp, 200 * MILLI - 12000, 'and exactly 12 HP after a minute, with no drift');
   assert.equal(core(s, 0).hp, luxOf(s, 0), 'the Core takes no entropy');
 });
 
@@ -337,7 +337,7 @@ test('entropy: it scales with max HP', () => {
   const s = newMatch();
   const [nuclear] = build(s, 0, 'nuclear', freeTile(s, 0));
   while (s.tick < 1201) step(s, []);
-  assert.equal(nuclear.hp, 800 * MILLI - 8000, '1% of 800 HP is 8 HP per minute');
+  assert.equal(nuclear.hp, 800 * MILLI - 48000, '0.1% of 800 HP is 0.8 HP per second, 48 HP per minute');
 });
 
 test('entropy after a shell upgrade uses the new maximum HP only for later seconds', () => {
@@ -347,7 +347,7 @@ test('entropy after a shell upgrade uses the new maximum HP only for later secon
   send(s, 0, { t: 'upgrade', towerId: tower.id, track: 'shell' });
   run(s, 600);
   assert.equal(tower.maxHp, 300 * MILLI);
-  assert.equal(tower.hp, 300 * MILLI - 2500);
+  assert.equal(tower.hp, 300 * MILLI - 15000);
 });
 
 test('entropy: a building with no HP left dissolves', () => {
@@ -404,7 +404,7 @@ test('meltdown: it hurts everything within 3 tiles, and nothing beyond', () => {
   assert.equal(alive(near), false, '400 damage kills a 200 HP solar 2 tiles away');
   assert.equal(alive(edge), false, 'and exactly 3 tiles away');
   assert.equal(alive(far), true, 'a solar 4 tiles away survives');
-  assert.ok(far.hp > 190 * MILLI, 'and takes only entropy damage');
+  assert.ok(far.hp > 170 * MILLI && far.hp < far.maxHp, 'and takes only entropy damage');
 });
 
 test('meltdown: damage to the Core comes out of its lux', () => {

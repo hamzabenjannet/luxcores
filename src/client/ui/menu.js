@@ -5,6 +5,8 @@
  * the menu (see main.js), so tests and shared links go straight in.
  */
 
+import { entropyFromText, entropyText } from '../entity-text.js';
+
 /**
  * @typedef {Object} MenuChoice
  * @property {string} name
@@ -12,7 +14,7 @@
  * @property {boolean} vsBot
  * @property {boolean} botVsBot
  * @property {number | undefined} seed
- * @property {number | undefined} entropy  entropy rate in percent of the maximum HP per minute, for a match this player creates; undefined keeps the default
+ * @property {number | undefined} entropy  entropy rate in tenths of a percent of the maximum HP per second, for a match this player creates; undefined keeps the default
  */
 
 const NAME_KEY = 'luxcores.playerName';
@@ -37,7 +39,7 @@ function remember(name) {
 
 /**
  * @param {HTMLElement} root
- * @param {{ server: string, error?: string, entropyDefault?: number }} opts  `entropyDefault` is the rate of data/balance.json
+ * @param {{ server: string, error?: string, entropyDefault?: number }} opts  `entropyDefault` is the rate of data/balance.json, in tenths of a percent per second
  * @returns {Promise<MenuChoice>}
  */
 export function showMenu(root, { server, error, entropyDefault = 1 }) {
@@ -56,20 +58,19 @@ export function showMenu(root, { server, error, entropyDefault = 1 }) {
     seed.placeholder = 'Map seed (optional)';
     seed.inputMode = 'numeric';
     const entropy = /** @type {HTMLInputElement} */ (document.createElement('input'));
-    entropy.inputMode = 'numeric';
-    entropy.placeholder = `${entropyDefault} (default)`;
-    entropy.title = 'Percent of the maximum HP that buildings, creeps and heroes lose per minute, 0 to 100. The host of a match sets it.';
+    entropy.inputMode = 'decimal';
+    entropy.placeholder = `${entropyText(entropyDefault)} (default)`;
+    entropy.title = 'Percent of the maximum HP that buildings, creeps and heroes lose per second, 0 to 100 with one decimal. The host of a match sets it.';
     const matchId = /** @type {HTMLInputElement} */ (document.createElement('input'));
     matchId.placeholder = 'Match id to join';
-    card.append(label('Name', name), label('Seed', seed), label('Entropy % per minute', entropy));
+    card.append(label('Name', name), label('Seed', seed), label('Entropy % per second', entropy));
 
     /** @param {Partial<MenuChoice>} part */
     const choose = (part) => {
       const chosen = name.value.trim() || 'Guest';
       remember(chosen);
       const seedValue = Number(seed.value);
-      const entropyValue = Number(entropy.value);
-      const entropyChosen = entropy.value.trim() !== '' && Number.isSafeInteger(entropyValue) && entropyValue >= 0 && entropyValue <= 100;
+      const entropyValue = entropyFromText(entropy.value);
       root.hidden = true;
       resolve({
         name: chosen,
@@ -77,7 +78,7 @@ export function showMenu(root, { server, error, entropyDefault = 1 }) {
         vsBot: false,
         botVsBot: false,
         seed: seed.value.trim() !== '' && Number.isSafeInteger(seedValue) ? seedValue : undefined,
-        entropy: entropyChosen ? entropyValue : undefined,
+        entropy: entropyValue >= 0 ? entropyValue : undefined,
         ...part,
       });
     };

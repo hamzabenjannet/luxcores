@@ -46,7 +46,7 @@ export class Recorder {
       commands: [],
       hashes: {},
     };
-    if (meta.options?.entropyPctPerMinute !== undefined) this.replay.options = { entropyPctPerMinute: meta.options.entropyPctPerMinute };
+    if (meta.options?.entropyPermillePerSecond !== undefined) this.replay.options = { entropyPermillePerSecond: meta.options.entropyPermillePerSecond };
   }
 
   /**

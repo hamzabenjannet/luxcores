@@ -13,7 +13,7 @@
     "recycleRefundPct": 60,
     "recycleChannelTicks": 60,
     "recycleQueueRefundPct": 100,
-    "entropyPctPerMinute": 1
+    "entropyPermillePerSecond": 1
   },
   "dayNight": {
     "dayTicks": 800,

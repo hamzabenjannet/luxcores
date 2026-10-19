@@ -13,7 +13,7 @@
  *   vsBot=1      with match=new: play against a bot
  *   botVsBot=1   with match=new: two bots play and this page watches
  *   seed         with match=new: map seed
- *   entropy      with match=new: entropy rate in percent of the maximum HP per minute (0 to 100)
+ *   entropy      with match=new: entropy rate in percent of the maximum HP per second (0 to 100, one decimal, such as 0.5)
  *   autostart=1  start the match as soon as the lobby exists
  *   recover      a recovery code that moves a profile to this device
  *   showcode=1   print a new recovery code in the debug text
@@ -32,7 +32,7 @@ import { joinServerMatch } from './net/server-session.js';
 import { createControls } from './ui/controls.js';
 import { showLobby } from './ui/lobby.js';
 import { showMenu } from './ui/menu.js';
-import { isDay } from './entity-text.js';
+import { entropyFromText, isDay } from './entity-text.js';
 import { matchSummary } from './ui/summary.js';
 
 const query = new URLSearchParams(location.search);
@@ -79,9 +79,9 @@ while (!session) {
         vsBot: query.get('vsBot') === '1',
         botVsBot: query.get('botVsBot') === '1',
         seed: query.has('seed') ? Number(query.get('seed')) : undefined,
-        entropy: query.has('entropy') ? Number(query.get('entropy')) : undefined,
+        entropy: query.has('entropy') && entropyFromText(query.get('entropy') ?? '') >= 0 ? entropyFromText(query.get('entropy') ?? '') : undefined,
       }
-    : await showMenu($('menu'), { server, error: problem, entropyDefault: data.balance.economy.entropyPctPerMinute });
+    : await showMenu($('menu'), { server, error: problem, entropyDefault: data.balance.economy.entropyPermillePerSecond });
   $('hud-debug').textContent = `Connecting to ${server} ...`;
   try {
     session = await joinServerMatch({
@@ -91,7 +91,7 @@ while (!session) {
       vsBot: choice.vsBot,
       botVsBot: choice.botVsBot,
       seed: choice.seed,
-      entropyPctPerMinute: choice.entropy,
+      entropyPermillePerSecond: choice.entropy,
       specVersion: SPEC_VERSION,
       recoveryCode: query.get('recover') ?? undefined,
     });
@@ -126,7 +126,7 @@ session.onSnapshot((s) => {
 
 const link = new URL(location.href);
 link.search = new URLSearchParams({ ...(query.has('server') ? { server } : {}), match: session.matchId }).toString();
-const lobby = showLobby($('menu'), session, { shareLink: link.toString(), entropyDefault: data.balance.economy.entropyPctPerMinute });
+const lobby = showLobby($('menu'), session, { shareLink: link.toString(), entropyDefault: data.balance.economy.entropyPermillePerSecond });
 if (query.get('autostart') === '1' && session.isHost) await session.start();
 
 const code = query.get('showcode') === '1' ? await session.requestRecoveryCode() : session.recoveryCode;

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { KIND, SPEC_VERSION } from '../src/sim/index.js';
-import { creepGroupLabels, entityText, isDay } from '../src/client/entity-text.js';
+import { creepGroupLabels, entityText, entropyFromText, entropyText, isDay } from '../src/client/entity-text.js';
 import { abilityStates, actionsFor, canAfford, endsBuildMode, groupActions, heroLuxChoices, heroPickState, immediateCast, immediateUse, itemStates, mixFor, queueLines, resolveTap, secondsText, shopStates } from '../src/client/ui/controls.js';
 import { matchSummary } from '../src/client/ui/summary.js';
 import { ROOT, loadData } from './helpers/load-data.js';
@@ -38,6 +38,11 @@ test('entity text cases', () => {
 
 test('creep group label cases', () => {
   for (const c of fixture.creepGroupLabels) assert.deepEqual(creepGroupLabels(c.entities, fixture.hpFactor), c.expect, c.name);
+});
+
+test('entropy rate cases', () => {
+  for (const c of fixture.entropyFromText) assert.equal(entropyFromText(c.text), c.expect, JSON.stringify(c.text));
+  for (const c of fixture.entropyText) assert.equal(entropyText(c.tenths), c.expect, JSON.stringify(c.tenths));
 });
 
 test('seconds text cases', () => {

@@ -2,11 +2,19 @@
 
 Working title. A strategy game mixing hero control (Dota 2), creep waypoint paths (Age of Empires) and base building with tower defense (Generals Zero Hour, Clash Royale). Everything in the world is made of light energy, measured in **lux**. Destroyed things dissolve into light; there is no blood or gore.
 
-Status: draft v0.9.10. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
+Status: draft v0.9.11. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
 
 ---
 
 ## 0. Changelog
+
+### v0.9.10 → v0.9.11
+
+Hamza asked on 2026-10-19 for the entropy effect per second instead of per minute.
+
+| Area | Change |
+|---|---|
+| Entropy | The rate is in tenths of a percent of max HP per second, 0 to 1000 (0 to 100 percent). The default is 1, which is 0.1 percent per second and 6 percent per minute, six times the old default of 1 percent per minute (section 3.7) |
 
 ### v0.9.9 → v0.9.10
 
@@ -14,7 +22,7 @@ Details that the client milestone (M7) and Hamza's requests of 2026-10-19 needed
 
 | Area | Change |
 |---|---|
-| Entropy | A match may set its own rate, 0 to 100 percent of max HP per minute. The host picks it at the start, the other player sees it in the lobby, and 1 stays the default (section 3.7) |
+| Entropy | A match may set its own rate, 0 to 100 percent of max HP. The host picks it at the start, the other player sees it in the lobby (section 3.7) |
 | Hidden information | The inventory and the Energy Grab budget of a player reach only that player's team (section 8.4) |
 | Creep labels | One label per creep group replaces one label per creep (section 13.1) |
 | End screen | Section 13.2 is built: duration, winner and the six counters of both teams, shown at the end of a match |
@@ -258,9 +266,9 @@ Buildings only. Refund `60% × current lux value`, 3 s channel, cancel by tappin
 
 ### 3.7 Entropy
 
-Buildings, creeps and heroes lose 1% of max HP per minute *(default)*. The Core is exempt. HP is removed once per second, and 60 seconds remove exactly 1% of max HP.
+Buildings, creeps and heroes lose 0.1% of max HP per second *(default)*. The Core is exempt. HP is removed once per second, so 60 seconds remove 6% of max HP.
 
-A match may set its own rate from 0 (no entropy) to 100 percent of max HP per minute. The host picks it when it creates the match, and the lobby shows it to the other player. A match that sets no rate uses the default of `data/balance.json`. The rate is part of the match: its replay, its log and a resume after a restart all keep it.
+A match may set its own rate from 0 (no entropy) to 100 percent of max HP per second, in steps of 0.1 percent. The data and the server hold the rate as whole tenths of a percent (`entropyPermillePerSecond`, 0 to 1000). The host picks it when it creates the match, and the lobby shows it to the other player. A match that sets no rate uses the default of `data/balance.json`. The rate is part of the match: its replay, its log and a resume after a restart all keep it.
 
 ### 3.8 Number logic
 
@@ -506,7 +514,7 @@ The sections above left these details open. `src/sim/creeps.js` and the behavior
 - **Waypoints.** A group moves on when its leader, the creep with the lowest id, comes within 1.5 tiles of the current waypoint. A waypoint on a blocked tile moves to the nearest free tile within 3 tiles.
 - **Paths.** A barracks default path is copied into each new group and does not change existing groups. A custom path replaces the old one and restarts at its first waypoint. An empty path puts the group back on the lane route.
 - **Merge and split.** Merge needs no distance; the result may hold up to 30 creeps. A split gives the new group the creeps with the highest ids, so the original keeps the lowest and the odd one. Both halves keep the path and its progress.
-- **Entropy.** Creeps lose 1% of max HP per minute like buildings and heroes (section 3.7).
+- **Entropy.** Creeps lose 0.1% of max HP per second like buildings and heroes (section 3.7).
 
 ## 10. Map
 

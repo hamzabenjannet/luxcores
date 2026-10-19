@@ -393,7 +393,7 @@ test('an enemy tower shoots creeps, and a stunned creep stops walking', () => {
   assert.ok(Math.hypot(c.x - before.x, c.z - before.z) < 300, 'a stunned creep does not walk');
 });
 
-test('dead creeps leave their group, an empty group disappears, and creeps lose 1% of their HP per minute', () => {
+test('dead creeps leave their group, an empty group disappears, and creeps lose 0.1% of their HP per second', () => {
   const s = fresh();
   const b = withBarracks(s);
   order(s, b, ['melee', 'melee']);
@@ -413,7 +413,7 @@ test('dead creeps leave their group, an empty group disappears, and creeps lose 
   const creep = creeps(t)[0];
   const born = creep.born;
   while (t.tick <= born + 1200) step(t, []);
-  assert.equal(creep.hp, creep.maxHp - creep.maxHp / 100, 'one minute removed exactly 1% of its max HP');
+  assert.equal(creep.hp, creep.maxHp - creep.maxHp * 6 / 100, 'one minute removed exactly 6% of its max HP');
 });
 
 test('the hash covers orders, groups and paths, and a replay of the commands reproduces it', () => {

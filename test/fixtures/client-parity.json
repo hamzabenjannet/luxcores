@@ -3907,5 +3907,77 @@
         }
       ]
     }
+  ],
+  "entropyFromText": [
+    {
+      "text": "0.1",
+      "expect": 1
+    },
+    {
+      "text": "5",
+      "expect": 50
+    },
+    {
+      "text": "100",
+      "expect": 1000
+    },
+    {
+      "text": "100.1",
+      "expect": -1
+    },
+    {
+      "text": "",
+      "expect": -1
+    },
+    {
+      "text": "  2.5 ",
+      "expect": 25
+    },
+    {
+      "text": "1.25",
+      "expect": -1
+    },
+    {
+      "text": "-3",
+      "expect": -1
+    },
+    {
+      "text": "abc",
+      "expect": -1
+    },
+    {
+      "text": "0",
+      "expect": 0
+    },
+    {
+      "text": ".5",
+      "expect": -1
+    }
+  ],
+  "entropyText": [
+    {
+      "tenths": 1,
+      "expect": "0.1"
+    },
+    {
+      "tenths": 15,
+      "expect": "1.5"
+    },
+    {
+      "tenths": 50,
+      "expect": "5"
+    },
+    {
+      "tenths": 0,
+      "expect": "0"
+    },
+    {
+      "tenths": 1000,
+      "expect": "100"
+    },
+    {
+      "tenths": 999,
+      "expect": "99.9"
+    }
   ]
 }

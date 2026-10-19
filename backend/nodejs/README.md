@@ -126,7 +126,7 @@ All routes live under `/api`. A route needs `Authorization: Bearer <token>` unle
 | `POST /auth/recover` | public | Exchange a recovery code for a token, a new device secret and a new code |
 | `GET /players`, `GET /players/leaderboard` | token | List profiles, top players by wins |
 | `GET /players/me`, `PATCH /players/me`, `GET /players/:id` | token | Profiles |
-| `POST /matches`, `GET /matches`, `GET /matches/:id` | token | Open and browse lobbies. The body of `POST /matches` may set `entropyPctPerMinute` (0 to 100, percent of max HP per minute; the default of `data/balance.json` when absent), which the match record, the lobby, the log and the replay keep |
+| `POST /matches`, `GET /matches`, `GET /matches/:id` | token | Open and browse lobbies. The body of `POST /matches` may set `entropyPermillePerSecond` (0 to 1000, tenths of a percent of max HP per second; the default of `data/balance.json` when absent), which the match record, the lobby, the log and the replay keep |
 | `POST /matches/:id/join`, `POST /matches/:id/leave` | token | Lobby membership |
 | `POST /matches/:id/start`, `POST /matches/:id/stop` | token, host | Start or stop the simulation |
 | `GET /game/spec` | public | Spec version, data hash, tick rate and the socket reference |

@@ -209,8 +209,8 @@ export interface WorldViewApi {
 
 /** Settings of one match on top of the data files (`MatchOptions` in `src/sim/config.js`). */
 export interface SimMatchOptions {
-  /** Percent of the maximum HP that buildings, creeps and heroes lose per minute. 0 turns entropy off. */
-  entropyPctPerMinute?: number;
+  /** Tenths of a percent of the maximum HP that buildings, creeps and heroes lose per second. 0 turns entropy off. */
+  entropyPermillePerSecond?: number;
 }
 
 export interface SimApi {

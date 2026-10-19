@@ -42,7 +42,7 @@ export class MatchesService {
       mode: dto.mode,
       status: MatchStatus.Lobby,
       seed: dto.seed ?? randomInt(0, MAX_SEED + 1),
-      ...(dto.entropyPctPerMinute === undefined ? {} : { entropyPctPerMinute: dto.entropyPctPerMinute }),
+      ...(dto.entropyPermillePerSecond === undefined ? {} : { entropyPermillePerSecond: dto.entropyPermillePerSecond }),
       vsBot: dto.vsBot,
       botVsBot: dto.botVsBot,
       hostId: host.id,

@@ -39,10 +39,10 @@ func _run() -> void:
 	_main._name_input.text = "GodotTester"
 	_main._mode_selector.select(0)
 	_main._seed_input.value = 1234567
-	_main._entropy_input.text = "5"
+	_main._entropy_input.text = "0.5"
 	await _main._connect_match()
-	_check("the host's entropy rate reaches the match", int(_main._current_match.get("entropyPctPerMinute", -1)), 5)
-	_check("the lobby says the entropy rate", _main._status_label.text.contains("Entropy 5% per minute."), true)
+	_check("the host's entropy rate reaches the match", int(_main._current_match.get("entropyPermillePerSecond", -1)), 5)
+	_check("the lobby says the entropy rate", _main._status_label.text.contains("Entropy 0.5% per second."), true)
 	_check("connected as a player", _main._role == "player" and _main._game.visible, true)
 	_check("the server rules loaded", _main._data.has("buildings") and _main._data.has("mapgen"), true)
 	await _main._start_match()

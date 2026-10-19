@@ -4,10 +4,12 @@
  * snapshot arrives: the match id, who is in, and the Start button for the host.
  */
 
+import { entropyText } from '../entity-text.js';
+
 /**
  * @param {HTMLElement} root
  * @param {import('../net/server-session.js').ServerSession} session
- * @param {{ shareLink: string, entropyDefault?: number }} opts  `entropyDefault` is the rate of data/balance.json, shown when the host chose none
+ * @param {{ shareLink: string, entropyDefault?: number }} opts  `entropyDefault` is the rate of data/balance.json in tenths of a percent per second, shown when the host chose none
  */
 export function showLobby(root, session, { shareLink, entropyDefault = 1 }) {
   root.hidden = false;
@@ -46,7 +48,7 @@ export function showLobby(root, session, { shareLink, entropyDefault = 1 }) {
     const match = session.getMatch();
     const names = match.botVsBot ? ['Bot Blue', 'Bot Red'] : match.players.map((/** @type {any} */ p) => p.name);
     if (match.vsBot) names.push('Bot');
-    rules.textContent = `Entropy ${match.entropyPctPerMinute ?? entropyDefault}% per minute${session.isHost ? '' : ' (set by the host)'}`;
+    rules.textContent = `Entropy ${entropyText(match.entropyPermillePerSecond ?? entropyDefault)}% per second${session.isHost ? '' : ' (set by the host)'}`;
     players.replaceChildren(...names.map((/** @type {string} */ n) => div('player', n)));
     const ready = match.botVsBot || match.vsBot || match.players.length >= 2;
     start.hidden = !session.isHost;

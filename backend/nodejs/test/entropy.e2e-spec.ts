@@ -18,10 +18,10 @@ async function play(url: string, entropy: number | undefined) {
   const player = await guest(url, `Entropy${entropy ?? 'default'}`);
   const created = await api(url, '/api/matches', {
     token: player.token,
-    body: { name: 'Entropy', vsBot: true, seed: 12, ...(entropy === undefined ? {} : { entropyPctPerMinute: entropy }) },
+    body: { name: 'Entropy', vsBot: true, seed: 12, ...(entropy === undefined ? {} : { entropyPermillePerSecond: entropy }) },
   });
   expect(created.status).toBe(201);
-  expect(created.body.entropyPctPerMinute).toBe(entropy);
+  expect(created.body.entropyPermillePerSecond).toBe(entropy);
   const matchId: string = created.body.id;
   const socket = await connectSocket(url, player.token);
   await ack(socket, 'match:join', { matchId });
@@ -46,14 +46,14 @@ describe('the entropy rate of a match', () => {
     try {
       const off = await play(t.url, 0);
       expect(off.barracks.hp).toBe(off.barracks.maxHp);
-      const fast = await play(t.url, 60);
+      const fast = await play(t.url, 10);
       expect(fast.barracks.hp).toBeLessThan(fast.barracks.maxHp);
       const normal = await play(t.url, undefined);
       expect(normal.barracks.hp).toBeGreaterThan(fast.barracks.hp);
 
       for (const run of [off, fast]) {
         const replay = await api(t.url, `/api/replays/${run.replayId}`, { token: run.token });
-        expect(replay.body.replay.options).toEqual({ entropyPctPerMinute: run === off ? 0 : 60 });
+        expect(replay.body.replay.options).toEqual({ entropyPermillePerSecond: run === off ? 0 : 10 });
         const verify = await api(t.url, `/api/replays/${run.replayId}/verify`, { method: 'POST', token: run.token });
         expect(verify.body).toMatchObject({ ok: true, firstMismatchTick: null });
       }
@@ -64,12 +64,12 @@ describe('the entropy rate of a match', () => {
     }
   }, 90_000);
 
-  it('refuses a rate outside 0 to 100', async () => {
+  it('refuses a rate outside 0 to 1000', async () => {
     const t = await createTestApp();
     try {
       const player = await guest(t.url, 'Strict');
-      for (const bad of [-1, 101, 1.5, 'a']) {
-        const res = await api(t.url, '/api/matches', { token: player.token, body: { name: 'Bad rate', entropyPctPerMinute: bad } });
+      for (const bad of [-1, 1001, 1.5, 'a']) {
+        const res = await api(t.url, '/api/matches', { token: player.token, body: { name: 'Bad rate', entropyPermillePerSecond: bad } });
         expect(res.status, String(bad)).toBe(400);
       }
     } finally {

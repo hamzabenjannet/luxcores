@@ -16,25 +16,25 @@
 
 import { MILLI, UNITS_PER_TILE } from './fixed.js';
 
-/** The highest entropy rate a match may set, in percent of the maximum HP per minute. */
-export const ENTROPY_MAX_PCT = 100;
+/** The highest entropy rate a match may set, in tenths of a percent of the maximum HP per second (1000 is 100 percent). */
+export const ENTROPY_MAX_PERMILLE = 1000;
 
 /**
  * Settings a match may change at its start, on top of the data files. Both are optional.
  * @typedef {Object} MatchOptions
- * @property {number} [entropyPctPerMinute] percent of maximum HP that buildings, creeps and heroes lose per minute (GDD 3.7); 0 turns entropy off
+ * @property {number} [entropyPermillePerSecond] tenths of a percent of maximum HP that buildings, creeps and heroes lose per second (GDD 3.7); 0 turns entropy off
  */
 
 /**
- * Whether the options are valid: a whole entropy rate from 0 to `ENTROPY_MAX_PCT`.
+ * Whether the options are valid: a whole entropy rate, in tenths of a percent per second, from 0 to `ENTROPY_MAX_PERMILLE`.
  * @param {unknown} options
  * @returns {options is MatchOptions}
  */
 export function validOptions(options) {
   if (options === null || typeof options !== 'object') return false;
-  const { entropyPctPerMinute } = /** @type {MatchOptions} */ (options);
-  return entropyPctPerMinute === undefined
-    || (Number.isSafeInteger(entropyPctPerMinute) && entropyPctPerMinute >= 0 && entropyPctPerMinute <= ENTROPY_MAX_PCT);
+  const { entropyPermillePerSecond } = /** @type {MatchOptions} */ (options);
+  return entropyPermillePerSecond === undefined
+    || (Number.isSafeInteger(entropyPermillePerSecond) && entropyPermillePerSecond >= 0 && entropyPermillePerSecond <= ENTROPY_MAX_PERMILLE);
 }
 
 /**
@@ -89,9 +89,9 @@ function convert(value, path) {
  */
 export function normalizeData(raw, options = {}) {
   if (!validOptions(options)) throw new RangeError('normalizeData: invalid match options');
-  const balance = options.entropyPctPerMinute === undefined
+  const balance = options.entropyPermillePerSecond === undefined
     ? raw.balance
-    : { ...raw.balance, economy: { ...raw.balance.economy, entropyPctPerMinute: options.entropyPctPerMinute } };
+    : { ...raw.balance, economy: { ...raw.balance.economy, entropyPermillePerSecond: options.entropyPermillePerSecond } };
   const out = {
     balance: convert(balance, 'balance'),
     buildings: convert(raw.buildings, 'buildings'),

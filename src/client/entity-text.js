@@ -97,6 +97,31 @@ export function creepGroupLabels(entities, hpFactor) {
 }
 
 /**
+ * The entropy rate a player typed, in percent of the maximum HP per second with at most one decimal,
+ * as the tenths of a percent the server takes. Anything else, or an empty field, gives -1.
+ * Examples: "0.1" gives 1, "5" gives 50, "100" gives 1000, "100.1" gives -1.
+ * @param {string} text
+ * @returns {number}
+ */
+export function entropyFromText(text) {
+  const m = /^(\d{1,3})(?:\.(\d))?$/.exec(text.trim());
+  if (!m) return -1;
+  const tenths = Number(m[1]) * 10 + Number(m[2] ?? 0);
+  return tenths <= 1000 ? tenths : -1;
+}
+
+/**
+ * An entropy rate as the percent per second a player reads.
+ * Examples: 1 gives "0.1", 15 gives "1.5", 50 gives "5".
+ * @param {number} tenths  tenths of a percent per second
+ */
+export function entropyText(tenths) {
+  const whole = Math.trunc(tenths / 10);
+  const tenth = tenths % 10;
+  return tenth === 0 ? String(whole) : `${whole}.${tenth}`;
+}
+
+/**
  * Whether the day half of the cycle is on (GDD 4.1). The match starts at dawn.
  * @param {number} tick
  * @param {{ dayTicks: number, nightTicks: number }} dayNight from data/balance.json

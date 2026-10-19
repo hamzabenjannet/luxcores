@@ -1,16 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createState, step, hashState, KIND, MILLI, heroOf, exportState, importState, countOf } from '../src/sim/index.js';
+import { createState, step, hashState, KIND, MILLI, heroOf, exportState, importState, countOf, normalizeData } from '../src/sim/index.js';
 import { loadData } from './helpers/load-data.js';
 
-const { config } = loadData();
+const { config, raw } = loadData();
+/** The rules with entropy off, for a test that measures damage dealt. */
+const quiet = normalizeData(raw, { entropyPermillePerSecond: 0 });
 const { hero } = config.balance;
 const rules = config.balance.items;
 const ITEM = Object.freeze({ boost: 0, grab: 1, haste: 2, sluggish: 3 });
 
 /** A 1v1 state with a big bank for both teams, so no match ends by accident. */
-function fresh(lux = 1_000_000) {
-  const s = createState({ seed: 1234567, players: [{ id: 0, team: 0, kind: 'human' }, { id: 1, team: 1, kind: 'human' }], config });
+function fresh(lux = 1_000_000, cfg = config) {
+  const s = createState({ seed: 1234567, players: [{ id: 0, team: 0, kind: 'human' }, { id: 1, team: 1, kind: 'human' }], config: cfg });
   for (const t of [0, 1]) {
     s.teams[t].coreLux = t === 0 ? lux : 1_000_000_000;
     const core = s.entities.find((e) => e.kind === KIND.CORE && e.team === t);
@@ -147,7 +149,7 @@ test('Energy Boost adds 15 lux (150 HP) to an own hero or building and is refuse
   h.z = building.z;
   send(s, 0, { t: 'useItem', inventorySlot: ITEM.boost, targetId: building.id });
   assert.equal(building.maxHp, 40 * MILLI * 10 + 15 * MILLI * 10);
-  assert.ok(building.hp > building.maxHp - 2000, 'the building took the HP (entropy may have nibbled a little)');
+  assert.ok(building.hp > building.maxHp - 10000, 'the building took the HP (entropy may have nibbled a little)');
   assert.equal(s.players[0].items[ITEM.boost], 3);
 
   const core = s.entities.find((e) => e.kind === KIND.CORE && e.team === 0);
@@ -220,7 +222,7 @@ test('Energy Grab ends when the hero dies', () => {
 });
 
 test('Haste quadruples the attack rate for 300 ticks and then wears off', () => {
-  const s = fresh();
+  const s = fresh(1_000_000, quiet); // entropy would add to the HP the target loses
   const b = withBarracks(s);
   const h = withHero(s, b);
   const target = enemyAt(s, h, 700);

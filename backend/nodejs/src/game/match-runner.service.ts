@@ -342,8 +342,8 @@ export class MatchRunnerService
   }
 
   /** The settings the host chose for a match, or undefined for the defaults. */
-  private optionsOf(match: MatchDto): { entropyPctPerMinute: number } | undefined {
-    return match.entropyPctPerMinute === undefined ? undefined : { entropyPctPerMinute: match.entropyPctPerMinute };
+  private optionsOf(match: MatchDto): { entropyPermillePerSecond: number } | undefined {
+    return match.entropyPermillePerSecond === undefined ? undefined : { entropyPermillePerSecond: match.entropyPermillePerSecond };
   }
 
   /** The sequence number a player's next command must use. 0 for a match that is not running. */
