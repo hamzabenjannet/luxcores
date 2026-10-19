@@ -15,17 +15,23 @@ run/main_scene="uid://b0rkikfaqj55p"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
 
+[autoload]
+
+MCPRuntimeServer="*res://addons/godot_mcp_toolkit/runtime/mcp_runtime_server.gd"
+
 [display]
 
 window/size/viewport_width=600
 window/size/viewport_height=1200
-window/size/resizable=true
+window/size/window_width_override=600
+window/size/window_height_override=1200
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+window/handheld/orientation=1
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/poibuilder/plugin.cfg")
+enabled=PackedStringArray("res://addons/godot_mcp_toolkit/plugin.cfg", "res://addons/poibuilder/plugin.cfg")
 
 [physics]
 

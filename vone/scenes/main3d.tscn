@@ -4310,7 +4310,7 @@ transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -3.1, 0.10000006, -0.1)
 mesh = SubResource("ArrayMesh_qmevj")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_fjf2k")
-metadata/_pb_pick_mesh_id = -9223354394605444447
+metadata/_pb_pick_mesh_id = -9223364992068145066
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 12
@@ -4320,7 +4320,7 @@ transform = Transform3D(0, 0, -50, 0, 10, 0, 50, 0, 0, -3.6, 0.10000006, 0.4)
 mesh = SubResource("ArrayMesh_iicx7")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_rqqm0")
-metadata/_pb_pick_mesh_id = -9223339387670943888
+metadata/_pb_pick_mesh_id = -9223364991380279242
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 2
@@ -4330,7 +4330,7 @@ transform = Transform3D(0, 0, 1, 0, 1.7594656, 0, -1, 0, 0, -4.4375024, 0.173906
 mesh = SubResource("ArrayMesh_gr6gf")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_h3fs6")
-metadata/_pb_pick_mesh_id = -9223354393733029288
+metadata/_pb_pick_mesh_id = -9223364991195729875
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 320
@@ -4340,7 +4340,7 @@ transform = Transform3D(0, 0, 1.7674925, 0, 1, 0, -1, 0, 0, -4.9, 0.1, -0.677450
 mesh = SubResource("ArrayMesh_dssb6")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_5iv1o")
-metadata/_pb_pick_mesh_id = -9223354377543020101
+metadata/_pb_pick_mesh_id = -9223364991111843800
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 320
@@ -4350,7 +4350,7 @@ transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -4.9, 0.1, -1.1)
 mesh = SubResource("ArrayMesh_4sdv7")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_rmcg2")
-metadata/_pb_pick_mesh_id = -9223354377459127204
+metadata/_pb_pick_mesh_id = -9223364991027957726
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 320
@@ -4360,7 +4360,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, -1)
 mesh = SubResource("ArrayMesh_da6ww")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_mr3va")
-metadata/_pb_pick_mesh_id = -9223354377375246613
+metadata/_pb_pick_mesh_id = -9223364990944071655
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 28
@@ -4371,7 +4371,7 @@ mesh = SubResource("ArrayMesh_vig3m")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_lm1mb")
 collider_type = 2
-metadata/_pb_pick_mesh_id = -9223354375882075716
+metadata/_pb_pick_mesh_id = -9223364989450899486
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 20
@@ -4381,7 +4381,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.2, 0, 0.8)
 mesh = SubResource("ArrayMesh_fjf2k")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_23y4a")
-metadata/_pb_pick_mesh_id = -9223354374808332530
+metadata/_pb_pick_mesh_id = -9223364988377157714
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 8
@@ -4391,7 +4391,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.8999999, 0.2, 1.1)
 mesh = SubResource("ArrayMesh_7h8rn")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_qdiup")
-metadata/_pb_pick_mesh_id = -9223354374321793257
+metadata/_pb_pick_mesh_id = -9223364987890618473
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 16
@@ -4401,7 +4401,7 @@ transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -2.6000001, 0.1, 1)
 mesh = SubResource("ArrayMesh_rqqm0")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_uujn8")
-metadata/_pb_pick_mesh_id = -9223354373432602659
+metadata/_pb_pick_mesh_id = -9223364987001426085
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 32
@@ -4411,7 +4411,7 @@ transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -3.1, 0.2, 0.90000004)
 mesh = SubResource("ArrayMesh_fw4j6")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_rnkjm")
-metadata/_pb_pick_mesh_id = -9223354371738096705
+metadata/_pb_pick_mesh_id = -9223364985306927326
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 32
@@ -4421,7 +4421,7 @@ transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -3.1, 0.3, 0.5)
 mesh = SubResource("ArrayMesh_h3fs6")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_nfwrv")
-metadata/_pb_pick_mesh_id = -9223354370043597884
+metadata/_pb_pick_mesh_id = -9223364983612428572
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 32
@@ -4431,7 +4431,7 @@ transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -3.8, 0.05, 0.2)
 mesh = SubResource("ArrayMesh_resw4")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_ubfpd")
-metadata/_pb_pick_mesh_id = -9223354368349104315
+metadata/_pb_pick_mesh_id = -9223364981917929809
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 12
