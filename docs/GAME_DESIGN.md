@@ -2,11 +2,24 @@
 
 Working title. A strategy game mixing hero control (Dota 2), creep waypoint paths (Age of Empires) and base building with tower defense (Generals Zero Hour, Clash Royale). Everything in the world is made of light energy, measured in **lux**. Destroyed things dissolve into light; there is no blood or gore.
 
-Status: draft v0.9.12. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
+Status: draft v0.9.13. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
 
 ---
 
 ## 0. Changelog
+
+### v0.9.12 → v0.9.13
+
+M8 (touch controls) with the owners' answers of 2026-10-19: the build ghost confirms with a button, abilities aim by drag as well as by two taps, and hot seat waits.
+
+| Area | Change |
+|---|---|
+| Build ghost | A tap in build mode places a ghost on the tile, green when the building can go there and red when not, with Place and Cancel buttons. Only Place sends the command (section 11.5) |
+| Hold-to-aim | The ranged and area buttons also aim by press, drag and release. Lifting over the map casts there, lifting back over the button cancels. The two-tap way of section 11.2 still works |
+| Zoom | Pinch and the mouse wheel zoom between 0.6 and 2.2 times the default view of 32 tiles across (section 11.1) |
+| Hero portrait | A tap on the hero's name resumes camera follow (section 11.1) |
+| Portrait | The page locks the screen to portrait where the browser allows it and asks the player to turn the phone upright otherwise; the Godot project is a portrait project (section 11) |
+| Hot seat | Deferred by the owners (section 12.2) |
 
 ### v0.9.11 → v0.9.12
 
@@ -571,6 +584,8 @@ Placement constraints for vents and blockers:
 
 ## 11. Mobile controls (portrait)
 
+The game is played upright. The web page locks the screen to portrait where the browser allows it (an installed or full-screen page on Android) and shows a prompt in landscape on a phone, and the Godot project is a portrait project.
+
 The map is larger than the screen. The camera follows the selected hero while it moves; a drag pans freely and stops follow.
 
 ### 11.1 Gestures
@@ -586,13 +601,14 @@ A hero told to attack a target walks until the target is in reach, hits it, and 
 | Tap barracks | Any | Sheet: creeps, items, default path |
 | Tap other own building | Any | Info, upgrade, recycle |
 | One-finger drag | Anywhere | Pan; stops hero follow |
-| Pinch | Anywhere | Zoom |
-| Tap hero portrait | Any | Select hero, recenter, resume follow |
+| Pinch, or the mouse wheel | Anywhere | Zoom, from 0.6 to 2.2 times the default view of 32 tiles across |
+| Tap hero portrait (the hero's name in the hero bar) | Any | Recenter and resume follow |
 
 ### 11.2 Ability targeting
 
 - Melee and shield: tap the button, cast immediately (melee on the current target).
 - Ranged and area: tap the button, then tap a target or point. Tapping the button again cancels.
+- Ranged and area also aim by drag: press the button, drag onto the map (a move of 14 pixels starts the aim, and a ring shows the point) and lift to cast there. Lifting back over the button cancels. A ranged cast needs an enemy or blocker under the finger; without one the aim ends with a message.
 
 ### 11.3 Creep path mode
 
@@ -615,6 +631,14 @@ A hero told to attack a target walks until the target is in reach, hits it, and 
 
 The barracks panel stacks the title, the actions (Recycle), the queue, then the order, hero and item controls. The panel hugs the bottom of the screen, so the queue sits above the controls and a new row grows the panel upward without moving a button the player is tapping. An order shows in the queue as a dim row the moment the player taps, and the real row replaces it when the next snapshot arrives. A control that shows an amount of lux updates its text in place, so a press is never lost to a rebuilt button.
 
+### 11.5 Build ghost
+
+1. Pick a building in the palette (a tower also takes its attack type).
+2. Tap a tile. A translucent box (the ghost) marks it, green when the building can go there and red when it cannot, and the panel names the reason in red: outside the build zone, a taken tile, a vent missing, or too little lux. Another tap moves the ghost.
+3. **Place** sends the build and ends build mode at once, so a second tap cannot place a second building. **Cancel** removes the ghost and keeps the building picked.
+
+The checks are the ones the sim would refuse for sure. The sim result is final.
+
 ## 12. MVP opponent
 
 ### 12.1 Bot
@@ -625,6 +649,8 @@ The barracks panel stacks the title, the actions (Recycle), the queue, then the 
 4. Creep groups use the default lane path.
 
 ### 12.2 Hot seat
+
+Deferred by the owners on 2026-10-19. The design below stays as the target.
 
 Two command sources on one device, with a toggle that switches which side the touch input controls.
 

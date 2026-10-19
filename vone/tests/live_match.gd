@@ -54,7 +54,12 @@ func _run() -> void:
 	_main._select_building("solar")
 	_check("the solar description shows the data cost", _main._build_description.text.contains("costs 20 lux"), true)
 	await _main._on_arena_tapped(Vector2(solar_tile.x + 0.5, solar_tile.y + 0.5))
+	_check("a tap sets the ghost and builds nothing", _main._ghost.tileX == solar_tile.x and _main._ghost.tileZ == solar_tile.y and _find(GameLogic.KIND_SOLAR, 0).size() == 0, true)
+	_check("the ghost is shown in the world", _main._world_3d.is_ghost_visible() if _main._world_3d != null else true, true)
+	_check("the panel offers Place and Cancel", _main._panel.visible and _main._panel_row.get_child_count() == 2 and _main._panel_title.text.begins_with("Solar at "), true)
+	_main._place_button.pressed.emit()
 	_check("a solar plant appears", await _until(func(): return _find(GameLogic.KIND_SOLAR, 0).size() > 0), true)
+	_check("Place removes the ghost", _main._ghost.is_empty(), true)
 	_check("a placement frees the palette", _main._building, "")
 
 	# Two buildings never share a tile, but a neighbour is fine even right next to an existing building.
@@ -64,7 +69,7 @@ func _run() -> void:
 	_main._select_building("wind")
 	var wind_tile := Vector2i(solar_tile.x + 1, solar_tile.y)
 	# The tap on the neighbour tile must not snap onto the solar plant beside it.
-	await _main._on_arena_tapped(Vector2(wind_tile.x + 0.5, wind_tile.y + 0.5))
+	await _place_at(wind_tile)
 	_check("a wind plant fits on the tile beside the solar plant", await _until(func(): return _find(GameLogic.KIND_WIND, 0).size() == 1), true)
 	_check("the second placement frees the palette too", _main._building, "")
 	_main._select_building("solar")
@@ -73,12 +78,15 @@ func _run() -> void:
 	await _main._on_arena_tapped(Vector2(48.5, 56.5))
 	_check("a build in the DMZ is refused with a reason", _main._status_label.text, "Build inside your own zone.")
 	_check("a refused tap keeps the building selected", _main._building, "solar")
+	_check("the ghost on the DMZ is red and Place is dimmed", _main._ghost_check().has("message") and _main._place_button.modulate.a < 1.0, true)
+	_main._panel_row.get_child(1).pressed.emit() # Cancel
+	_check("Cancel removes the ghost and keeps the building selected", _main._ghost.is_empty() and _main._building == "solar", true)
 	_main._select_building("solar") # toggles build mode off
 
 	var tower_tile := _free_tile(3)
 	_main._tower_attack_selector.select(2)
 	_main._select_building("tower")
-	await _main._on_arena_tapped(Vector2(tower_tile.x + 0.5, tower_tile.y + 0.5))
+	await _place_at(tower_tile)
 	var tower_ok: bool = await _until(func(): return _find(GameLogic.KIND_TOWER, 0).filter(func(e): return int(e.attack) == 3).size() > 0)
 	_check("an area tower appears", tower_ok, true)
 	_check("the bot builds too", await _until(func(): return _find(GameLogic.KIND_SOLAR, 1).size() > 0), true)
@@ -115,7 +123,7 @@ func _run() -> void:
 	_check("part 1b starts", await _until(func(): return _entities().size() > 0), true)
 	var barracks_tile := _free_tile(0)
 	_main._select_building("barracks")
-	await _main._on_arena_tapped(Vector2(barracks_tile.x + 0.5, barracks_tile.y + 0.5))
+	await _place_at(barracks_tile)
 	_check("a barracks appears", await _until(func(): return _find(GameLogic.KIND_BARRACKS, 0).size() == 1), true)
 	var barracks_id: int = int(_find(GameLogic.KIND_BARRACKS, 0)[0].id)
 	_check("the barracks placement freed the palette", _main._building, "")
@@ -179,7 +187,7 @@ func _run() -> void:
 	_check("part 1c starts", await _until(func(): return _entities().size() > 0), true)
 	var hero_tile := _free_tile(0)
 	_main._select_building("barracks")
-	await _main._on_arena_tapped(Vector2(hero_tile.x + 0.5, hero_tile.y + 0.5))
+	await _place_at(hero_tile)
 	_check("the hero barracks appears", await _until(func(): return _find(GameLogic.KIND_BARRACKS, 0).size() == 1), true)
 	_check("the barracks placement freed the palette", _main._building, "")
 	await _main._on_arena_tapped(Vector2(hero_tile.x + 0.5, hero_tile.y + 0.5))
@@ -205,6 +213,61 @@ func _run() -> void:
 	_check("aiming the area ability waits for a tap", _main._ability, 2)
 	await _main._on_arena_tapped(Vector2(float(hero.x) / 1000.0, float(hero.z) / 1000.0 - 3.0))
 	_check("the area ability starts its cooldown", await _until(func(): return int(_find(GameLogic.KIND_HERO, 0)[0].get("cd2", 0)) > 0), true)
+
+	# Hold-to-aim: press the area button, drag onto the map, lift. Lifting back over the button cancels.
+	_check("the area ability is ready again", await _until(func(): return int(_find(GameLogic.KIND_HERO, 0)[0].get("cd2", 0)) == 0), true)
+	var area_button: Button = _main._ability_buttons[2]
+	var button_origin: Vector2 = area_button.get_global_transform_with_canvas().origin
+	var on_button: Vector2 = area_button.get_global_rect().get_center() - button_origin
+	# A point of the map near the hero (the area ability has a reach), as the window position the camera shows it at.
+	var near_hero: Dictionary = _find(GameLogic.KIND_HERO, 0)[0]
+	var camera := _main._world_3d.get_node("Camera3D") as Camera3D
+	var near_world := Vector3(float(near_hero.x) / 1000.0 - 48.0, 0.0, float(near_hero.z) / 1000.0 - 3.0 - 56.0)
+	var on_map: Vector2 = camera.unproject_position(near_world) - button_origin
+	_press_ability(area_button, 2, on_button, true)
+	_check("a press alone does not aim", _main._ability, -1)
+	_move_ability(area_button, 2, on_map)
+	_check("dragging off the button aims", _main._ability == 2 and bool(_main._hold.aiming), true)
+	_press_ability(area_button, 2, on_button, false)
+	_check("lifting back over the button cancels", _main._ability == -1 and _main._hold.is_empty(), true)
+	_check("a cancelled aim casts nothing", int(_find(GameLogic.KIND_HERO, 0)[0].get("cd2", 0)), 0)
+	_press_ability(area_button, 2, on_button, true)
+	_move_ability(area_button, 2, on_map)
+	_press_ability(area_button, 2, on_map, false)
+	_check("lifting over the map casts at that point", await _until(func(): return int(_find(GameLogic.KIND_HERO, 0)[0].get("cd2", 0)) > 0), true)
+	_check("the cast ended the aim", _main._ability, -1)
+	var ranged_button: Button = _main._ability_buttons[1]
+	var ranged_origin: Vector2 = ranged_button.get_global_transform_with_canvas().origin
+	_press_ability(ranged_button, 1, ranged_button.get_global_rect().get_center() - ranged_origin, true)
+	_move_ability(ranged_button, 1, on_map + button_origin - ranged_origin)
+	_press_ability(ranged_button, 1, on_map + button_origin - ranged_origin, false)
+	_check("ranged over empty ground says there is no target and ends the aim", _main._status_label.text == "Tap an enemy to hit." and _main._ability == -1, true)
+
+	# The hero's name recenters the camera and resumes follow.
+	_check("follow is off before the hero's name is tapped", _main._arena.is_following(), false)
+	_main._hero_name_label.pressed.emit()
+	_check("a tap on the hero's name resumes follow", _main._arena.is_following(), true)
+
+	# Pinch zoom: two fingers move apart, the view zooms in and stops at its limits.
+	var arena = _main._arena
+	arena.set_zoom(1.0)
+	arena._gui_input(_touch(0, Vector2(200, 400), true))
+	arena._gui_input(_touch(1, Vector2(300, 400), true))
+	arena._gui_input(_drag(1, Vector2(350, 400)))
+	_check("fingers 1.5 times farther apart zoom to 1.5", is_equal_approx(arena.get_zoom(), 1.5), true)
+	arena._gui_input(_drag(1, Vector2(1000, 400)))
+	_check("the zoom stops at its upper limit", is_equal_approx(arena.get_zoom(), GameLogic.ZOOM_MAX), true)
+	arena._gui_input(_drag(1, Vector2(201, 400)))
+	_check("and at its lower limit", is_equal_approx(arena.get_zoom(), GameLogic.ZOOM_MIN), true)
+	arena._gui_input(_touch(1, Vector2(201, 400), false))
+	arena._gui_input(_touch(0, Vector2(200, 400), false))
+	arena.set_zoom(1.0)
+	var wheel := InputEventMouseButton.new()
+	wheel.button_index = MOUSE_BUTTON_WHEEL_UP
+	wheel.pressed = true
+	arena._gui_input(wheel)
+	_check("a wheel notch zooms in", arena.get_zoom() > 1.0, true)
+	arena.set_zoom(1.0)
 	_check("the aim ended with the cast", _main._ability, -1)
 	_main._leave_match()
 
@@ -216,7 +279,7 @@ func _run() -> void:
 	_check("part 1d starts", await _until(func(): return _entities().size() > 0), true)
 	var shop_tile := _free_tile(0)
 	_main._select_building("barracks")
-	await _main._on_arena_tapped(Vector2(shop_tile.x + 0.5, shop_tile.y + 0.5))
+	await _place_at(shop_tile)
 	_check("the shop barracks appears", await _until(func(): return _find(GameLogic.KIND_BARRACKS, 0).size() == 1), true)
 	await _main._on_arena_tapped(Vector2(shop_tile.x + 0.5, shop_tile.y + 0.5))
 	_check("the barracks panel sells the four items", _main._shop_box.get_child_count() == 2 and _main._shop_box.get_child(1).get_child_count() == 4, true)
@@ -290,6 +353,37 @@ func _find(kind: int, team: int) -> Array:
 	return _entities().filter(func(e): return int(e.kind) == kind and int(e.team) == team)
 
 ## A free tile (not a vent) in team 0's build zone near the middle, the n-th by distance.
+## One mouse event on an ability button at a point local to the button: a press, a release, or (motion) a move.
+func _press_ability(button: Button, slot: int, local_point: Vector2, pressed: bool) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = pressed
+	event.position = local_point
+	_main._on_ability_gui_input(event, slot, button)
+
+func _move_ability(button: Button, slot: int, local_point: Vector2) -> void:
+	var event := InputEventMouseMotion.new()
+	event.position = local_point
+	_main._on_ability_gui_input(event, slot, button)
+
+func _touch(index: int, point: Vector2, pressed: bool) -> InputEventScreenTouch:
+	var event := InputEventScreenTouch.new()
+	event.index = index
+	event.position = point
+	event.pressed = pressed
+	return event
+
+func _drag(index: int, point: Vector2) -> InputEventScreenDrag:
+	var event := InputEventScreenDrag.new()
+	event.index = index
+	event.position = point
+	return event
+
+## Taps a tile in build mode, then confirms the ghost with Place (GDD 11.5).
+func _place_at(tile: Vector2i) -> void:
+	await _main._on_arena_tapped(Vector2(tile.x + 0.5, tile.y + 0.5))
+	_main._place_button.pressed.emit()
+
 func _free_tile(n: int) -> Vector2i:
 	var taken := {}
 	for e in _entities():

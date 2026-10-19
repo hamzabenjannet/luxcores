@@ -36,13 +36,20 @@ var _selected_entity_id := -1
 var _map_width := 96
 var _map_height := 112
 var _camera_target := Vector3.ZERO
-var _base_camera_size := 192.0
+## The camera size (vertical extent in world units) at zoom 1, which shows 32 tiles across (GDD 10.1).
+var _view_size := 100.0
+var _ghost: MeshInstance3D
+## True once the camera was framed on the viewer's base, which needs the first real world.
+var _fitted_to_world := false
+var _aim_ring: MeshInstance3D
 var _camera_initialized := false
 ## While true the camera eases toward the viewer's hero. Dragging the map turns it off.
 var _following := false
 var _viewer_team := 0
 var _follow_point := Vector3.ZERO
 var _has_follow_point := false
+
+const VIEW_TILES_WIDE := 32.0
 
 func _ready() -> void:
 	_camera.current = true
@@ -59,6 +66,13 @@ func _ready() -> void:
 	_path_root = Node3D.new()
 	_path_root.name = "Paths"
 	add_child(_path_root)
+	_ghost = _marker_mesh(BoxMesh.new(), Color(0.3, 0.95, 0.63, 0.55))
+	(_ghost.mesh as BoxMesh).size = Vector3(0.9, 0.6, 0.9)
+	_aim_ring = _marker_mesh(CylinderMesh.new(), Color(1.0, 0.84, 0.42, 0.6))
+	(_aim_ring.mesh as CylinderMesh).top_radius = 0.95
+	(_aim_ring.mesh as CylinderMesh).bottom_radius = 0.95
+	(_aim_ring.mesh as CylinderMesh).height = 0.05
+	get_viewport().size_changed.connect(_on_viewport_resized)
 	for template_name in TEMPLATE_NAMES:
 		var template := get_node_or_null(NodePath(template_name)) as MeshInstance3D
 		if template != null:
@@ -101,6 +115,9 @@ func set_world(layout: Dictionary, world_snapshot: Dictionary, team: int) -> voi
 		map_changed = true
 	if map_changed:
 		_configure_map()
+	if not _fitted_to_world and not layout.is_empty():
+		_fitted_to_world = true
+		_fit_camera()
 	_remember_hero_point()
 	_render_entities()
 	_render_paths()
@@ -162,8 +179,61 @@ func pan_camera(screen_delta: Vector2) -> void:
 	_camera_target.z = clampf(_camera_target.z, -float(_map_height) * 0.5, float(_map_height) * 0.5)
 	_position_camera()
 
+## The zoom factor; 1 shows 32 tiles across. The limits are GameLogic.ZOOM_MIN and ZOOM_MAX.
+func get_zoom() -> float:
+	return _view_size / _camera.size
+
+func set_zoom(zoom: float) -> void:
+	_camera.size = _view_size / GameLogic.clamp_zoom(zoom)
+
+## Multiplies the view size by `factor`: below 1 zooms in.
 func zoom_by(factor: float) -> void:
-	_camera.size = clampf(_camera.size * factor, _base_camera_size * 0.25, _base_camera_size * 1.5)
+	set_zoom(get_zoom() / factor)
+
+## A flat or boxy marker that draws over the world without lighting or depth, hidden until set.
+func _marker_mesh(mesh: Mesh, color: Color) -> MeshInstance3D:
+	var instance := MeshInstance3D.new()
+	instance.mesh = mesh
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.no_depth_test = true
+	material.albedo_color = color
+	instance.material_override = material
+	instance.visible = false
+	add_child(instance)
+	return instance
+
+## The build ghost: a translucent box on the tile, green when the building can go there and red when not.
+func set_ghost(tile_x: int, tile_z: int, valid: bool) -> void:
+	_ghost.visible = true
+	_ghost.position = Vector3(float(tile_x) + 0.5 - float(_map_width) * 0.5, 0.3, float(tile_z) + 0.5 - float(_map_height) * 0.5)
+	(_ghost.material_override as StandardMaterial3D).albedo_color = Color(0.3, 0.95, 0.63, 0.55) if valid else Color(1.0, 0.35, 0.35, 0.55)
+
+func clear_ghost() -> void:
+	_ghost.visible = false
+
+func is_ghost_visible() -> bool:
+	return _ghost.visible
+
+## The aim ring of a held ability, at a ground point in tiles.
+func set_aim(point: Vector2) -> void:
+	_aim_ring.visible = true
+	_aim_ring.position = Vector3(point.x - float(_map_width) * 0.5, 0.05, point.y - float(_map_height) * 0.5)
+
+func clear_aim() -> void:
+	_aim_ring.visible = false
+
+func _on_viewport_resized() -> void:
+	if not _camera_initialized:
+		return
+	var zoom := get_zoom()
+	_view_size = _view_size_for_viewport()
+	set_zoom(zoom)
+
+func _view_size_for_viewport() -> float:
+	var viewport_size := get_viewport().get_visible_rect().size
+	return VIEW_TILES_WIDE * maxf(1.0, viewport_size.y) / maxf(1.0, viewport_size.x)
 
 func _configure_map() -> void:
 	if not is_instance_valid(_terrain) or not is_instance_valid(_map_root):
@@ -183,11 +253,14 @@ func _configure_map() -> void:
 		_camera_initialized = true
 
 func _fit_camera() -> void:
-	var viewport_size := get_viewport().get_visible_rect().size
-	var aspect := viewport_size.x / maxf(1.0, viewport_size.y)
-	_base_camera_size = maxf(float(_map_height) * 1.2, float(_map_width) / maxf(0.1, aspect)) * 1.08
-	_camera.size = _base_camera_size
-	_camera_target = Vector3.ZERO
+	_view_size = _view_size_for_viewport()
+	_camera.size = _view_size
+	# Start on the viewer's three rows (Core row, build row, DMZ), as the web client does: z 80 for team 0, z 32 for team 1.
+	var core_x := float(_map_width) * 0.5
+	for entity in _snapshot.get("entities", []):
+		if int(entity.get("kind", 0)) == GameLogic.KIND_CORE and int(entity.get("team", -1)) == _viewer_team:
+			core_x = float(entity.get("x", 0)) / GameLogic.UNITS_PER_TILE
+	_camera_target = Vector3(core_x - float(_map_width) * 0.5, 0.0, (80.0 if _viewer_team == 0 else 32.0) - float(_map_height) * 0.5)
 	_position_camera()
 
 func _position_camera() -> void:

@@ -1,6 +1,6 @@
 # Handover
 
-Status as of 2026-10-18, after M4 (creeps), unit spacing and phase A of the server architecture plan (match log and crash resume). Read `CLAUDE.md` first for the working rules.
+Status as of 2026-10-19, after M9 (touch controls and the 1 000-seed bot soak) and the playtest fixes. M10 is next. Read `CLAUDE.md` first for the working rules.
 
 ## Where things stand
 
@@ -32,7 +32,7 @@ Milestones M1 (map generation), M2 (economy), M3 (combat and physics) and M4 (cr
 | Prose gate | `tools/check_style.py` labels hits `deny` or `ask`, supports `--register informal`, reads `.js` files through their comments and checks the whole repo with `npm run lint:prose:all`; `test/prose.test.js` fails `npm test` on any `deny` hit |
 | Godot project (`vone/`) | Godot 4.6, GL Compatibility renderer, a thin client at M7 (see Client Alignment below): spec check, server data, build, upgrade, recycle, creep orders, queue, groups, merge, split, paths, hero picks and abilities, hero orders, items, combat visuals, bot and spectator modes |
 | Cross-runtime check | `determinism.html` plays the sim inside Chromium. The idle hash at tick 120 (`be35e5ef`, seed 1234567) and the bot hash at tick 1 200 (`d480339c`, seed 777, with creeps, heroes, A* and collisions) equal the Node values |
-| Latest validation (2026-10-19, M7) | `npm test`: 239 passed; `node tools/run-bots.js --soak 100`: 100 seeds of 5 000 ticks, twice each, identical hashes, no crash (356 s); backend `npm test`: 93 passed and 42 skipped without services; backend `npm run test:e2e`: 81 passed and 13 skipped without services, including a restart of a match with a 60 percent entropy rate (the MongoDB, Redis, RabbitMQ and PostgreSQL tests were not rerun, so the Redis relay change for team-only events is tested by reading, not by a run `[UNVERIFIED]`); root `npm run test:e2e`: 15 of 15 passed, with Godot parity 141 checks, Godot live 90 checks, and Chromium equal to Node (idle `4cfd40ef` at tick 120, bots `5c36e7a1` at tick 1 200). The creeps browser test was flaky and now sends its orders in one call, which passed six runs in a row |
+| Latest validation (2026-10-19, M9) | `npm test`: 248 passed; `node tools/run-bots.js --soak 1000 5000`: 1 000 seeds of 5 000 ticks, twice each, identical hashes, no crash, no non-integer value (648 s on 9 workers); backend `npm test`: 93 passed and 42 skipped without services; backend `npm run test:e2e`: 83 passed and 13 skipped without services; root `npm run test:e2e`: 16 of 16 passed, with Godot parity, Godot live (112 checks) and Chromium equal to Node. The MongoDB, Redis, RabbitMQ and PostgreSQL tests were not rerun. Nothing was tried on a phone `[UNVERIFIED]` |
 
 ### Browser and Godot Tests
 
@@ -107,7 +107,7 @@ Open for the owners:
 - **Hama's review of GDD 7.7.** Hamza confirmed the rotation lock at spawn, instant abilities, the Area ability hitting buildings and the Lumen Core, and no casting while stunned. Hama has not yet judged how the abilities feel.
 - **Bots and balance.** Of seeds 1 to 6 of `tools/run-bots.js`, five now end in a victory between ticks 1 034 and 5 413, and seed 4 reaches the 10 000-tick limit. The bot spends half of its Core on a hero as soon as it has a barracks, so its first tower comes at tick 248 in seed 11 and later than before `[UNVERIFIED]`: I did not measure the older timing. Whether that is the balance the owners want is their judgment.
 - **Hero roster.** Names and kits are still the placeholders in `data/heroes.json` until Hama designs them.
-- **No portrait lock and no hold-to-aim.** M8 owns those, as the milestone table says. Camera follow came in M7.
+- **No portrait lock and no hold-to-aim.** Both came in M8. Camera follow came in M7.
 
 ## M6 (Items)
 
@@ -163,15 +163,46 @@ Hamza played a bot match and reported a draw at the tick limit, lag when orderin
 - **Dim queue rows.** A sent order shows in the queue at once and gives way to the real row (parity cases `pendingLine` and `pendingKept`).
 - **GDScript warnings.** Locals and parameters named `position`, `scale`, `size`, `name` and `theme` shadowed properties of `Control` and `Node3D`, and three integer divisions lacked `@warning_ignore`. They are renamed or marked. Headless Godot prints no warnings, so I found them by reading the code against the editor's report `[UNVERIFIED]` for any warning the editor shows that I did not search for.
 
-## Next Milestone: M8
+## M8 (Touch Controls)
 
-From `docs/TECH_ARCHITECTURE.md` section 14. Each milestone ends with tests green and a short demo on a phone. Both clients grow together: put every UI decision in `src/client/ui/controls.js` and `vone/scripts/game_logic.gd`, and add parity cases.
+Done on 2026-10-19 in both clients, with the owners' answers of that day (GDD v0.9.13, section 11). Hot seat was deferred.
+
+- **Build ghost (GDD 11.5).** A tap in build mode sets a translucent ghost on the tile, green or red, and the panel shows Place and Cancel. `placement()` holds the checks (zone, taken tile, vent, lux) and `resolveTap` returns `{ ghost, message? }` for a build tap. The parity cases are `placement` and the changed `resolveTap` cases.
+- **Hold-to-aim (GDD 11.2).** Press the ranged or area button, drag 14 pixels off it and lift over the map to cast there; lifting back over the button cancels. The tap-then-tap way stays. The pure rules are `holdAimPhase` and `holdAimRelease`.
+- **Pinch and wheel zoom.** Two fingers, the mouse wheel and a trackpad pinch zoom between 0.6 and 2.2 times the default view (`clampZoom`, `pinchZoom`). The web client had no zoom before. Godot keeps its plus and minus buttons.
+- **Hero name.** A tap on the hero's name resumes camera follow.
+- **Portrait.** The page tries `screen.orientation.lock('portrait')` and shows a prompt in landscape on a phone; `src/client/manifest.webmanifest` asks for portrait and full screen when the page is installed. The Godot project already had the portrait setting.
+- **Godot camera.** The Godot camera now opens on the viewer's three rows at 32 tiles across, like the web client (before it showed the whole map), so one zoom value means the same in both. The zoom limits are the shared ones.
+
+Checks: unit tests for `placement`, the gestures and the portrait lock, parity cases for all of them, browser tests for the ghost, pinch (synthetic pointer events), hold-to-aim and the hero name, and Godot live checks for the ghost, hold-to-aim, pinch, wheel and the hero name.
+
+Open for the owners:
+
+- **Hama's review of the touch feel.** Ghost colors, the 14-pixel aim threshold, the zoom limits and the rotate prompt are first guesses.
+- **Not tried on a phone** `[UNVERIFIED]`. The browser tests drive pointer events in Chromium, and the Godot tests drive the handlers with synthetic events. Real fingers, the lock on Android and Godot's touch emulation on a device are untested. Godot may send both a touch and an emulated mouse event for one finger; the handlers are written to ignore the second.
+- **Item aiming.** Energy Boost and Sluggish still aim with two taps. Hold-to-aim covers abilities only, as the owners asked.
+
+## M9 (Bot and Soak)
+
+Done on 2026-10-19 except hot seat, which the owners deferred. The bot of M4 and M5 already followed GDD 12.1. The soak is `node tools/run-bots.js --soak 1000 5000`: it spreads the seeds over worker threads, plays each seed twice, compares the two hashes, scans the whole final state for a non-integer value (`tools/non-integer.js`, with a unit test) and reports how the matches ended.
+
+Result of 1 000 seeds of 5 000 ticks, twice each, on 9 workers (648 s): 0 crashes, 0 disagreeing runs, 0 non-integer states. 735 matches ended in a victory (earliest tick 971, median 1 198, latest 4 979) and 265 had no winner at the 5 000-tick test limit.
+
+Open for the owners:
+
+- **Team 1 wins far more often.** Of the 735 victories, team 1 won 648 and team 0 won 87, with the same bot on both sides and a point-mirrored map. I did not look for the cause. It may be a bot asymmetry, the order in which the pipeline treats the two teams, or the map. This is worth a day before any balance tuning `[UNVERIFIED]` as a diagnosis.
+- **No CI.** The repo has no CI configuration, so "soak in CI" is a command to run, not a pipeline. Adding a workflow is an infrastructure choice for Hamza.
+- **Hot seat (GDD 12.2).** Deferred. The design stays in the GDD: a server match type that gives both teams to the host, commands that carry a side and a Side button.
+
+## Next Milestone: M10
+
+From `docs/TECH_ARCHITECTURE.md` section 14. Each milestone ends with tests green and a short demo on a phone.
 
 | # | Scope | Done when |
 |---|---|---|
-| M8 | Touch controls per GDD 11: tap select, hero move and attack, ability targeting, path mode with Undo/Go/Cancel and Reuse last path, build ghost, quick slots, pinch zoom | A full match playable by touch |
-| M9 | Bot per GDD 12.1, hot-seat toggle, bot-vs-bot soak over 1 000 seeds in Node | Soak finishes with no crash and no non-integer values |
-| M10 | Cross-browser determinism page (Chrome Android, iOS Safari vs Node), performance pass | Identical final hashes on all three |
+| M10 | Cross-browser determinism page (Chrome Android, iOS Safari vs Node), performance pass on a mid-range Android phone | Identical final hashes on all three |
+
+Before M10, play a full match on a phone against the current build (the M8 acceptance test) and send the findings to Hama.
 
 ## Interpretations Made in the Scaffold
 

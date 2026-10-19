@@ -39,6 +39,9 @@ var selected_entity_id := -1
 var _bounds := Rect2()
 var _tile_size := Vector2.ONE
 var _zoom := 1.0
+var _ghost_tile := Vector2i(-1, -1)
+var _ghost_valid := true
+var _aim_point := Vector2(-1.0, -1.0)
 var _pan_offset := Vector2.ZERO
 var _dragging := false
 var _pointer_moved := false
@@ -77,6 +80,36 @@ func set_paths(new_paths: Array) -> void:
 	paths = new_paths
 	queue_redraw()
 
+## The build ghost on a tile (green when valid), or none. The 3D arena draws the same marker.
+func set_ghost(tile: Vector2i, valid: bool) -> void:
+	_ghost_tile = tile
+	_ghost_valid = valid
+	queue_redraw()
+
+func clear_ghost() -> void:
+	_ghost_tile = Vector2i(-1, -1)
+	queue_redraw()
+
+## The aim ring of a held ability at a ground point in tiles, or none.
+func set_aim(point: Vector2) -> void:
+	_aim_point = point
+	queue_redraw()
+
+func clear_aim() -> void:
+	_aim_point = Vector2(-1.0, -1.0)
+	queue_redraw()
+
+func get_zoom() -> float:
+	return _zoom
+
+func set_zoom(zoom: float) -> void:
+	_set_zoom(zoom)
+
+## The ground point in tiles under a point of the whole window, as a one-key Dictionary, or empty outside the map.
+func ground_at_global(global_point: Vector2) -> Dictionary:
+	var local_point := get_global_transform_with_canvas().affine_inverse() * global_point
+	return {"ground": ground_at(local_point)} if _bounds.has_point(local_point) else {}
+
 ## The 2D view has no camera to move, so following does nothing here.
 func set_follow(_on: bool) -> void:
 	pass
@@ -110,6 +143,11 @@ func _draw() -> void:
 	_draw_markers(map_data.get("vents", []), Color("#4cf3c5"), 2.4, "VENT")
 	_draw_markers(map_data.get("itemSpawns", []), Color("#f7dc69"), 1.8, "ITEM SPAWN")
 	_draw_paths()
+	if _ghost_tile.x >= 0:
+		var ghost_color := Color(0.3, 0.95, 0.63, 0.55) if _ghost_valid else Color(1.0, 0.35, 0.35, 0.55)
+		draw_rect(_tile_rect(_ghost_tile.x, _ghost_tile.y), ghost_color)
+	if _aim_point.x >= 0.0:
+		draw_arc(_bounds.position + _aim_point * _tile_size, maxf(6.0, _tile_size.x * 0.9), 0.0, TAU, 24, Color(1.0, 0.84, 0.42, 0.9), 2.0)
 	_draw_entities(snapshot.get("entities", []))
 	_draw_selection_hint()
 	_draw_zoom_controls()

@@ -364,6 +364,35 @@ static func entropy_text(tenths: int) -> String:
 	var tenth := tenths % 10
 	return str(whole) if tenth == 0 else "%d.%d" % [whole, tenth]
 
+## Zoom 1 is the default view. The limits and the gesture rules are the same as in src/client/input/gestures.js.
+const ZOOM_MIN := 0.6
+const ZOOM_MAX := 2.2
+
+## Pixels a pressed ability button may move before the press becomes an aim drag.
+const HOLD_AIM_PX := 14.0
+
+## The zoom limited to ZOOM_MIN..ZOOM_MAX.
+static func clamp_zoom(zoom: float) -> float:
+	return clampf(zoom, ZOOM_MIN, ZOOM_MAX)
+
+## The zoom after a pinch: the zoom when the two fingers touched, scaled by how far they moved apart.
+## A start distance of 0 leaves the zoom alone.
+static func pinch_zoom(start_zoom: float, start_distance: float, distance: float) -> float:
+	if start_distance <= 0.0:
+		return clamp_zoom(start_zoom)
+	return clamp_zoom(start_zoom * distance / start_distance)
+
+## "aiming" once a pressed ability button moved HOLD_AIM_PX, else "pending".
+static func hold_aim_phase(moved_px: float) -> String:
+	return "aiming" if moved_px >= HOLD_AIM_PX else "pending"
+
+## What lifting the finger does after a press on an ability button: "click" without an aim drag,
+## and after one "cast" over the map or "cancel" back over the button.
+static func hold_aim_release(aiming: bool, over_button: bool) -> String:
+	if not aiming:
+		return "click"
+	return "cancel" if over_button else "cast"
+
 ## How long a dim queue row waits for the snapshot after the server accepted the order, in milliseconds.
 const PENDING_MS := 3000.0
 
@@ -448,7 +477,41 @@ static func pick_entity(entities: Array, ground: Vector2) -> Dictionary:
 			best_d = d
 	return best
 
-## What a tap does, as a Dictionary with one key: "command", "message", "select"
+## Whether a building can go on a tile now: {"command": ...} to send, or {"message": ...} with the reason it
+## cannot. The sim result is final; this answers at once what it would refuse for sure.
+## ctx: tile_x, tile_z, entities, viewer_team, building, attack, core_lux_milli, data ({buildings, balance, mapgen}), vents.
+static func placement(ctx: Dictionary) -> Dictionary:
+	var tile_x := int(ctx.tile_x)
+	var tile_z := int(ctx.tile_z)
+	var viewer_team := int(ctx.viewer_team)
+	var building := String(ctx.building)
+	var data: Dictionary = ctx.data
+	var zone := build_zone(data.mapgen, viewer_team)
+	if tile_z < zone.x or tile_z > zone.y or tile_x < 0 or tile_x >= int(data.mapgen.get("width", 96)):
+		return {"message": "Build inside your own zone."}
+	for entity in ctx.get("entities", []):
+		if int(entity.get("kind", 0)) <= KIND_BLOCKER \
+				and int(floor(float(entity.get("x", 0)) / UNITS_PER_TILE)) == tile_x \
+				and int(floor(float(entity.get("z", 0)) / UNITS_PER_TILE)) == tile_z:
+			return {"message": "That tile is taken."}
+	var info: Dictionary = data.buildings[building]
+	if bool(info.get("requiresVent", false)):
+		var on_vent := false
+		for vent in ctx.get("vents", []):
+			if int(vent.team) == viewer_team and int(vent.tileX) == tile_x and int(vent.tileZ) == tile_z:
+				on_vent = true
+		if not on_vent:
+			return {"message": "Geothermal needs a vent tile."}
+	var cost := int(info.costLux)
+	if not can_afford(int(ctx.get("core_lux_milli", 0)), cost, int(data.balance.core.minLeftAfterSpendLux)):
+		return {"message": "Not enough lux: %s costs %d." % [building, cost]}
+	var command := {"t": "build", "building": building, "tileX": tile_x, "tileZ": tile_z}
+	if building == "tower":
+		command["attack"] = String(ctx.get("attack", "ranged"))
+	return {"command": command}
+
+## What a tap does, as a Dictionary with one key: "command", "message", "ghost" (a tap in build mode: the
+## tile, plus a "message" when the building cannot go there), "select"
 ## (an entity id, or null to clear) or nothing else. A hero order from a tap on the open map also
 ## carries "deselect": true, and the caller then clears the selected building and group. The ctx holds:
 ##   ground (Vector2, tiles), entities, viewer_team, building ("" for none),
@@ -491,29 +554,17 @@ static func resolve_tap(ctx: Dictionary) -> Dictionary:
 		return {"message": "Tap an enemy hero or creep."}
 
 	if not building.is_empty():
-		var zone := build_zone(data.mapgen, viewer_team)
-		if tile_z < zone.x or tile_z > zone.y or tile_x < 0 or tile_x >= int(data.mapgen.get("width", 96)):
-			return {"message": "Build inside your own zone."}
-		for entity in entities:
-			if int(entity.get("kind", 0)) <= KIND_BLOCKER \
-					and int(floor(float(entity.get("x", 0)) / UNITS_PER_TILE)) == tile_x \
-					and int(floor(float(entity.get("z", 0)) / UNITS_PER_TILE)) == tile_z:
-				return {"message": "That tile is taken."}
-		var info: Dictionary = data.buildings[building]
-		if bool(info.get("requiresVent", false)):
-			var on_vent := false
-			for vent in ctx.get("vents", []):
-				if int(vent.team) == viewer_team and int(vent.tileX) == tile_x and int(vent.tileZ) == tile_z:
-					on_vent = true
-			if not on_vent:
-				return {"message": "Geothermal needs a vent tile."}
-		var cost := int(info.costLux)
-		if not can_afford(int(ctx.get("core_lux_milli", 0)), cost, int(data.balance.core.minLeftAfterSpendLux)):
-			return {"message": "Not enough lux: %s costs %d." % [building, cost]}
-		var command := {"t": "build", "building": building, "tileX": tile_x, "tileZ": tile_z}
-		if building == "tower":
-			command["attack"] = String(ctx.get("attack", "ranged"))
-		return {"command": command}
+		# A tap in build mode only sets the ghost; the Place button sends the command (GDD 11.5).
+		# The message says why the ghost is red.
+		var check := placement({
+			"tile_x": tile_x, "tile_z": tile_z, "entities": entities, "viewer_team": viewer_team, "building": building,
+			"attack": String(ctx.get("attack", "ranged")), "core_lux_milli": int(ctx.get("core_lux_milli", 0)),
+			"data": data, "vents": ctx.get("vents", []),
+		})
+		var ghost := {"ghost": {"tileX": tile_x, "tileZ": tile_z}}
+		if check.has("message"):
+			ghost["message"] = check.message
+		return ghost
 
 	var mode := String(ctx.get("mode", ""))
 	if mode == "path":

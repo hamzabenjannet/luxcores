@@ -3,6 +3,8 @@ extends Control
 
 signal tapped(ground: Vector2)
 
+const GameLogic = preload("res://scripts/game_logic.gd")
+
 const DRAG_THRESHOLD_SQUARED := 25.0
 const ZOOM_FACTOR := 1.25
 
@@ -15,6 +17,10 @@ var _press_position := Vector2.ZERO
 var _plus_button: Button
 var _minus_button: Button
 var draw_count := 0
+## Fingers on the screen by touch index, at their latest position, and the pinch they make.
+var _touches := {}
+var _pinch_distance := 0.0
+var _pinch_zoom := 1.0
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -87,7 +93,48 @@ func _zoom_out() -> void:
 	if is_instance_valid(_world_root):
 		_world_root.call("zoom_by", ZOOM_FACTOR)
 
+## The zoom factor of the world; 1 shows 32 tiles across.
+func get_zoom() -> float:
+	return float(_world_root.call("get_zoom")) if is_instance_valid(_world_root) else 1.0
+
+func set_zoom(zoom: float) -> void:
+	if is_instance_valid(_world_root):
+		_world_root.call("set_zoom", zoom)
+
+## The build ghost on a tile (green when valid), or none.
+func set_ghost(tile: Vector2i, valid: bool) -> void:
+	if is_instance_valid(_world_root):
+		_world_root.call("set_ghost", tile.x, tile.y, valid)
+
+func clear_ghost() -> void:
+	if is_instance_valid(_world_root):
+		_world_root.call("clear_ghost")
+
+## The aim ring of a held ability at a ground point in tiles, or none.
+func set_aim(point: Vector2) -> void:
+	if is_instance_valid(_world_root):
+		_world_root.call("set_aim", point)
+
+func clear_aim() -> void:
+	if is_instance_valid(_world_root):
+		_world_root.call("clear_aim")
+
+## The ground point in tiles under a point of the whole window (global canvas coordinates), or an
+## empty Dictionary when the view does not look at the ground there.
+func ground_at_global(global_point: Vector2) -> Dictionary:
+	var ground = _ground_at(get_global_transform_with_canvas().affine_inverse() * global_point)
+	return {} if ground == null else {"ground": ground}
+
 func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMagnifyGesture:
+		# A trackpad pinch: the factor is the change of the finger distance since the last event.
+		set_zoom(GameLogic.pinch_zoom(get_zoom(), 1.0, event.factor))
+		accept_event()
+		return
+	if event is InputEventMouseButton and event.pressed and (event.button_index == MOUSE_BUTTON_WHEEL_UP or event.button_index == MOUSE_BUTTON_WHEEL_DOWN):
+		set_zoom(GameLogic.pinch_zoom(get_zoom(), 1.0, 1.1 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / 1.1))
+		accept_event()
+		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			_begin_pointer(event.position)
@@ -101,14 +148,35 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	if event is InputEventScreenTouch:
 		if event.pressed:
-			_begin_pointer(event.position)
+			_touches[event.index] = event.position
+			if _touches.size() == 2:
+				# A second finger turns the press into a pinch: no tap and no pan from here on.
+				_dragging = false
+				_pointer_moved = true
+				_pinch_distance = _finger_distance()
+				_pinch_zoom = get_zoom()
+			elif _touches.size() == 1:
+				_begin_pointer(event.position)
 		else:
-			_end_pointer(event.position)
+			_touches.erase(event.index)
+			if _touches.size() < 2:
+				_pinch_distance = 0.0
+			# The last finger up ends the gesture. After a pinch it is no tap, because the pinch set _pointer_moved.
+			if _touches.is_empty():
+				_end_pointer(event.position)
 		accept_event()
 		return
-	if event is InputEventScreenDrag and _dragging:
-		_move_pointer(event.position)
+	if event is InputEventScreenDrag:
+		_touches[event.index] = event.position
+		if _pinch_distance > 0.0 and _touches.size() >= 2:
+			set_zoom(GameLogic.pinch_zoom(_pinch_zoom, _pinch_distance, _finger_distance()))
+		elif _dragging:
+			_move_pointer(event.position)
 		accept_event()
+
+func _finger_distance() -> float:
+	var points: Array = _touches.values()
+	return (points[0] as Vector2).distance_to(points[1] as Vector2)
 
 func _begin_pointer(point: Vector2) -> void:
 	_dragging = true
@@ -130,20 +198,25 @@ func _move_pointer(point: Vector2) -> void:
 		_world_root.call("pan_camera", viewport_delta)
 	_last_pointer = point
 
-func _handle_map_tap(screen_point: Vector2) -> void:
+## The ground point in tiles under a point of this control, or null when the ray misses the ground.
+func _ground_at(local_point: Vector2) -> Variant:
 	if _map.is_empty() or not is_instance_valid(_world_root):
-		return
-	var viewport_position := get_global_transform_with_canvas() * screen_point
+		return null
+	var viewport_position := get_global_transform_with_canvas() * local_point
 	var ray_origin: Vector3 = _world_root.call("camera_ray_origin", viewport_position)
 	var ray_direction: Vector3 = _world_root.call("camera_ray_direction", viewport_position)
 	if is_zero_approx(ray_direction.y):
-		return
+		return null
 	var distance := -ray_origin.y / ray_direction.y
 	if distance < 0.0:
-		return
-	var point := ray_origin + ray_direction * distance
-	var ground := Vector2(
-		point.x + float(_map.get("width", 96)) * 0.5,
-		point.z + float(_map.get("height", 112)) * 0.5
+		return null
+	var hit := ray_origin + ray_direction * distance
+	return Vector2(
+		hit.x + float(_map.get("width", 96)) * 0.5,
+		hit.z + float(_map.get("height", 112)) * 0.5
 	)
-	tapped.emit(ground)
+
+func _handle_map_tap(screen_point: Vector2) -> void:
+	var ground = _ground_at(screen_point)
+	if ground != null:
+		tapped.emit(ground)

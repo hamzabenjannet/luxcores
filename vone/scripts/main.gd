@@ -44,13 +44,20 @@ var _shop_box: VBoxContainer
 var _shop_key := ""
 var _summary_box: VBoxContainer
 var _hero_bar: HBoxContainer
-var _hero_name_label: Label
+var _hero_name_label: Button
 var _follow_button: Button
 var _ability_buttons: Array = []
 var _item_bar: HBoxContainer
 var _item_buttons: Array = []
 ## The id of the item (Energy Boost or Sluggish) whose target the next tap chooses, or -1.
 var _item_aim := -1
+## The tile chosen for the building in the palette, {tileX, tileZ}, or empty. The Place button sends it (GDD 11.5).
+var _ghost := {}
+var _place_button: Button
+## A press on an aimed ability button: {slot, start (global Vector2), aiming}, or empty. A drag off the button aims.
+var _hold := {}
+## A click right after an aim drag must not toggle the tap-tap aim, so the button ignores presses until this time (msec).
+var _ignore_press_until := 0
 ## The slot (1 ranged, 2 area) whose target the next tap chooses, or -1.
 var _ability := -1
 ## Label of the chosen hero allocation, one of GameLogic.hero_lux_choices.
@@ -293,9 +300,13 @@ func _build_interface() -> void:
 	_hero_bar = HBoxContainer.new()
 	_hero_bar.visible = false
 	_hero_bar.add_theme_constant_override("separation", 8)
-	_hero_name_label = Label.new()
+	# A tap on the hero's name recenters the camera and resumes follow (GDD 11.1, the hero portrait).
+	_hero_name_label = _make_button("", Color("#1b2a3b"))
+	_hero_name_label.flat = true
 	_hero_name_label.add_theme_font_size_override("font_size", 18)
-	_hero_name_label.custom_minimum_size.x = 120
+	_hero_name_label.custom_minimum_size = Vector2(120, 52)
+	_hero_name_label.size_flags_horizontal = Control.SIZE_FILL
+	_hero_name_label.pressed.connect(_recenter_on_hero)
 	_hero_bar.add_child(_hero_name_label)
 	_follow_button = _make_button("Follow", Color("#24364a"))
 	_follow_button.custom_minimum_size = Vector2(90, 52)
@@ -305,7 +316,9 @@ func _build_interface() -> void:
 		var ability_button := _make_button(String(ability_def.letter), Color("#24364a"))
 		ability_button.custom_minimum_size = Vector2(0, 52)
 		ability_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		ability_button.pressed.connect(_cast_from_bar.bind(int(ability_def.slot)))
+		ability_button.pressed.connect(_on_ability_pressed.bind(int(ability_def.slot)))
+		if String(ability_def.aim) != "none":
+			ability_button.gui_input.connect(_on_ability_gui_input.bind(int(ability_def.slot), ability_button))
 		_hero_bar.add_child(ability_button)
 		_ability_buttons.append(ability_button)
 	_game.add_child(_hero_bar)
@@ -478,6 +491,7 @@ func _select_building(building: String) -> void:
 	_path_points = []
 	# A second press on the same building puts it back.
 	_building = "" if _building == building else building
+	_ghost = {}
 	_selected_entity = -1
 	_tower_attack_row.visible = _building == "tower"
 	_build_description.visible = not _building.is_empty()
@@ -547,6 +561,10 @@ func _on_arena_tapped(ground: Vector2) -> void:
 			_set_status("Order sent. The server will validate it.")
 		if _mode == "merge":
 			_mode = ""
+	elif result.has("ghost"):
+		_ghost = result.ghost
+		if result.has("message"):
+			_set_status(String(result.message))
 	elif result.has("message"):
 		_set_status(String(result.message))
 	elif result.has("addWaypoint"):
@@ -599,11 +617,20 @@ func _refresh_panel() -> void:
 		return
 	_arena.set_paths(_paths_to_draw())
 	_refresh_hero_bar()
+	if _building.is_empty():
+		_ghost = {}
+	if _ghost.is_empty():
+		_arena.clear_ghost()
+	else:
+		_arena.set_ghost(Vector2i(int(_ghost.tileX), int(_ghost.tileZ)), not _ghost_check().has("message"))
 	var now_ms := float(Time.get_ticks_msec())
 	_pending = _pending.filter(func(entry: Dictionary) -> bool:
 		return GameLogic.pending_kept(int(entry.base), float(entry.expires_ms), _real_order_count(int(entry.barracks_id)), now_ms))
 	if _mode == "path":
 		_show_path_bar()
+		return
+	if not _building.is_empty() and not _ghost.is_empty():
+		_show_ghost_panel()
 		return
 	var group := _group_record(_selected_group)
 	if _selected_group >= 0 and group.is_empty():
@@ -629,6 +656,65 @@ func _refresh_panel() -> void:
 		_queue_key = ""
 		return
 	_show_building_panel(selected)
+
+## The placement check for the ghost tile with the lux of now.
+func _ghost_check() -> Dictionary:
+	return GameLogic.placement({
+		"tile_x": int(_ghost.tileX), "tile_z": int(_ghost.tileZ), "entities": _current_snapshot.get("entities", []),
+		"viewer_team": _viewer_team, "building": _building, "attack": GameLogic.ATTACK_TYPES[_tower_attack_selector.selected],
+		"core_lux_milli": _viewer_core_lux_milli(), "data": _data, "vents": _current_map.get("vents", []),
+	})
+
+## Place and Cancel for the ghost, and why the ghost is red when it is.
+func _show_ghost_panel() -> void:
+	_panel.visible = true
+	_clear_box(_order_box)
+	_clear_box(_hero_box)
+	_clear_box(_queue_box)
+	_clear_box(_shop_box)
+	_order_key = ""
+	_hero_key = ""
+	_shop_key = ""
+	_queue_key = ""
+	var check := _ghost_check()
+	var title := "%s at %d, %d" % [_building.capitalize(), int(_ghost.tileX), int(_ghost.tileZ)]
+	if check.has("message"):
+		title += ": " + String(check.message)
+	_panel_title.text = title
+	var key := "ghost|" + _building
+	if key != _panel_key or not is_instance_valid(_place_button):
+		_panel_key = key
+		_clear_box(_panel_row)
+		_place_button = _make_button("Place  %d" % int(_data.buildings[_building].costLux), Color("#1d5a43"))
+		_place_button.custom_minimum_size = Vector2(0, 48)
+		_place_button.name = "PlaceGhost"
+		_place_button.pressed.connect(_place_ghost)
+		_panel_row.add_child(_place_button)
+		var cancel_button := _make_button("Cancel", Color("#52313b"))
+		cancel_button.custom_minimum_size = Vector2(0, 48)
+		cancel_button.name = "CancelGhost"
+		cancel_button.pressed.connect(_cancel_ghost)
+		_panel_row.add_child(cancel_button)
+	_place_button.modulate = Color(1, 1, 1, 0.5) if check.has("message") else Color.WHITE
+
+func _cancel_ghost() -> void:
+	_ghost = {}
+	_refresh_panel()
+
+## Sends the build for the ghost tile. A placed building ends build mode at once, so a second tap cannot place a second one.
+func _place_ghost() -> void:
+	var check := _ghost_check()
+	if check.has("message"):
+		_set_status(String(check.message))
+		return
+	_building = ""
+	_ghost = {}
+	_build_description.visible = false
+	_tower_attack_row.visible = false
+	_arena.set_selection(_building, _selected_entity)
+	_refresh_palette()
+	_refresh_panel()
+	_run_panel_action(check.command)
 
 func _group_record(group_id: int) -> Dictionary:
 	if group_id < 0:
@@ -1051,6 +1137,83 @@ func _refresh_hero_bar() -> void:
 		var dim: bool = not bool(state.ready) or bool(state.poor)
 		button.modulate = Color(1, 1, 1, 0.5 if dim else 1.0)
 		button.flat = _ability != int(state.slot)
+
+## The hero's name was tapped: follow the hero again.
+func _recenter_on_hero() -> void:
+	_arena.set_follow(true)
+	_refresh_hero_bar()
+
+## A click on an ability button, unless it ends an aim drag.
+func _on_ability_pressed(slot: int) -> void:
+	if Time.get_ticks_msec() < _ignore_press_until:
+		return
+	_cast_from_bar(slot)
+
+## Hold-to-aim: press an aimed ability button, drag onto the map and lift to cast there. Lifting back over the
+## button cancels, and a press that stays on it is a plain click (GameLogic.hold_aim_release).
+func _on_ability_gui_input(event: InputEvent, slot: int, button: Button) -> void:
+	var global_point := Vector2.ZERO
+	var down := false
+	var is_pointer := false
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		is_pointer = true
+		down = event.pressed
+		global_point = button.get_global_transform_with_canvas() * event.position
+	elif event is InputEventScreenTouch:
+		is_pointer = true
+		down = event.pressed
+		global_point = button.get_global_transform_with_canvas() * event.position
+	elif event is InputEventMouseMotion or event is InputEventScreenDrag:
+		global_point = button.get_global_transform_with_canvas() * event.position
+	else:
+		return
+	if is_pointer and down:
+		if _hold.is_empty() and not _viewer_hero().is_empty():
+			_hold = {"slot": slot, "start": global_point, "aiming": false}
+		return
+	if _hold.is_empty() or int(_hold.slot) != slot:
+		return
+	var over_button := button.get_global_rect().has_point(global_point)
+	if is_pointer:
+		var aiming := bool(_hold.aiming)
+		_hold = {}
+		_arena.clear_aim()
+		if not aiming:
+			return
+		_ignore_press_until = Time.get_ticks_msec() + 200
+		var what := GameLogic.hold_aim_release(true, over_button)
+		var ground: Dictionary = _arena.ground_at_global(global_point)
+		if what == "cast" and not ground.is_empty():
+			_on_arena_tapped(ground.ground)
+		# A refused cast (no enemy under the finger) ends the aim too: the drag was the whole gesture.
+		if _ability == slot:
+			_ability = -1
+		_refresh_hero_bar()
+		return
+	if not bool(_hold.aiming):
+		if GameLogic.hold_aim_phase((global_point - (_hold.start as Vector2)).length()) != "aiming":
+			return
+		var hero := _viewer_hero()
+		var state: Dictionary = GameLogic.ability_states(hero, _data.abilities, _viewer_core_lux_milli(), int(_data.balance.core.minLeftAfterSpendLux), _tick_hz)[slot]
+		if not bool(state.ready):
+			_hold = {} # not ready: the release is a plain click, which says why
+			return
+		_hold["aiming"] = true
+		_ability = slot
+		_item_aim = -1
+		_building = ""
+		_ghost = {}
+		_selected_entity = -1
+		_selected_group = -1
+		_mode = ""
+		_build_description.visible = false
+		_tower_attack_row.visible = false
+		_refresh_hero_bar()
+	var ground: Dictionary = _arena.ground_at_global(global_point)
+	if over_button or ground.is_empty():
+		_arena.clear_aim()
+	else:
+		_arena.set_aim(ground.ground)
 
 ## The camera follows the hero while on; dragging the map turns it off.
 func _toggle_follow() -> void:

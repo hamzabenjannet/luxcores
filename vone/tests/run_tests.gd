@@ -55,6 +55,23 @@ func _init() -> void:
 		_check("pending line %s" % JSON.stringify(c.command), GameLogic.pending_line(c.command, fixture.pendingNames.heroNames, fixture.pendingNames.itemNames), String(c.expect))
 	for c in fixture.pendingKept:
 		_check("pending kept: %s" % String(c.name), GameLogic.pending_kept(int(c.base), float(c.expires), int(c.realCount), float(c.now)), bool(c.expect))
+	for c in fixture.placement:
+		var pctx: Dictionary = c.ctx
+		var placed := GameLogic.placement({
+			"tile_x": int(floor(float(pctx.ground[0]))), "tile_z": int(floor(float(pctx.ground[1]))),
+			"entities": pctx.get("entities", []), "viewer_team": int(pctx.viewerTeam), "building": String(pctx.building),
+			"attack": String(pctx.get("attack", "ranged")), "core_lux_milli": int(pctx.get("coreLuxMilli", 100000)),
+			"data": data, "vents": pctx.get("vents", []),
+		})
+		_check("placement: %s" % String(c.name), _normalize(placed), _normalize(c.expect))
+	for c in fixture.zoom:
+		_check("zoom limit: %s" % String(c.name), is_equal_approx(GameLogic.clamp_zoom(float(c.zoom)), float(c.expect)), true)
+	for c in fixture.pinchZoom:
+		_check("pinch %s" % JSON.stringify(c), is_equal_approx(GameLogic.pinch_zoom(float(c.startZoom), float(c.startDistance), float(c.distance)), float(c.expect)), true)
+	for c in fixture.holdAimPhase:
+		_check("hold-aim phase %s" % JSON.stringify(c), GameLogic.hold_aim_phase(float(c.movedPx)), String(c.expect))
+	for c in fixture.holdAimRelease:
+		_check("hold-aim release %s" % JSON.stringify(c), GameLogic.hold_aim_release(bool(c.aiming), bool(c.overButton)), String(c.expect))
 	for c in fixture.tickCapFromText:
 		_check("tick cap from text %s" % JSON.stringify(c.text), GameLogic.tick_cap_from_text(String(c.text)), int(c.expect))
 	for c in fixture.tickCapText:
