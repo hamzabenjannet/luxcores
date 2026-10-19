@@ -101,8 +101,12 @@ func connect_match(options: Dictionary) -> Dictionary:
 		var existing := await _request("/api/matches/" + requested_match.uri_encode(), HTTPClient.METHOD_GET, {}, true)
 		if not existing.ok:
 			return existing
-		if bool(existing.data.get("botVsBot", false)):
-			match_response = existing
+		var mine := false
+		for entry in existing.data.get("players", []):
+			if str(entry.get("playerId", "")) == _player_id:
+				mine = true
+		if GameLogic.join_call(bool(existing.data.get("botVsBot", false)), mine) == "none":
+			match_response = existing # a bot match is watched, and a match the player is already in is rejoined
 		else:
 			match_response = await _request("/api/matches/" + requested_match.uri_encode() + "/join", HTTPClient.METHOD_POST, {}, true)
 	if not match_response.ok:
@@ -112,6 +116,7 @@ func connect_match(options: Dictionary) -> Dictionary:
 	_match_id = str(match_data.get("id", ""))
 	if _match_id.is_empty():
 		return _failure("The backend returned a match without an ID.")
+	_remember_match(_match_id)
 	_viewer_team = 0
 	for player in match_data.get("players", []):
 		if str(player.get("playerId", "")) == _player_id:
@@ -241,13 +246,35 @@ func _reconnect() -> void:
 	_was_open = false
 	message_received.emit("Could not reconnect to the match.")
 
-## Tells the server this client leaves, then closes the connection. `call` is GameLogic.leave_call(): "leave" frees
+## Tells the server this client leaves, then closes the connection. `action` is GameLogic.leave_call(): "leave" frees
 ## a lobby seat or cancels the lobby, "quit" leaves a running match (a forfeit against a human, a stop otherwise), and
 ## "none" only disconnects. A failed call is ignored: the match may have ended, and the connection closes either way.
-func leave_match(call: String) -> void:
-	if call != "none" and not _match_id.is_empty() and not _token.is_empty():
-		await _request("/api/matches/%s/%s" % [_match_id, call], HTTPClient.METHOD_POST, {}, true)
+func leave_match(action: String) -> void:
+	forget_match()
+	if action != "none" and not _match_id.is_empty() and not _token.is_empty():
+		await _request("/api/matches/%s/%s" % [_match_id, action], HTTPClient.METHOD_POST, {}, true)
 	disconnect_match()
+
+## The id of the match this device was in last on a server, or "". A closed window or a crash leaves it behind, so
+## the start screen can offer to rejoin; leaving a match or finishing it clears it.
+func remembered_match(server: String) -> String:
+	var settings := ConfigFile.new()
+	if settings.load("user://luxcores.cfg") != OK:
+		return ""
+	return str(settings.get_value("last_match", server.strip_edges().trim_suffix("/"), ""))
+
+func forget_match() -> void:
+	_remember_match("")
+
+func _remember_match(id: String) -> void:
+	var settings := ConfigFile.new()
+	settings.load("user://luxcores.cfg") # a missing file is fine: it is created below
+	if id.is_empty():
+		if settings.has_section_key("last_match", _server):
+			settings.erase_section_key("last_match", _server)
+	else:
+		settings.set_value("last_match", _server, id)
+	settings.save("user://luxcores.cfg")
 
 func disconnect_match() -> void:
 	_leaving = true

@@ -14,6 +14,7 @@
  */
 
 import { leaveCall } from '../ui/leave.js';
+import { joinCall } from '../ui/rejoin.js';
 
 /**
  * Latest server state. Filled by socket events.
@@ -82,8 +83,8 @@ export async function joinServerMatch({ server, name, matchId, vsBot = false, bo
   let match =
     matchId === 'new'
       ? await request(`${base}/api/matches`, { token, body: { name: `${name}'s match`, vsBot, botVsBot, ...(seed === undefined ? {} : { seed }), ...(entropyPermillePerSecond === undefined ? {} : { entropyPermillePerSecond }), ...(maxTicks === undefined ? {} : { maxTicks }) } })
-      : existing.botVsBot
-        ? existing
+      : joinCall({ botVsBot: Boolean(existing.botVsBot), mine: existing.players.some((/** @type {any} */ p) => p.playerId === auth.player.id) }) === 'none'
+        ? existing // a bot match is watched, and a match the player is already in is rejoined: no seat to take
         : await request(`${base}/api/matches/${matchId}/join`, { token, method: 'POST' });
   const map = await request(`${base}/api/game/maps/${match.seed}`);
 

@@ -126,12 +126,24 @@ func _run() -> void:
 	_check("snapshots flow again after the rejoin", await _until(func(): return int(_main._current_snapshot.get("tick", 0)) > tick_after_drop + 10), true)
 	var wind_ack: Dictionary = await _main._backend.send_command({"t": "build", "building": "wind", "tileX": solar_tile.x + 3, "tileZ": solar_tile.y})
 	_check("a command after the rejoin is accepted: the count continued", wind_ack.get("accepted", false), true)
+	# Rejoin by id: the device drops the match without leaving it (a crash), then connects to the same id again.
+	var rejoin_id: String = _main._backend.get_match_id()
+	_check("the match is remembered on the device", _main._backend.remembered_match(server) == rejoin_id, true)
+	_main._backend.disconnect_match()
+	_main._match_input.text = rejoin_id
+	await _main._connect_match()
+	_check("a running match the player is in is rejoined by its id", _main._role == "player" and str(_main._current_match.get("id", "")) == rejoin_id, true)
+	var tick_at_rejoin: int = int(_main._current_snapshot.get("tick", 0))
+	_check("snapshots flow after the rejoin by id", await _until(func(): return int(_main._current_snapshot.get("tick", 0)) > tick_at_rejoin + 10), true)
+	_main._match_input.text = ""
+
 	var left_id: String = _main._backend.get_match_id()
 	await _main._leave_match()
 	var sign_in: Dictionary = await _main._backend._sign_in("Checker") # the same device signs in again, as the same guest
 	_main._backend._token = str(sign_in.data.get("accessToken", ""))
 	var left: Dictionary = await _main._backend._request("/api/matches/" + left_id, HTTPClient.METHOD_GET, {}, true)
 	_check("Leave stops the match on the server", left.ok and str(left.data.status) == "finished" and str(left.data.result.reason) == "stopped", true)
+	_check("leaving forgets the remembered match", _main._backend.remembered_match(server), "")
 	_check("Leave returns to the start screen", _main._home.visible and not _main._game.visible and _main._status_label.get_parent() == _main._home, true)
 
 	# Part 1b: creeps. A fresh match against the bot: order groups, cancel, split, merge and send one.
@@ -334,8 +346,11 @@ func _run() -> void:
 	_check("the end screen shows", _main._summary_box.visible, true)
 	_check("the end screen names the outcome and the duration", _main._summary_box.get_child(0).text.begins_with("Victory") and _main._summary_box.get_child(0).text.ends_with("2:58"), true)
 	_check("the end screen has a row per counter", _main._summary_box.get_child(1).get_child_count(), 3 + 6 * 3)
-	await _main._leave_match()
-	_check("leaving hides the end screen", _main._summary_box.visible, false)
+	_check("the end screen offers Close and Back to Menu", _main._summary_box.get_child(2).get_child_count() == 2 and _main._summary_box.get_child(2).get_child(1).name == "BackToMenu", true)
+	_main._summary_box.get_child(2).get_child(1).pressed.emit() # Back to Menu
+	await process_frame
+	await _until(func(): return _main._home.visible)
+	_check("Back to Menu returns to the start screen and hides the end screen", _main._home.visible and not _main._game.visible and not _main._summary_box.visible, true)
 
 	# Part 2: two bots play, and this client only watches.
 	_main._mode_selector.select(1)
@@ -409,13 +424,13 @@ func _free_tile(n: int) -> Vector2i:
 			taken["%d,%d" % [int(e.x) / 1000, int(e.z) / 1000]] = true
 	for vent in _main._current_map.vents:
 		taken["%d,%d" % [int(vent.tileX), int(vent.tileZ)]] = true
-	var free: Array = []
+	var open_tiles: Array = []
 	for z in range(70, 110):
 		for x in range(4, 92, 2):
 			if not taken.has("%d,%d" % [x, z]):
-				free.append({"d": (x - 44) * (x - 44) + (z - 90) * (z - 90), "x": x, "z": z})
-	free.sort_custom(func(a, b): return a.d < b.d or (a.d == b.d and a.z < b.z))
-	return Vector2i(int(free[n].x), int(free[n].z))
+				open_tiles.append({"d": (x - 44) * (x - 44) + (z - 90) * (z - 90), "x": x, "z": z})
+	open_tiles.sort_custom(func(a, b): return a.d < b.d or (a.d == b.d and a.z < b.z))
+	return Vector2i(int(open_tiles[n].x), int(open_tiles[n].z))
 
 ## Polls once per frame until the condition holds or the time runs out.
 func _until(condition: Callable) -> bool:

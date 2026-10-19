@@ -53,6 +53,8 @@ func _init() -> void:
 		_check("entropy text %s" % JSON.stringify(c.tenths), GameLogic.entropy_text(int(c.tenths)), String(c.expect))
 	for c in fixture.leaveCall:
 		_check("leave call %s" % JSON.stringify(c), GameLogic.leave_call(String(c.status), String(c.role), bool(c.isHost)), String(c.expect))
+	for c in fixture.joinCall:
+		_check("join call %s" % JSON.stringify(c), GameLogic.join_call(bool(c.botVsBot), bool(c.mine)), String(c.expect))
 	for c in fixture.leaveNeedsConfirm:
 		_check("leave confirm %s" % JSON.stringify(c), GameLogic.leave_needs_confirm(String(c.status), String(c.role), int(c.humans)), bool(c.expect))
 	for c in fixture.pendingLine:

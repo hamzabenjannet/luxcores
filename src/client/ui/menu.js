@@ -40,10 +40,10 @@ function remember(name) {
 
 /**
  * @param {HTMLElement} root
- * @param {{ server: string, error?: string, entropyDefault?: number, capDefault?: number }} opts  `entropyDefault` is the rate of data/balance.json, in tenths of a percent per second; `capDefault` is the tick limit it suggests for a capped match
+ * @param {{ server: string, error?: string, entropyDefault?: number, capDefault?: number, lastMatch?: string }} opts  `lastMatch` is the id of the match this browser was in last, offered as a rejoin;  `entropyDefault` is the rate of data/balance.json, in tenths of a percent per second; `capDefault` is the tick limit it suggests for a capped match
  * @returns {Promise<MenuChoice>}
  */
-export function showMenu(root, { server, error, entropyDefault = 1, capDefault = 10000 }) {
+export function showMenu(root, { server, error, entropyDefault = 1, capDefault = 10000, lastMatch }) {
   root.hidden = false;
   root.replaceChildren();
   return new Promise((resolve) => {
@@ -109,6 +109,7 @@ export function showMenu(root, { server, error, entropyDefault = 1, capDefault =
     };
 
     card.append(
+      ...(lastMatch ? [button('Rejoin Last Match', () => choose({ matchId: lastMatch }))] : []),
       button('Play Against Bot', () => choose({ vsBot: true })),
       button('Watch Bot Against Bot', () => choose({ botVsBot: true })),
       button('Host a Match for Two', () => choose({})),

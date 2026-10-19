@@ -39,6 +39,7 @@ import { matchSummary } from './ui/summary.js';
 import { lockPortrait } from './orientation.js';
 import { createPerfMeter } from './perf.js';
 import { leaveNeedsConfirm } from './ui/leave.js';
+import { forgetMatch, recallMatch, rememberMatch } from './ui/rejoin.js';
 
 const query = new URLSearchParams(location.search);
 const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
@@ -87,7 +88,7 @@ while (!session) {
         maxTicks: query.has('maxTicks') && (query.get('maxTicks') === '0' || tickCapFromText(query.get('maxTicks') ?? '') >= 0) ? Number(query.get('maxTicks')) : undefined,
         entropy: query.has('entropy') && entropyFromText(query.get('entropy') ?? '') >= 0 ? entropyFromText(query.get('entropy') ?? '') : undefined,
       }
-    : await showMenu($('menu'), { server, error: problem, entropyDefault: data.balance.economy.entropyPermillePerSecond, capDefault: data.balance.match.stalemateTicks });
+    : await showMenu($('menu'), { server, error: problem, entropyDefault: data.balance.economy.entropyPermillePerSecond, capDefault: data.balance.match.stalemateTicks, lastMatch: recallMatch(server) });
   $('hud-debug').textContent = `Connecting to ${server} ...`;
   try {
     session = await joinServerMatch({
@@ -107,6 +108,10 @@ while (!session) {
     problem = err instanceof Error ? err.message : String(err);
   }
 }
+
+// The match is remembered so that a closed tab or a crash can rejoin it from the menu; leaving or finishing forgets it.
+rememberMatch(server, session.matchId);
+session.onChange(() => { if (session.feed.status === 'finished') forgetMatch(); });
 
 const view = networkWorldView(session.feed);
 const viewerTeam = session.viewerTeam;
@@ -138,6 +143,7 @@ link.search = new URLSearchParams({ ...(query.has('server') ? { server } : {}), 
  * and gives a match for two humans to the other player, so nothing is left running (GDD 11.6).
  */
 async function leaveMatch() {
+  forgetMatch();
   await session.leave();
   const back = new URL(location.href);
   back.search = query.has('server') ? new URLSearchParams({ server }).toString() : '';
@@ -216,7 +222,10 @@ session.onChange(() => {
   const close = document.createElement('button');
   close.textContent = 'Close';
   close.addEventListener('click', () => { summaryCard.hidden = true; });
-  summaryCard.append(table, close);
+  const back = document.createElement('button');
+  back.textContent = 'Back to Menu';
+  back.addEventListener('click', () => { void leaveMatch(); });
+  summaryCard.append(table, close, back);
   summaryCard.hidden = false;
 });
 

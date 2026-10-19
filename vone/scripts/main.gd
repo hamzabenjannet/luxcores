@@ -36,6 +36,7 @@ var _bottom_sheet: PanelContainer
 var _bottom_box: VBoxContainer
 var _summary_card: PanelContainer
 var _leave_button: Button
+var _rejoin_button: Button
 ## When the Leave button was armed for a forfeit, in msec, or 0.
 var _leave_armed_until := 0
 var _match_label: Label
@@ -210,6 +211,12 @@ func _build_interface() -> void:
 	var connect_button := _make_button("CONNECT / CREATE MATCH", Color("#315f95"))
 	connect_button.pressed.connect(_connect_match)
 	_home.add_child(connect_button)
+	# Offered when this device was in a match that it did not leave (a closed window, a crash).
+	_rejoin_button = _make_button("REJOIN LAST MATCH", Color("#34577a"))
+	_rejoin_button.visible = false
+	_rejoin_button.pressed.connect(_rejoin_last_match)
+	_home.add_child(_rejoin_button)
+	_server_input.text_changed.connect(func(_text: String) -> void: _refresh_rejoin())
 
 	_status_label = Label.new()
 	_status_label.text = "Connect to a Luxcores backend to start."
@@ -1471,6 +1478,7 @@ func _update_start_button() -> void:
 	_start_button.disabled = false
 
 func _on_match_ended(result: Dictionary) -> void:
+	_backend.forget_match() # a finished match is nothing to rejoin
 	_current_match["status"] = "finished"
 	_set_match_phase("finished")
 	_update_start_button()
@@ -1508,6 +1516,18 @@ func _show_summary(summary: Dictionary) -> void:
 			value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 			grid.add_child(value_label)
 	_summary_box.add_child(grid)
+	var summary_buttons := HBoxContainer.new()
+	summary_buttons.add_theme_constant_override("separation", 10)
+	var close_summary := _make_button("CLOSE", Color("#34577a"))
+	close_summary.custom_minimum_size = Vector2(0, 44)
+	close_summary.pressed.connect(func() -> void: _summary_box.visible = false)
+	summary_buttons.add_child(close_summary)
+	var back_to_menu := _make_button("BACK TO MENU", Color("#52313b"))
+	back_to_menu.custom_minimum_size = Vector2(0, 44)
+	back_to_menu.name = "BackToMenu"
+	back_to_menu.pressed.connect(_leave_match)
+	summary_buttons.add_child(back_to_menu)
+	_summary_box.add_child(summary_buttons)
 	_summary_box.visible = true
 
 func _update_world_label() -> void:
@@ -1554,9 +1574,9 @@ func _on_leave_pressed() -> void:
 ## Tells the server (a lobby seat is freed or cancelled, a running match is stopped or forfeited), closes the
 ## connection and returns to the start screen.
 func _leave_match() -> void:
-	var call := GameLogic.leave_call(str(_current_match.get("status", "lobby")), _role, _is_host)
+	var leave_action := GameLogic.leave_call(str(_current_match.get("status", "lobby")), _role, _is_host)
 	_leave_button.disabled = true
-	await _backend.leave_match(call)
+	await _backend.leave_match(leave_action)
 	_leave_button.disabled = false
 	_leave_button.text = "LEAVE"
 	_leave_armed_until = 0
@@ -1582,6 +1602,18 @@ func _leave_match() -> void:
 
 ## Shows the start screen or the game. The status line moves with it: into the card at the start, under the match
 ## information in the game.
+## Shows the rejoin button when this device remembers a match on the server in the address field.
+func _refresh_rejoin() -> void:
+	if _rejoin_button == null or _server_input == null:
+		return
+	var remembered: String = _backend.remembered_match(_server_input.text)
+	_rejoin_button.visible = not remembered.is_empty()
+	_rejoin_button.text = "REJOIN LAST MATCH (%s)" % remembered.substr(0, 8)
+
+func _rejoin_last_match() -> void:
+	_match_input.text = _backend.remembered_match(_server_input.text)
+	await _connect_match()
+
 func _show_page(in_game: bool) -> void:
 	_home.visible = not in_game
 	_game.visible = in_game
@@ -1589,6 +1621,8 @@ func _show_page(in_game: bool) -> void:
 	var target: Node = _top_box if in_game else _home
 	if _status_label.get_parent() != target:
 		_status_label.reparent(target)
+	if not in_game:
+		_refresh_rejoin()
 	_fit_overlays()
 
 func _overlay_style(alpha: float) -> StyleBoxFlat:

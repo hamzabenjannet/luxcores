@@ -411,6 +411,10 @@ test('Leave ends the match on the server and returns to the menu, and a match fo
     assert.match(await host.textContent('#banner') ?? '', /^Victory {2}\(forfeit\)$/);
     const duel = await matchOnServer(host, matchId);
     assert.deepEqual([duel.status, duel.result.reason, duel.result.winnerTeam], ['finished', 'forfeit', 0]);
+    // The end table offers Back to Menu, which also forgets the match.
+    await host.click('#summary button:has-text("Back to Menu")');
+    await host.waitForSelector('#menu .card button:has-text("Play Against Bot")', { timeout: 30_000 });
+    assert.equal(await host.evaluate(() => localStorage.getItem('luxcores.lastMatch')), null, 'a finished match is not offered for a rejoin');
 
     // A lobby has its own Leave: the host cancels it.
     const lobbyHost = await open(await newContext(), 'name=Lonely&match=new');
@@ -418,6 +422,43 @@ test('Leave ends the match on the server and returns to the menu, and a match fo
     await lobbyHost.click('#menu button:has-text("Leave")');
     await lobbyHost.waitForSelector('#menu .card button:has-text("Play Against Bot")', { timeout: 30_000 });
     assert.equal((await matchOnServer(lobbyHost, lobbyId)).status, 'cancelled');
+    assert.deepEqual(errors, [], 'the pages must log no console or page errors');
+  }, { MATCH_MAX_TICKS: '2400' });
+});
+
+test('a closed tab can rejoin its running match by id, from the menu button or the match id field', { timeout: 180_000, skip }, async () => {
+  await withBackend(async ({ errors, newContext, open }) => {
+    const context = await newContext();
+    const first = await open(context, `name=Halo&match=new&vsBot=1&autostart=1&maxTicks=0&seed=${SEED}`);
+    await until(first, () => /** @type {any} */ (window).__luxTest.entities().length > 0);
+    const id = await luxTest(first, 'matchId');
+    const base = new URL(first.url()).origin;
+    await first.close(); // a closed tab: no Leave, so the match keeps running for the watchdog's grace time
+
+    // The menu of the same browser offers the match, and the button connects to it again as the same player.
+    const second = await context.newPage();
+    second.on('pageerror', (e) => errors.push(`page error: ${e.message}`));
+    await second.goto(`${base}/?test=1`, { waitUntil: 'load' });
+    await second.click('#menu button:has-text("Rejoin Last Match")');
+    await second.waitForFunction(() => /** @type {any} */ (window).__luxTest?.matchId, null, { timeout: 30_000 });
+    assert.equal(await luxTest(second, 'matchId'), id, 'the same match');
+    assert.equal(await luxTest(second, 'role'), 'player');
+    await until(second, () => /** @type {any} */ (window).__luxTest.entities().length > 0);
+
+    // The id field does the same: a third tab types the id of the running match and joins as the same player.
+    const third = await context.newPage();
+    third.on('pageerror', (e) => errors.push(`page error: ${e.message}`));
+    await third.goto(`${base}/?test=1`, { waitUntil: 'load' });
+    await third.fill('#menu input[placeholder="Match id to join"]', id);
+    await third.click('#menu button:has-text("Join Match")');
+    await third.waitForFunction(() => /** @type {any} */ (window).__luxTest?.matchId, null, { timeout: 30_000 });
+    assert.equal(await luxTest(third, 'matchId'), id);
+    assert.equal(await luxTest(third, 'role'), 'player', 'it is a rejoin, not a spectator seat');
+
+    // A stranger cannot take a seat in that running match by id.
+    const auth = await (await fetch(`http://127.0.0.1:${new URL(base).port}/api/auth/guest`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Stranger' }) })).json();
+    const join = await fetch(`http://127.0.0.1:${new URL(base).port}/api/matches/${id}/join`, { method: 'POST', headers: { authorization: `Bearer ${auth.accessToken}` } });
+    assert.equal(join.status, 409, 'the match is no longer open to strangers');
     assert.deepEqual(errors, [], 'the pages must log no console or page errors');
   }, { MATCH_MAX_TICKS: '2400' });
 });
@@ -604,7 +645,7 @@ test('a human orders creeps, then splits, merges and sends a group, through the 
     // One round trip for all four, because a slow page makes each call to it take a second and the queue drains meanwhile.
     await hook(`Promise.all([t.send({ t: 'orderCreeps', barracksId: ${barracksId}, mix: ['melee', 'ranged', 'area', 'melee', 'ranged'] }), ...[1, 2, 3].map(() => t.send({ t: 'orderCreeps', barracksId: ${barracksId}, mix: ['melee'] }))])`);
     // The first order (2 s) may already have left the queue by now, and a slow page sees fewer rows.
-    await page.waitForFunction(() => document.querySelectorAll('.queue-row').length >= 3);
+    await page.waitForFunction(() => document.querySelectorAll('.queue-row').length >= 3 && !document.querySelector('.queue-row.pending')); // a dim row has no working Cancel
     const luxOf = async () => Number(((await page.textContent('#hud-core')) ?? '').replace(/\D/g, ''));
     const before = await luxOf();
     await page.click('.queue-row:last-child .cancel');

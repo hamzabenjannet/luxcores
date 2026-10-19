@@ -2,11 +2,21 @@
 
 Working title. A strategy game mixing hero control (Dota 2), creep waypoint paths (Age of Empires) and base building with tower defense (Generals Zero Hour, Clash Royale). Everything in the world is made of light energy, measured in **lux**. Destroyed things dissolve into light; there is no blood or gore.
 
-Status: draft v0.9.14. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
+Status: draft v0.9.15. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
 
 ---
 
 ## 0. Changelog
+
+### v0.9.14 → v0.9.15
+
+Hamza asked on 2026-10-19 to balance the bot, to add a way back to the menu from the end-of-match table, and to rejoin a match by its id.
+
+| Area | Change |
+|---|---|
+| Bot | The bot builds its towers on the columns of its own side: team 1 uses the mirrored columns, where both bots used the left ones before. Team 1 won 648 of 735 decided soak matches before the change, and 72 of 151 after it (section 12.1) |
+| End of match | The end-of-match table has Close and Back to Menu (section 11.6) |
+| Rejoin | A player rejoins a running match from the menu by its id, or with a button that remembers the last match. The match is forgotten when the player leaves it or it ends (section 11.6) |
 
 ### v0.9.13 → v0.9.14
 
@@ -651,7 +661,9 @@ The checks are the ones the sim would refuse for sure. The sim result is final.
 
 ### 11.6 Leaving a match
 
-Both clients have a **Leave** button, in the lobby and in the game. It frees a lobby seat (the host cancels the lobby), stops a running match against a bot as a draw, and, in a running match for two humans, forfeits it: the other team wins with the end reason `forfeit`. Because that costs a win, the button asks for a second press within 3 seconds first. A spectator who does not own the match only closes the connection. After leaving, the client shows the start screen.
+Both clients have a **Leave** button, in the lobby and in the game. It frees a lobby seat (the host cancels the lobby), stops a running match against a bot as a draw, and, in a running match for two humans, forfeits it: the other team wins with the end reason `forfeit`. Because that costs a win, the button asks for a second press within 3 seconds first. A spectator who does not own the match only closes the connection. After leaving, the client shows the start screen. The end-of-match table has the same way out (Back to Menu) beside Close, which only hides the table.
+
+A player who closes the page or loses the connection without leaving can come back while the match still runs (the server stops it after 2 minutes with nobody connected): the start screen offers **Rejoin Last Match**, and a match id typed into the join field also reconnects a player who already belongs to that match. A stranger cannot take a seat in a running match, and a bot-versus-bot match is only watched.
 
 The server also ends a running match that nobody has been connected to for 2 minutes (a closed tab, a lost connection), as a draw with its replay kept, so no match runs forever on a server.
 
@@ -661,7 +673,7 @@ The server also ends a running match that nobody has been connected to for 2 min
 
 1. Picks heroes in roster order, allocating 50% of Core lux, spawning at its newest barracks.
 2. Hero walks the nearest lane toward the enemy Core and attacks whatever is in range. No abilities, no items.
-3. Every 1 s, spends settled lux in rotation: collector, barracks, tower, creep group of 5.
+3. Every 1 s, spends settled lux in rotation: collector, barracks, tower, creep group of 5. Towers go on the build-zone columns of the bot's own side, so team 1 mirrors the columns of team 0 (the map is point-mirrored).
 4. Creep groups use the default lane path.
 
 ### 12.2 Hot seat

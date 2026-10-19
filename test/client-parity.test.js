@@ -7,6 +7,7 @@ import { creepGroupLabels, entityText, entropyFromText, entropyText, isDay, tick
 import { abilityStates, actionsFor, canAfford, endsBuildMode, groupActions, heroLuxChoices, heroPickState, immediateCast, immediateUse, itemStates, mixFor, pendingKept, pendingLine, placement, queueLines, resolveTap, secondsText, shopStates } from '../src/client/ui/controls.js';
 import { HOLD_AIM_PX, clampZoom, holdAimPhase, holdAimRelease, pinchZoom } from '../src/client/input/gestures.js';
 import { leaveCall, leaveNeedsConfirm } from '../src/client/ui/leave.js';
+import { joinCall } from '../src/client/ui/rejoin.js';
 import { matchSummary } from '../src/client/ui/summary.js';
 import { ROOT, loadData } from './helpers/load-data.js';
 
@@ -110,6 +111,7 @@ test('item cases', () => {
 test('leave cases: which call a Leave needs, and when it asks first', () => {
   for (const c of fixture.leaveCall) assert.equal(leaveCall(c), c.expect, JSON.stringify(c));
   for (const c of fixture.leaveNeedsConfirm) assert.equal(leaveNeedsConfirm(c), c.expect, JSON.stringify(c));
+  for (const c of fixture.joinCall) assert.equal(joinCall(c), c.expect, JSON.stringify(c));
 });
 
 test('placement cases', () => {

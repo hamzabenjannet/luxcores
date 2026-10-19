@@ -4531,5 +4531,27 @@
       "humans": 2,
       "expect": false
     }
+  ],
+  "joinCall": [
+    {
+      "botVsBot": false,
+      "mine": false,
+      "expect": "join"
+    },
+    {
+      "botVsBot": false,
+      "mine": true,
+      "expect": "none"
+    },
+    {
+      "botVsBot": true,
+      "mine": false,
+      "expect": "none"
+    },
+    {
+      "botVsBot": true,
+      "mine": true,
+      "expect": "none"
+    }
   ]
 }

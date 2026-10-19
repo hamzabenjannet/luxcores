@@ -376,6 +376,12 @@ static func leave_call(status: String, role: String, is_host: bool) -> String:
 		return "quit"
 	return "none"
 
+## Which server call a join by id needs: "join" takes a seat in an open lobby, "none" connects to the match as it is
+## (a bot-versus-bot match is watched, and a match the player already belongs to is rejoined). The same rule as
+## src/client/ui/rejoin.js.
+static func join_call(bot_vs_bot: bool, mine: bool) -> String:
+	return "none" if bot_vs_bot or mine else "join"
+
 ## Whether Leave asks for a second tap first: only in a running match for two humans, where leaving forfeits.
 static func leave_needs_confirm(status: String, role: String, humans: int) -> bool:
 	return status == "running" and role == "player" and humans >= 2
