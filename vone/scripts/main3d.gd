@@ -36,7 +36,7 @@ var _selected_entity_id := -1
 var _map_width := 96
 var _map_height := 112
 var _camera_target := Vector3.ZERO
-## The camera size (vertical extent in world units) at zoom 1, which shows 32 tiles across (GDD 10.1).
+## The camera size (vertical extent in world units) at zoom 1, which shows 32 tiles across and at least 28 tall (GDD 10.1).
 var _view_size := 100.0
 var _ghost: MeshInstance3D
 ## True once the camera was framed on the viewer's base, which needs the first real world.
@@ -50,6 +50,8 @@ var _follow_point := Vector3.ZERO
 var _has_follow_point := false
 
 const VIEW_TILES_WIDE := 32.0
+## A wide window shows at least this many tiles top to bottom at zoom 1, as in the web client.
+const VIEW_TILES_TALL_MIN := 28.0
 
 func _ready() -> void:
 	_camera.current = true
@@ -115,7 +117,9 @@ func set_world(layout: Dictionary, world_snapshot: Dictionary, team: int) -> voi
 		map_changed = true
 	if map_changed:
 		_configure_map()
-	if not _fitted_to_world and not layout.is_empty():
+	if layout.is_empty():
+		_fitted_to_world = false # the next match frames its own base
+	elif not _fitted_to_world:
 		_fitted_to_world = true
 		_fit_camera()
 	_remember_hero_point()
@@ -233,7 +237,7 @@ func _on_viewport_resized() -> void:
 
 func _view_size_for_viewport() -> float:
 	var viewport_size := get_viewport().get_visible_rect().size
-	return VIEW_TILES_WIDE * maxf(1.0, viewport_size.y) / maxf(1.0, viewport_size.x)
+	return maxf(VIEW_TILES_WIDE * maxf(1.0, viewport_size.y) / maxf(1.0, viewport_size.x), VIEW_TILES_TALL_MIN)
 
 func _configure_map() -> void:
 	if not is_instance_valid(_terrain) or not is_instance_valid(_map_root):
@@ -260,7 +264,10 @@ func _fit_camera() -> void:
 	for entity in _snapshot.get("entities", []):
 		if int(entity.get("kind", 0)) == GameLogic.KIND_CORE and int(entity.get("team", -1)) == _viewer_team:
 			core_x = float(entity.get("x", 0)) / GameLogic.UNITS_PER_TILE
-	_camera_target = Vector3(core_x - float(_map_width) * 0.5, 0.0, (80.0 if _viewer_team == 0 else 32.0) - float(_map_height) * 0.5)
+	# A wide window starts 8 tiles nearer the base, so the Core is not under the panel at the bottom (as in the web client).
+	var viewport_size := get_viewport().get_visible_rect().size
+	var nearer := 8.0 if viewport_size.x > viewport_size.y else 0.0
+	_camera_target = Vector3(core_x - float(_map_width) * 0.5, 0.0, (80.0 + nearer if _viewer_team == 0 else 32.0 - nearer) - float(_map_height) * 0.5)
 	_position_camera()
 
 func _position_camera() -> void:

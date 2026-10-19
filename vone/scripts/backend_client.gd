@@ -241,6 +241,14 @@ func _reconnect() -> void:
 	_was_open = false
 	message_received.emit("Could not reconnect to the match.")
 
+## Tells the server this client leaves, then closes the connection. `call` is GameLogic.leave_call(): "leave" frees
+## a lobby seat or cancels the lobby, "quit" leaves a running match (a forfeit against a human, a stop otherwise), and
+## "none" only disconnects. A failed call is ignored: the match may have ended, and the connection closes either way.
+func leave_match(call: String) -> void:
+	if call != "none" and not _match_id.is_empty() and not _token.is_empty():
+		await _request("/api/matches/%s/%s" % [_match_id, call], HTTPClient.METHOD_POST, {}, true)
+	disconnect_match()
+
 func disconnect_match() -> void:
 	_leaving = true
 	_was_open = false

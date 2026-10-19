@@ -16,6 +16,8 @@ export enum MatchEndReason {
   Draw = 'draw',
   TickLimit = 'tick-limit',
   Stopped = 'stopped',
+  /** A player left a running match for two humans, so the other one won. */
+  Forfeit = 'forfeit',
 }
 
 export class MatchPlayerDto {

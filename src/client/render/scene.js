@@ -23,6 +23,8 @@ export const TEAM_COLORS = [0x3d8bff, 0xff4d4d]; // team 0 blue (player), team 1
 
 /** Viewport width in tiles at default zoom (GDD 10.1). */
 const VIEW_TILES_WIDE = 32;
+/** A wide window shows at least this many tiles top to bottom at default zoom, so a landscape view is wider than 32 tiles. */
+const VIEW_TILES_TALL_MIN = 28;
 
 /**
  * @param {HTMLCanvasElement} canvas
@@ -106,7 +108,9 @@ export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0, hero
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 500);
   // Start framed on the viewer's 3 rows (Core row, build row, DMZ): z 48 to 112 for team 0, z 0 to 64 for team 1.
   // Team 0's base is at the bottom, team 1's at the top; the camera stays north-up for both.
-  const target = new THREE.Vector3(corePos[viewerTeam][0], 0, viewerTeam === 0 ? 80 : 32);
+  // A wide window starts 8 tiles nearer the base, so the Core is not under the panel at the bottom.
+  const nearer = canvas.clientWidth > canvas.clientHeight ? 8 : 0;
+  const target = new THREE.Vector3(corePos[viewerTeam][0], 0, viewerTeam === 0 ? 80 + nearer : 32 - nearer);
   const OFFSET = new THREE.Vector3(0, 60, 42); // looking north, tilted
   let zoom = 1;
 
@@ -129,12 +133,13 @@ export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0, hero
     frameCamera();
   }
 
-  /** Sizes the view from the canvas shape and the zoom: zoom 1 shows 32 tiles across. */
+  /** Sizes the view from the canvas shape and the zoom: zoom 1 shows 32 tiles across (more on a wide window). */
   function frameCamera() {
     const w = canvas.clientWidth || 1;
     const h = canvas.clientHeight || 1;
-    const halfW = VIEW_TILES_WIDE / 2 / zoom;
-    const halfH = halfW * (h / w);
+    // 32 tiles across, but never less than 28 tiles tall: a landscape window then shows more width, not a thin strip.
+    const halfH = Math.max((VIEW_TILES_WIDE / 2) * (h / w), VIEW_TILES_TALL_MIN / 2) / zoom;
+    const halfW = halfH * (w / h);
     camera.left = -halfW; camera.right = halfW;
     camera.top = halfH; camera.bottom = -halfH;
     camera.updateProjectionMatrix();

@@ -9,7 +9,12 @@ const TEAM_RED := Color("#ff4d4d")
 ## Start-menu modes, in the order of the selector.
 const MODES := ["Play against bot", "Watch bot against bot", "Host a match for two"]
 ## The smallest window the interface still fits in. The window opens maximized and follows every resize.
-const MIN_WINDOW_SIZE := Vector2i(320, 480)
+const MIN_WINDOW_SIZE := Vector2i(480, 360)
+## Space between the window edge and the controls, in virtual pixels.
+const UI_MARGIN := 10
+## Widths of the start card and of the top and bottom panels. Narrower windows get the window width less the margins.
+const HOME_WIDTH := 560.0
+const SHEET_WIDTH := 600.0
 
 var _backend: Node
 var _home: VBoxContainer
@@ -23,6 +28,16 @@ var _limit_selector: OptionButton
 var _cap_input: LineEdit
 var _mode_selector: OptionButton
 var _status_label: Label
+var _home_card: PanelContainer
+var _home_center: CenterContainer
+var _top_panel: PanelContainer
+var _top_box: VBoxContainer
+var _bottom_sheet: PanelContainer
+var _bottom_box: VBoxContainer
+var _summary_card: PanelContainer
+var _leave_button: Button
+## When the Leave button was armed for a forfeit, in msec, or 0.
+var _leave_armed_until := 0
 var _match_label: Label
 var _match_id_input: LineEdit
 var _phase_label: Label
@@ -112,34 +127,48 @@ func configure_3d_world(world: Node3D) -> void:
 
 func _build_interface() -> void:
 	_set_dark_theme()
+	# The arena is the background of the whole window and takes every tap that no control catches. The
+	# controls float over it in translucent panels, so the map keeps all the space, as in the web client.
+	_arena = Arena3DScript.new() if _world_3d != null else ArenaScript.new()
+	if _arena is Control and _arena.has_method("set_world_root"):
+		_arena.set_world_root(_world_3d)
+	_arena.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_arena.tapped.connect(_on_arena_tapped)
+	add_child(_arena)
+
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 28)
-	margin.add_theme_constant_override("margin_top", 26)
-	margin.add_theme_constant_override("margin_right", 28)
-	margin.add_theme_constant_override("margin_bottom", 26)
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for side in ["left", "top", "right", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, UI_MARGIN)
 	add_child(margin)
 
 	var pages := VBoxContainer.new()
+	pages.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pages.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pages.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	pages.add_theme_constant_override("separation", 16)
+	pages.add_theme_constant_override("separation", 10)
 	margin.add_child(pages)
 
-	#var title := Label.new()
-	#title.text = "LUXCORES"
-	#title.add_theme_font_size_override("font_size", 44)
-	#title.add_theme_color_override("font_color", Color("#eaf4ff"))
-	#pages.add_child(title)
-	#var tagline := Label.new()
-	#tagline.text = "A light-powered strategy game"
-	#tagline.add_theme_font_size_override("font_size", 20)
-	#tagline.add_theme_color_override("font_color", Color("#9eafc4"))
-	#pages.add_child(tagline)
-
+	# The start screen: a card in the middle of the window that scrolls when the window is too small for it.
 	_home = VBoxContainer.new()
-	_home.add_theme_constant_override("separation", 14)
-	pages.add_child(_home)
+	_home.add_theme_constant_override("separation", 12)
+	_home.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_home_card = PanelContainer.new()
+	_home_card.add_theme_stylebox_override("panel", _overlay_style(0.94))
+	var home_scroll := ScrollContainer.new()
+	home_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	home_scroll.add_child(_home)
+	_home_card.add_child(home_scroll)
+	_home_center = CenterContainer.new()
+	_home_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_home_center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_home_center.add_child(_home_card)
+	pages.add_child(_home_center)
+	# The container around the card goes with it, or it keeps its share of the height in the game.
+	_home.visibility_changed.connect(func() -> void:
+		_home_center.visible = _home.visible
+		_fit_overlays())
 	_add_field(_home, "Backend URL", "https://luxcores.webrit.cloud", "_server_input")
 	_add_field(_home, "Player name", "Halo", "_name_input")
 	_add_field(_home, "Match ID (blank to use the mode below)", "", "_match_input")
@@ -184,72 +213,117 @@ func _build_interface() -> void:
 
 	_status_label = Label.new()
 	_status_label.text = "Connect to a Luxcores backend to start."
-	_status_label.add_theme_font_size_override("font_size", 18)
+	_status_label.add_theme_font_size_override("font_size", 17)
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status_label.add_theme_color_override("font_color", Color("#aabbd0"))
-	pages.add_child(_status_label)
+	_status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_home.add_child(_status_label)
 
 	_game = VBoxContainer.new()
 	_game.visible = false
+	_game.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_game.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_game.add_theme_constant_override("separation", 10)
+	_game.add_theme_constant_override("separation", 8)
 	pages.add_child(_game)
+
+	# Top: the match, its phase and the clock, the status line and the Start and Leave buttons.
+	_top_panel = PanelContainer.new()
+	_top_panel.add_theme_stylebox_override("panel", _overlay_style(0.8))
+	_top_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_game.add_child(_top_panel)
+	_top_box = VBoxContainer.new()
+	_top_box.add_theme_constant_override("separation", 4)
+	_top_panel.add_child(_top_box)
 	var match_id_row := HBoxContainer.new()
-	match_id_row.add_theme_constant_override("separation", 10)
+	match_id_row.add_theme_constant_override("separation", 8)
 	var match_id_label := Label.new()
-	match_id_label.text = "Match ID"
-	match_id_label.add_theme_font_size_override("font_size", 18)
+	match_id_label.text = "Match"
+	match_id_label.add_theme_font_size_override("font_size", 16)
 	match_id_row.add_child(match_id_label)
 	_match_id_input = LineEdit.new()
 	_match_id_input.editable = false
 	_match_id_input.select_all_on_focus = true
-	_match_id_input.custom_minimum_size.y = 48
+	_match_id_input.custom_minimum_size = Vector2(120, 40)
 	_match_id_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	match_id_row.add_child(_match_id_input)
 	var copy_match_id_button := _make_button("COPY", Color("#34577a"))
-	copy_match_id_button.custom_minimum_size = Vector2(100, 48)
+	copy_match_id_button.custom_minimum_size = Vector2(70, 40)
+	copy_match_id_button.size_flags_horizontal = Control.SIZE_SHRINK_END
 	copy_match_id_button.pressed.connect(_copy_match_id)
 	match_id_row.add_child(copy_match_id_button)
-	_game.add_child(match_id_row)
+	_start_button = _make_button("START", Color("#287557"))
+	_start_button.custom_minimum_size = Vector2(80, 40)
+	_start_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_start_button.pressed.connect(_start_match)
+	match_id_row.add_child(_start_button)
+	_leave_button = _make_button("LEAVE", Color("#52313b"))
+	_leave_button.custom_minimum_size = Vector2(80, 40)
+	_leave_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_leave_button.pressed.connect(_on_leave_pressed)
+	match_id_row.add_child(_leave_button)
+	_top_box.add_child(match_id_row)
+	var labels_row := HBoxContainer.new()
+	labels_row.add_theme_constant_override("separation", 14)
 	_match_label = Label.new()
 	_match_label.text = ""
-	_match_label.add_theme_font_size_override("font_size", 18)
+	_match_label.add_theme_font_size_override("font_size", 16)
 	_match_label.add_theme_color_override("font_color", Color("#d5e5fa"))
-	_game.add_child(_match_label)
+	labels_row.add_child(_match_label)
 	_phase_label = Label.new()
 	_phase_label.text = "LOBBY"
-	_phase_label.add_theme_font_size_override("font_size", 22)
+	_phase_label.add_theme_font_size_override("font_size", 18)
 	_phase_label.add_theme_color_override("font_color", Color("#f0bd68"))
-	_game.add_child(_phase_label)
+	labels_row.add_child(_phase_label)
 	_world_label = Label.new()
 	_world_label.text = "Waiting for match snapshot"
-	_world_label.add_theme_font_size_override("font_size", 20)
+	_world_label.add_theme_font_size_override("font_size", 17)
 	_world_label.add_theme_color_override("font_color", Color("#b7c7da"))
-	_game.add_child(_world_label)
+	_world_label.clip_text = true
+	_world_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	labels_row.add_child(_world_label)
+	_top_box.add_child(labels_row)
 
 	_build_description = Label.new()
 	_build_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_build_description.add_theme_font_size_override("font_size", 17)
+	_build_description.add_theme_font_size_override("font_size", 15)
 	_build_description.add_theme_color_override("font_color", Color("#d5e5fa"))
 	_build_description.visible = false
-	_game.add_child(_build_description)
+	_top_box.add_child(_build_description)
 
-	_arena = Arena3DScript.new() if _world_3d != null else ArenaScript.new()
-	if _arena is Control and _arena.has_method("set_world_root"):
-		_arena.set_world_root(_world_3d)
-	_arena.custom_minimum_size = Vector2.ZERO
-	_arena.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_arena.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_arena.tapped.connect(_on_arena_tapped)
-	_game.add_child(_arena)
+	# The middle is the map. It only holds the end-of-match table, which shows over it.
+	var middle := CenterContainer.new()
+	middle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	middle.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_game.add_child(middle)
+	_summary_card = PanelContainer.new()
+	_summary_card.visible = false
+	_summary_card.add_theme_stylebox_override("panel", _overlay_style(0.94))
+	middle.add_child(_summary_card)
+	# The end-of-match screen (GDD 13.2), filled when the match ends.
+	_summary_box = VBoxContainer.new()
+	_summary_box.visible = false
+	_summary_box.add_theme_constant_override("separation", 4)
+	_summary_card.add_child(_summary_box)
+	_summary_box.visibility_changed.connect(func() -> void: _summary_card.visible = _summary_box.visible)
+
+	# Bottom: the build palette, the selection panel and the hero and item bars.
+	_bottom_sheet = PanelContainer.new()
+	_bottom_sheet.add_theme_stylebox_override("panel", _overlay_style(0.8))
+	_bottom_sheet.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_game.add_child(_bottom_sheet)
+	_bottom_box = VBoxContainer.new()
+	_bottom_box.add_theme_constant_override("separation", 6)
+	_bottom_sheet.add_child(_bottom_box)
 
 	_palette = GridContainer.new()
-	_palette.columns = 3
+	_palette.columns = 6
 	_palette.add_theme_constant_override("h_separation", 10)
 	_palette.add_theme_constant_override("v_separation", 10)
-	_game.add_child(_palette)
+	_bottom_box.add_child(_palette)
 	for item in GameLogic.PALETTE:
 		var build_button := _make_button(item[1], Color("#24364a"))
+		build_button.custom_minimum_size = Vector2(0, 46)
+		build_button.add_theme_font_size_override("font_size", 15)
 		build_button.pressed.connect(_select_building.bind(item[0]))
 		_palette.add_child(build_button)
 		_palette_buttons[item[0]] = build_button
@@ -267,7 +341,7 @@ func _build_interface() -> void:
 	_tower_attack_selector.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_tower_attack_row.add_child(_tower_attack_selector)
 	_tower_attack_row.visible = false
-	_game.add_child(_tower_attack_row)
+	_bottom_box.add_child(_tower_attack_row)
 
 	# The selected building's actions: tower upgrades and recycle. The buttons are rebuilt
 	# only when the actions change, so a tap never lands on a button that was just replaced.
@@ -294,7 +368,7 @@ func _build_interface() -> void:
 	_shop_box = VBoxContainer.new()
 	_shop_box.add_theme_constant_override("separation", 6)
 	_panel.add_child(_shop_box)
-	_game.add_child(_panel)
+	_bottom_box.add_child(_panel)
 
 	# The hero bar: the hero's label and its four abilities, M R A S. It shows while a hero lives.
 	_hero_bar = HBoxContainer.new()
@@ -321,27 +395,15 @@ func _build_interface() -> void:
 			ability_button.gui_input.connect(_on_ability_gui_input.bind(int(ability_def.slot), ability_button))
 		_hero_bar.add_child(ability_button)
 		_ability_buttons.append(ability_button)
-	_game.add_child(_hero_bar)
+	_bottom_box.add_child(_hero_bar)
 	# The item bar: one quick slot per item, with how many the hero holds. It shows while a hero lives.
 	_item_bar = HBoxContainer.new()
 	_item_bar.visible = false
 	_item_bar.add_theme_constant_override("separation", 8)
-	_game.add_child(_item_bar)
+	_bottom_box.add_child(_item_bar)
 
-	# The end-of-match screen (GDD 13.2), filled when the match ends.
-	_summary_box = VBoxContainer.new()
-	_summary_box.visible = false
-	_summary_box.add_theme_constant_override("separation", 4)
-	_game.add_child(_summary_box)
-
-	var game_controls := HBoxContainer.new()
-	_start_button = _make_button("START MATCH", Color("#287557"))
-	_start_button.pressed.connect(_start_match)
-	game_controls.add_child(_start_button)
-	var leave_button := _make_button("LEAVE", Color("#52313b"))
-	leave_button.pressed.connect(_leave_match)
-	game_controls.add_child(leave_button)
-	_game.add_child(game_controls)
+	get_viewport().size_changed.connect(_fit_overlays)
+	_fit_overlays.call_deferred()
 
 func _add_field(parent: VBoxContainer, caption: String, initial_text: String, variable_name: String) -> void:
 	var field_column := VBoxContainer.new()
@@ -441,8 +503,7 @@ func _connect_match() -> void:
 	_arena.set_balance(_data.balance, _data.heroes, _data.items)
 	_tick_hz = int(_backend.get_spec().get("tickHz", 20))
 	_match_id_input.text = _backend.get_match_id()
-	_home.visible = false
-	_game.visible = true
+	_show_page(true)
 	var spectator := _role == "spectator"
 	_palette.visible = not spectator
 	_match_label.text = "WATCHING BOTS" if spectator else "Team %d  •  %s" % [
@@ -1473,8 +1534,32 @@ func _update_world_label() -> void:
 	]
 	_world_label.add_theme_color_override("font_color", TEAM_BLUE if _viewer_team == 0 else TEAM_RED)
 
+## The LEAVE button. In a running match for two humans the first press only arms the button, because leaving
+## forfeits the match; the second press within three seconds leaves. Everything else leaves at once.
+func _on_leave_pressed() -> void:
+	var status := str(_current_match.get("status", "lobby"))
+	var humans := 0
+	for entry in _current_match.get("players", []):
+		if str(entry.get("kind", "")) == "human":
+			humans += 1
+	if GameLogic.leave_needs_confirm(status, _role, humans) and Time.get_ticks_msec() > _leave_armed_until:
+		_leave_armed_until = Time.get_ticks_msec() + 3000
+		_leave_button.text = "FORFEIT?"
+		_set_status("Leaving forfeits this match. Press the button again to leave.")
+		await get_tree().create_timer(3.0).timeout
+		_leave_button.text = "LEAVE"
+		return
+	await _leave_match()
+
+## Tells the server (a lobby seat is freed or cancelled, a running match is stopped or forfeited), closes the
+## connection and returns to the start screen.
 func _leave_match() -> void:
-	_backend.disconnect_match()
+	var call := GameLogic.leave_call(str(_current_match.get("status", "lobby")), _role, _is_host)
+	_leave_button.disabled = true
+	await _backend.leave_match(call)
+	_leave_button.disabled = false
+	_leave_button.text = "LEAVE"
+	_leave_armed_until = 0
 	_match_id_input.clear()
 	_current_snapshot = {}
 	_current_match = {}
@@ -1486,12 +1571,44 @@ func _leave_match() -> void:
 	_mode = ""
 	_path_points = []
 	_building = ""
+	_ghost = {}
 	_build_description.visible = false
 	_tower_attack_row.visible = false
-	_game.visible = false
-	_home.visible = true
+	_arena.clear_ghost()
+	_arena.set_world({}, {}, 0) # the map and the units of the match leave the screen
 	_summary_box.visible = false
+	_show_page(false)
 	_set_status("Disconnected.")
+
+## Shows the start screen or the game. The status line moves with it: into the card at the start, under the match
+## information in the game.
+func _show_page(in_game: bool) -> void:
+	_home.visible = not in_game
+	_game.visible = in_game
+	_arena.visible = in_game # the zoom buttons belong to the game, not to the start screen
+	var target: Node = _top_box if in_game else _home
+	if _status_label.get_parent() != target:
+		_status_label.reparent(target)
+	_fit_overlays()
+
+func _overlay_style(alpha: float) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.03, 0.05, 0.09, alpha)
+	style.border_color = Color("#2c4057")
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(10)
+	style.set_content_margin_all(10)
+	return style
+
+## Sizes the floating panels to the window: the cards keep their width on a big window and shrink to the window
+## on a small one, and the start card is no taller than the window (it scrolls).
+func _fit_overlays() -> void:
+	if _home_card == null:
+		return
+	var room := get_viewport_rect().size - Vector2(UI_MARGIN * 2, UI_MARGIN * 2)
+	_home_card.custom_minimum_size = Vector2(minf(HOME_WIDTH, room.x), minf(_home.get_combined_minimum_size().y + 24.0, room.y))
+	_top_panel.custom_minimum_size.x = minf(SHEET_WIDTH, room.x)
+	_bottom_sheet.custom_minimum_size.x = minf(SHEET_WIDTH, room.x)
 
 func _copy_match_id() -> void:
 	if _match_id_input.text.is_empty():
@@ -1503,6 +1620,7 @@ func _copy_match_id() -> void:
 func _set_status(text: String) -> void:
 	if is_instance_valid(_status_label):
 		_status_label.text = text
+		_fit_overlays.call_deferred()
 
 func _set_match_phase(phase: String) -> void:
 	if not is_instance_valid(_phase_label):

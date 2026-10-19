@@ -4425,5 +4425,111 @@
       "overButton": true,
       "expect": "cancel"
     }
+  ],
+  "leaveCall": [
+    {
+      "status": "lobby",
+      "role": "player",
+      "isHost": true,
+      "expect": "leave"
+    },
+    {
+      "status": "lobby",
+      "role": "player",
+      "isHost": false,
+      "expect": "leave"
+    },
+    {
+      "status": "lobby",
+      "role": "spectator",
+      "isHost": true,
+      "expect": "leave"
+    },
+    {
+      "status": "lobby",
+      "role": "spectator",
+      "isHost": false,
+      "expect": "none"
+    },
+    {
+      "status": "running",
+      "role": "player",
+      "isHost": true,
+      "expect": "quit"
+    },
+    {
+      "status": "running",
+      "role": "player",
+      "isHost": false,
+      "expect": "quit"
+    },
+    {
+      "status": "running",
+      "role": "spectator",
+      "isHost": true,
+      "expect": "quit"
+    },
+    {
+      "status": "running",
+      "role": "spectator",
+      "isHost": false,
+      "expect": "none"
+    },
+    {
+      "status": "finished",
+      "role": "player",
+      "isHost": true,
+      "expect": "none"
+    },
+    {
+      "status": "finished",
+      "role": "player",
+      "isHost": false,
+      "expect": "none"
+    },
+    {
+      "status": "finished",
+      "role": "spectator",
+      "isHost": true,
+      "expect": "none"
+    },
+    {
+      "status": "finished",
+      "role": "spectator",
+      "isHost": false,
+      "expect": "none"
+    }
+  ],
+  "leaveNeedsConfirm": [
+    {
+      "status": "running",
+      "role": "player",
+      "humans": 2,
+      "expect": true
+    },
+    {
+      "status": "running",
+      "role": "player",
+      "humans": 1,
+      "expect": false
+    },
+    {
+      "status": "running",
+      "role": "spectator",
+      "humans": 2,
+      "expect": false
+    },
+    {
+      "status": "lobby",
+      "role": "player",
+      "humans": 2,
+      "expect": false
+    },
+    {
+      "status": "finished",
+      "role": "player",
+      "humans": 2,
+      "expect": false
+    }
   ]
 }

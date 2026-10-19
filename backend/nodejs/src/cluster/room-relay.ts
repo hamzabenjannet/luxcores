@@ -84,7 +84,7 @@ export class RoomRelay {
   }
 
   /** How many subscribers the room has besides this node. Cached for a second. */
-  private othersListening(matchId: string): Promise<number> {
+  othersListening(matchId: string): Promise<number> {
     const cached = this.interest.get(matchId);
     if (cached && Date.now() - cached.at < INTEREST_TTL_MS) return cached.others;
     const name = this.channel(matchId);

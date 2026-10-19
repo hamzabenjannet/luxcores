@@ -2,11 +2,21 @@
 
 Working title. A strategy game mixing hero control (Dota 2), creep waypoint paths (Age of Empires) and base building with tower defense (Generals Zero Hour, Clash Royale). Everything in the world is made of light energy, measured in **lux**. Destroyed things dissolve into light; there is no blood or gore.
 
-Status: draft v0.9.13. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
+Status: draft v0.9.14. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
 
 ---
 
 ## 0. Changelog
+
+### v0.9.13 → v0.9.14
+
+Hamza asked on 2026-10-19 for a Leave button in the web client so that matches do not keep running on the server, and answered two rule questions.
+
+| Area | Change |
+|---|---|
+| Leaving | A player can leave a running match. In a match for two humans the leaver forfeits: the other team wins and the end reason is `forfeit`, which counts on the leaderboard. Against a bot, or with no other human, the match stops as a draw. A lobby seat is freed, and the host leaving cancels the lobby (section 11.6) |
+| Abandoned matches | A running match with nobody connected for 2 minutes (the server setting `MATCH_ABANDON_SECONDS`, 0 turns it off) is stopped as a draw and keeps its replay (section 2) |
+| Default view | A wide window shows at least 28 tiles top to bottom at zoom 1, so a landscape view is wider than 32 tiles (section 11.1) |
 
 ### v0.9.12 → v0.9.13
 
@@ -233,7 +243,7 @@ Single hero with a 5-hero rotation, funnel unit replaced by the Energy Grab item
 | Unlimited | A Lumen Core reaches 0 lux | The team whose Core survives |
 | Timed (10 min) | Core at 0, or timer reaches 10:00 | Core survivor; at the buzzer, the team with the higher **total lux value** |
 
-The host of a match chooses its tick limit when creating it: Unlimited, which runs until a Core falls, or Capped, which ends an undecided match as a draw at the chosen tick (1 to 1000000, 20 ticks per second). A match whose host chose nothing takes the server limit, `match.stalemateTicks` (10000, about 8 minutes) or the `MATCH_MAX_TICKS` setting that tests and test servers raise.
+The host of a match chooses its tick limit when creating it: Unlimited, which runs until a Core falls, or Capped, which ends an undecided match as a draw at the chosen tick (1 to 1000000, 20 ticks per second). A running match that nobody has been connected to for 2 minutes is stopped as a draw (section 11.6). A match whose host chose nothing takes the server limit, `match.stalemateTicks` (10000, about 8 minutes) or the `MATCH_MAX_TICKS` setting that tests and test servers raise.
 
 **Total lux value** = Core lux + lux value of every building, creep and hero the team owns. Items are not counted.
 
@@ -601,7 +611,7 @@ A hero told to attack a target walks until the target is in reach, hits it, and 
 | Tap barracks | Any | Sheet: creeps, items, default path |
 | Tap other own building | Any | Info, upgrade, recycle |
 | One-finger drag | Anywhere | Pan; stops hero follow |
-| Pinch, or the mouse wheel | Anywhere | Zoom, from 0.6 to 2.2 times the default view of 32 tiles across |
+| Pinch, or the mouse wheel | Anywhere | Zoom, from 0.6 to 2.2 times the default view of 32 tiles across (on a wide window the default view is at least 28 tiles tall, so it shows more than 32 across) |
 | Tap hero portrait (the hero's name in the hero bar) | Any | Recenter and resume follow |
 
 ### 11.2 Ability targeting
@@ -638,6 +648,12 @@ The barracks panel stacks the title, the actions (Recycle), the queue, then the 
 3. **Place** sends the build and ends build mode at once, so a second tap cannot place a second building. **Cancel** removes the ghost and keeps the building picked.
 
 The checks are the ones the sim would refuse for sure. The sim result is final.
+
+### 11.6 Leaving a match
+
+Both clients have a **Leave** button, in the lobby and in the game. It frees a lobby seat (the host cancels the lobby), stops a running match against a bot as a draw, and, in a running match for two humans, forfeits it: the other team wins with the end reason `forfeit`. Because that costs a win, the button asks for a second press within 3 seconds first. A spectator who does not own the match only closes the connection. After leaving, the client shows the start screen.
+
+The server also ends a running match that nobody has been connected to for 2 minutes (a closed tab, a lost connection), as a draw with its replay kept, so no match runs forever on a server.
 
 ## 12. MVP opponent
 

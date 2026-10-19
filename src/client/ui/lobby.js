@@ -9,9 +9,9 @@ import { entropyText, tickCapText } from '../entity-text.js';
 /**
  * @param {HTMLElement} root
  * @param {import('../net/server-session.js').ServerSession} session
- * @param {{ shareLink: string, entropyDefault?: number }} opts  `entropyDefault` is the rate of data/balance.json in tenths of a percent per second, shown when the host chose none
+ * @param {{ shareLink: string, entropyDefault?: number, onLeave?: () => void }} opts  `entropyDefault` is the rate of data/balance.json in tenths of a percent per second, shown when the host chose none; `onLeave` runs when the player taps Leave
  */
-export function showLobby(root, session, { shareLink, entropyDefault = 1 }) {
+export function showLobby(root, session, { shareLink, entropyDefault = 1, onLeave }) {
   root.hidden = false;
   const card = document.createElement('div');
   card.className = 'card';
@@ -42,7 +42,11 @@ export function showLobby(root, session, { shareLink, entropyDefault = 1 }) {
       status.textContent = err instanceof Error ? err.message : String(err);
     }
   });
-  card.append(title, idLine, players, rules, limit, status, copy, start);
+  const leave = document.createElement('button');
+  leave.textContent = 'Leave';
+  leave.className = 'leave-lobby';
+  leave.addEventListener('click', () => onLeave?.());
+  card.append(title, idLine, players, rules, limit, status, copy, start, leave);
   root.replaceChildren(card);
 
   function update() {

@@ -13,6 +13,8 @@
  * Socket.IO loads on demand from the import map in index.html.
  */
 
+import { leaveCall } from '../ui/leave.js';
+
 /**
  * Latest server state. Filled by socket events.
  * @typedef {Object} Feed
@@ -43,6 +45,7 @@
  * @property {() => Promise<string>} requestRecoveryCode  makes a new recovery code; the old one stops working
  * @property {string} matchId
  * @property {() => Promise<void>} start  host only; asks the server to start the match
+ * @property {() => Promise<void>} leave  tells the server this client leaves (a lobby seat, or a running match: a forfeit against a human, a stop otherwise) and closes the connection
  * @property {(cmd: { t: string, [field: string]: unknown }) => Promise<{ accepted: boolean, tick?: number, reason?: string }>} sendCommand
  * @property {(listener: (snapshot: any) => void) => void} onSnapshot
  * @property {(listener: () => void) => void} onChange  called on every status change
@@ -177,6 +180,15 @@ export async function joinServerMatch({ server, name, matchId, vsBot = false, bo
     requestRecoveryCode: async () => (await request(`${base}/api/auth/recovery-code`, { token, method: 'POST' })).recoveryCode,
     matchId: match.id,
     start: async () => { await request(`${base}/api/matches/${match.id}/start`, { token, method: 'POST' }); },
+    leave: async () => {
+      const call = leaveCall({ status: feed.status, role: joined.role, isHost: match.hostId === auth.player.id });
+      try {
+        if (call !== 'none') await request(`${base}/api/matches/${match.id}/${call}`, { token, method: 'POST' });
+      } catch {
+        // The match ended meanwhile, or the server is away: the connection closes either way.
+      }
+      socket.close();
+    },
     sendCommand: async (cmd) => {
       const ack = await socket.timeout(5000).emitWithAck('match:command', { matchId: match.id, seq: seq++, cmd });
       if (!ack.accepted && typeof ack.nextSeq === 'number') seq = ack.nextSeq; // the server's count wins; the player taps again

@@ -55,6 +55,7 @@ To play against the server from a browser, open `http://localhost:3000/?server=&
 | `WS_AUTH_TIMEOUT_MS`, `WS_MAX_PAYLOAD_BYTES` | `5000`, `16384` | Plain WebSocket auth window and largest frame |
 | `LUXCORES_ROOT` | `../..` | Repo root with `src/sim`, `data/` and `index.html` |
 | `PUBLIC_DIR` | `public` | Backend static folder |
+| `MATCH_ABANDON_SECONDS` | `120` | A running match that no client (on any server) has been connected to for this long is stopped as a draw and keeps its replay. `0` turns the watchdog off |
 | `MATCH_ON_SHUTDOWN` | `resume` | A graceful stop leaves running matches running, and the next start rebuilds them from their logs. `end` draws them at once |
 | `EVENT_LOG_DIR`, `EVENT_LOG_FLUSH_MS`, `EVENT_LOG_KEEP_FINISHED` | `events` next to the JSON database, `100`, `false` | Where the file copy of the match logs lives, how often logs are written, and whether a finished match keeps its log everywhere (see Match Log and Resume) |
 | `EVENT_LOG_RETENTION_DAYS` | `14` | Days a finished match keeps its events in MongoDB. `0` deletes them when the match ends |
@@ -131,6 +132,7 @@ All routes live under `/api`. A route needs `Authorization: Bearer <token>` unle
 | `GET /players/me`, `PATCH /players/me`, `GET /players/:id` | token | Profiles |
 | `POST /matches`, `GET /matches`, `GET /matches/:id` | token | Open and browse lobbies. The body of `POST /matches` may set `entropyPermillePerSecond` (0 to 1000, tenths of a percent of max HP per second; the default of `data/balance.json` when absent), which the match record, the lobby, the log and the replay keep. It may also set `maxTicks` (0 for unlimited, or 1 to 1000000; the server limit applies when absent), which the match record and the lobby keep and the runner applies at the end of each tick |
 | `POST /matches/:id/join`, `POST /matches/:id/leave` | token | Lobby membership |
+| `POST /matches/:id/quit` | token | Leave a running match. In a match for two humans the leaver forfeits (the other team wins, reason `forfeit`); against a bot, or alone, the match stops as a draw. The host of a bot-versus-bot match may quit it too |
 | `POST /matches/:id/start`, `POST /matches/:id/stop` | token, host | Start or stop the simulation |
 | `GET /game/spec` | public | Spec version, data hash, tick rate and the socket reference |
 | `GET /game/maps/:seed` | public | The generated map for a seed |

@@ -25,6 +25,8 @@ export interface RoomSink {
 export class RoomHub {
   private readonly sinks: RoomSink[] = [];
   private readonly relay?: RoomRelay;
+  /** Clients of this server that sit in each match room. */
+  private readonly listeners = new Map<string, number>();
 
   constructor(
     runner: MatchRunnerService,
@@ -33,6 +35,7 @@ export class RoomHub {
     @Optional() @Inject(REDIS_HANDLE) redis?: RedisHandle | null,
   ) {
     if (redis) this.relay = new RoomRelay(redis, ownership.nodeId, (matchId, event, data, team) => this.deliver(matchId, event, data, team));
+    runner.setPresence((matchId) => this.anyoneListening(matchId));
     matches.changes.on('changed', (match: { id: string }) =>
       this.broadcast(match.id, 'match:updated', match),
     );
@@ -52,12 +55,22 @@ export class RoomHub {
 
   /** A client of this server joined the room. */
   watch(matchId: string): void {
+    this.listeners.set(matchId, (this.listeners.get(matchId) ?? 0) + 1);
     void this.relay?.watch(matchId);
   }
 
   /** A client of this server left the room. */
   unwatch(matchId: string): void {
+    const left = (this.listeners.get(matchId) ?? 0) - 1;
+    if (left > 0) this.listeners.set(matchId, left);
+    else this.listeners.delete(matchId);
     void this.relay?.unwatch(matchId);
+  }
+
+  /** Whether any client, on this server or another, sits in the match room. */
+  async anyoneListening(matchId: string): Promise<boolean> {
+    if ((this.listeners.get(matchId) ?? 0) > 0) return true;
+    return this.relay ? (await this.relay.othersListening(matchId)) > 0 : false;
   }
 
   /**

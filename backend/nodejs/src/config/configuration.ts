@@ -38,6 +38,8 @@ export interface AppConfig {
     snapshotEveryTicks: number;
     /** Ticks between two checkpoints of a running match, a multiple of 20. 0 turns checkpoints off. */
     checkpointEveryTicks: number;
+    /** Seconds a running match may have nobody connected before the server stops it as a draw. 0 turns it off. */
+    abandonSeconds: number;
     /** What a graceful shutdown does to live matches: `resume` keeps them for the next start, `end` draws them. */
     onShutdown: 'resume' | 'end';
   };
@@ -121,6 +123,7 @@ export default (): AppConfig => {
       matchMaxTicks: int(env.MATCH_MAX_TICKS, 0),
       snapshotEveryTicks: int(env.SNAPSHOT_EVERY_TICKS, 2),
       checkpointEveryTicks: int(env.CHECKPOINT_EVERY_TICKS, 400),
+      abandonSeconds: int(env.MATCH_ABANDON_SECONDS, 120),
       onShutdown: env.MATCH_ON_SHUTDOWN === 'end' ? 'end' : 'resume',
     },
     cluster: {

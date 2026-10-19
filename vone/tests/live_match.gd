@@ -34,6 +34,13 @@ func _run() -> void:
 		quit(1)
 		return
 
+	# The layout: the start card sits inside the window, and once in a match the arena is the whole window
+	# with the controls floating over it.
+	await process_frame
+	var window_rect := Rect2(Vector2.ZERO, _main.get_viewport_rect().size)
+	_check("the start card is inside the window", window_rect.encloses(_main._home_card.get_global_rect()), true)
+	_check("the status line is in the start card", _main._status_label.get_parent() == _main._home, true)
+
 	# Part 1: a human plays a bot through the real UI methods.
 	_main._server_input.text = server
 	_main._name_input.text = "GodotTester"
@@ -44,6 +51,11 @@ func _run() -> void:
 	_check("the host's entropy rate reaches the match", int(_main._current_match.get("entropyPermillePerSecond", -1)), 5)
 	_check("the lobby says the entropy rate", _main._status_label.text.contains("Entropy 0.5% per second."), true)
 	_check("connected as a player", _main._role == "player" and _main._game.visible, true)
+	await process_frame
+	_check("the arena fills the whole window", _main._arena.get_global_rect().is_equal_approx(window_rect), true)
+	_check("the top and bottom panels are inside the window", window_rect.encloses(_main._top_panel.get_global_rect()) and window_rect.encloses(_main._bottom_sheet.get_global_rect()), true)
+	_check("the panels leave the middle of the window to the map", _main._top_panel.get_global_rect().end.y + _main._bottom_sheet.get_global_rect().size.y < window_rect.size.y * 0.8, true)
+	_check("the status line moved under the match information", _main._status_label.get_parent() == _main._top_box, true)
 	_check("the server rules loaded", _main._data.has("buildings") and _main._data.has("mapgen"), true)
 	await _main._start_match()
 	var started: bool = await _until(func(): return _entities().size() > 0)
@@ -114,7 +126,13 @@ func _run() -> void:
 	_check("snapshots flow again after the rejoin", await _until(func(): return int(_main._current_snapshot.get("tick", 0)) > tick_after_drop + 10), true)
 	var wind_ack: Dictionary = await _main._backend.send_command({"t": "build", "building": "wind", "tileX": solar_tile.x + 3, "tileZ": solar_tile.y})
 	_check("a command after the rejoin is accepted: the count continued", wind_ack.get("accepted", false), true)
-	_main._leave_match()
+	var left_id: String = _main._backend.get_match_id()
+	await _main._leave_match()
+	var sign_in: Dictionary = await _main._backend._sign_in("Checker") # the same device signs in again, as the same guest
+	_main._backend._token = str(sign_in.data.get("accessToken", ""))
+	var left: Dictionary = await _main._backend._request("/api/matches/" + left_id, HTTPClient.METHOD_GET, {}, true)
+	_check("Leave stops the match on the server", left.ok and str(left.data.status) == "finished" and str(left.data.result.reason) == "stopped", true)
+	_check("Leave returns to the start screen", _main._home.visible and not _main._game.visible and _main._status_label.get_parent() == _main._home, true)
 
 	# Part 1b: creeps. A fresh match against the bot: order groups, cancel, split, merge and send one.
 	_main._mode_selector.select(0)
@@ -177,7 +195,7 @@ func _run() -> void:
 	_check("path mode counts two waypoints", _main._path_points.size() == 2 and _main._panel_title.text.contains("2/10"), true)
 	_main._path_go()
 	_check("the group takes the custom path", await _until(func(): return _main._current_snapshot.groups.any(func(g): return int(g.id) == int(ids[1]) and int(g.custom) == 1 and g.waypoints.size() == 2)), true)
-	_main._leave_match()
+	await _main._leave_match()
 
 	# Part 1c: heroes. Pick one at a barracks through the panel, shield it, aim the area ability.
 	_main._mode_selector.select(0)
@@ -269,7 +287,7 @@ func _run() -> void:
 	_check("a wheel notch zooms in", arena.get_zoom() > 1.0, true)
 	arena.set_zoom(1.0)
 	_check("the aim ended with the cast", _main._ability, -1)
-	_main._leave_match()
+	await _main._leave_match()
 
 	# Part 1d: items. Buy two before any hero exists, get them with the hero, use Haste and aim Energy Boost.
 	_main._mode_selector.select(0)
@@ -306,7 +324,7 @@ func _run() -> void:
 	await _main._on_arena_tapped(Vector2(float(boosted.x) / 1000.0, float(boosted.z) / 1000.0))
 	_check("Energy Boost adds 15 lux of HP", await _until(func(): return int(_find(GameLogic.KIND_HERO, 0)[0].maxHp) == int(boosted.maxHp) + 150000), true)
 	_check("the aim ended with the use", _main._item_aim, -1)
-	_main._leave_match()
+	await _main._leave_match()
 
 	# The end-of-match screen reads the counters of the result.
 	_main._viewer_team = 0
@@ -316,7 +334,7 @@ func _run() -> void:
 	_check("the end screen shows", _main._summary_box.visible, true)
 	_check("the end screen names the outcome and the duration", _main._summary_box.get_child(0).text.begins_with("Victory") and _main._summary_box.get_child(0).text.ends_with("2:58"), true)
 	_check("the end screen has a row per counter", _main._summary_box.get_child(1).get_child_count(), 3 + 6 * 3)
-	_main._leave_match()
+	await _main._leave_match()
 	_check("leaving hides the end screen", _main._summary_box.visible, false)
 
 	# Part 2: two bots play, and this client only watches.
@@ -330,7 +348,7 @@ func _run() -> void:
 	_check("both bots build towers", both, true)
 	_check("the spectator HUD names the sides", _main._world_label.text.contains("Blue") and _main._world_label.text.contains("Red"), true)
 	var match_id: String = _main._backend.get_match_id()
-	_main._leave_match()
+	await _main._leave_match()
 
 	# Part 3: a second client joins the bot match by id and watches it.
 	_main._match_input.text = match_id

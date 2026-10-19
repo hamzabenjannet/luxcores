@@ -376,6 +376,52 @@ test('?perf=1 shows the frame meter with what the renderer draws', { timeout: 12
   }, { MATCH_MAX_TICKS: '1200' });
 });
 
+/** Reads a match as a fresh guest from the backend the page talks to, from the test's own side. */
+async function matchOnServer(/** @type {import('playwright-core').Page} */ page, /** @type {string} */ id) {
+  const base = `http://127.0.0.1:${new URL(page.url()).port}`;
+  const auth = await (await fetch(`${base}/api/auth/guest`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Checker' }) })).json();
+  return (await fetch(`${base}/api/matches/${id}`, { headers: { authorization: `Bearer ${auth.accessToken}` } })).json();
+}
+
+test('Leave ends the match on the server and returns to the menu, and a match for two humans asks before it forfeits', { timeout: 180_000, skip }, async () => {
+  await withBackend(async ({ errors, newContext, open }) => {
+    // Against a bot: one tap leaves, the page is back at the start menu and the match is over on the server.
+    const solo = await open(await newContext(), `name=Halo&match=new&vsBot=1&autostart=1&maxTicks=0&seed=${SEED}`);
+    await until(solo, () => /** @type {any} */ (window).__luxTest.entities().length > 0);
+    const soloId = await luxTest(solo, 'matchId');
+    assert.equal(await solo.isVisible('#leave'), true, 'the HUD has a Leave button');
+    await solo.click('#leave');
+    await solo.waitForSelector('#menu .card button:has-text("Play Against Bot")', { timeout: 30_000 });
+    const left = await matchOnServer(solo, soloId);
+    assert.equal(left.status, 'finished', 'nothing keeps running after Leave');
+    assert.equal(left.result.reason, 'stopped');
+
+    // Two humans: the first tap only arms the button, the second forfeits, and the other player wins.
+    const host = await open(await newContext(), `name=Stays&match=new&maxTicks=0&seed=${SEED}`);
+    const matchId = await luxTest(host, 'matchId');
+    const guest = await open(await newContext(), `name=Goes&match=${matchId}`);
+    await host.evaluate(() => /** @type {any} */ (window).__luxTest.start());
+    await until(guest, () => /** @type {any} */ (window).__luxTest.entities().length > 0);
+    await guest.click('#leave');
+    assert.match(await guest.textContent('#leave') ?? '', /Forfeit\? Tap again/, 'the first tap asks');
+    assert.equal(await guest.locator('#menu .card button:has-text("Play Against Bot")').count(), 0, 'and stays in the match');
+    await guest.click('#leave');
+    await guest.waitForSelector('#menu .card button:has-text("Play Against Bot")', { timeout: 30_000 });
+    await host.waitForSelector('#banner:not([hidden])', { timeout: 30_000 });
+    assert.match(await host.textContent('#banner') ?? '', /^Victory {2}\(forfeit\)$/);
+    const duel = await matchOnServer(host, matchId);
+    assert.deepEqual([duel.status, duel.result.reason, duel.result.winnerTeam], ['finished', 'forfeit', 0]);
+
+    // A lobby has its own Leave: the host cancels it.
+    const lobbyHost = await open(await newContext(), 'name=Lonely&match=new');
+    const lobbyId = await luxTest(lobbyHost, 'matchId');
+    await lobbyHost.click('#menu button:has-text("Leave")');
+    await lobbyHost.waitForSelector('#menu .card button:has-text("Play Against Bot")', { timeout: 30_000 });
+    assert.equal((await matchOnServer(lobbyHost, lobbyId)).status, 'cancelled');
+    assert.deepEqual(errors, [], 'the pages must log no console or page errors');
+  }, { MATCH_MAX_TICKS: '2400' });
+});
+
 test('a spectator watches two bots play to the end', { timeout: 180_000, skip }, async () => {
   await withBackend(async ({ errors, newContext, open }) => {
     const page = await open(await newContext(), 'name=Watcher&match=new&botVsBot=1&autostart=1&seed=777');

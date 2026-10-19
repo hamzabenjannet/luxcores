@@ -364,6 +364,22 @@ static func entropy_text(tenths: int) -> String:
 	var tenth := tenths % 10
 	return str(whole) if tenth == 0 else "%d.%d" % [whole, tenth]
 
+## Which server call a player's Leave needs: "leave" frees a lobby seat or cancels the lobby, "quit" leaves a
+## running match, "none" only closes the connection. A bot-versus-bot match has its host as a spectator.
+## The same rule as src/client/ui/leave.js.
+static func leave_call(status: String, role: String, is_host: bool) -> String:
+	if role != "player" and not is_host:
+		return "none"
+	if status == "lobby":
+		return "leave"
+	if status == "running":
+		return "quit"
+	return "none"
+
+## Whether Leave asks for a second tap first: only in a running match for two humans, where leaving forfeits.
+static func leave_needs_confirm(status: String, role: String, humans: int) -> bool:
+	return status == "running" and role == "player" and humans >= 2
+
 ## Zoom 1 is the default view. The limits and the gesture rules are the same as in src/client/input/gestures.js.
 const ZOOM_MIN := 0.6
 const ZOOM_MAX := 2.2

@@ -38,6 +38,7 @@ import { entropyFromText, isDay, tickCapFromText } from './entity-text.js';
 import { matchSummary } from './ui/summary.js';
 import { lockPortrait } from './orientation.js';
 import { createPerfMeter } from './perf.js';
+import { leaveNeedsConfirm } from './ui/leave.js';
 
 const query = new URLSearchParams(location.search);
 const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
@@ -132,7 +133,36 @@ session.onSnapshot((s) => {
 
 const link = new URL(location.href);
 link.search = new URLSearchParams({ ...(query.has('server') ? { server } : {}), match: session.matchId }).toString();
-const lobby = showLobby($('menu'), session, { shareLink: link.toString(), entropyDefault: data.balance.economy.entropyPermillePerSecond });
+/**
+ * Leaves the match and returns to the start menu. The server frees a lobby seat, stops a match against a bot
+ * and gives a match for two humans to the other player, so nothing is left running (GDD 11.6).
+ */
+async function leaveMatch() {
+  await session.leave();
+  const back = new URL(location.href);
+  back.search = query.has('server') ? new URLSearchParams({ server }).toString() : '';
+  location.assign(back.toString());
+}
+const lobby = showLobby($('menu'), session, { shareLink: link.toString(), entropyDefault: data.balance.economy.entropyPermillePerSecond, onLeave: leaveMatch });
+
+// The Leave button of the HUD. In a running match for two humans it asks for a second tap, because leaving forfeits.
+const leaveButton = $('leave');
+leaveButton.hidden = false;
+let armedUntil = 0;
+leaveButton.addEventListener('click', () => {
+  const humans = session.getMatch().players.filter((/** @type {{ kind: string }} */ p) => p.kind === 'human').length;
+  if (leaveNeedsConfirm({ status: session.feed.status, role: session.role, humans }) && Date.now() > armedUntil) {
+    armedUntil = Date.now() + 3000;
+    leaveButton.textContent = 'Forfeit? Tap again';
+    leaveButton.classList.add('armed');
+    setTimeout(() => {
+      leaveButton.textContent = 'Leave';
+      leaveButton.classList.remove('armed');
+    }, 3000);
+    return;
+  }
+  void leaveMatch();
+});
 if (query.get('autostart') === '1' && session.isHost) await session.start();
 
 const code = query.get('showcode') === '1' ? await session.requestRecoveryCode() : session.recoveryCode;

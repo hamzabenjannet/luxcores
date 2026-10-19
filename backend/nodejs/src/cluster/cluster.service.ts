@@ -83,6 +83,14 @@ export class ClusterService {
     return reply as MatchDto;
   }
 
+  async forfeit(matchId: string, loserTeam: number): Promise<MatchDto> {
+    if (this.runner.isRunning(matchId)) return this.runner.forfeit(matchId, loserTeam);
+    const reply = await this.ask(matchId, { t: 'forfeit', team: loserTeam });
+    if (reply === NOT_RUNNING) return this.runner.forfeit(matchId, loserTeam); // throws the usual "not running"
+    if (typeof reply === 'string') throw new ConflictException(reply);
+    return reply as MatchDto;
+  }
+
   /**
    * Sends a request to the node that runs the match. Returns its reply, `NOT_RUNNING` when no node
    * holds the match, or a sentence that says why the request could not be served.

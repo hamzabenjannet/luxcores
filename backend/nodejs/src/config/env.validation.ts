@@ -93,6 +93,7 @@ class EnvironmentVariables {
   @IsOptional() @IsString() LUXCORES_ROOT?: string;
   @IsOptional() @IsString() PUBLIC_DIR?: string;
   @IsOptional() @IsInt() @Min(20) MATCH_MAX_TICKS?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(86400) MATCH_ABANDON_SECONDS?: number;
   @IsOptional() @IsIn(['resume', 'end']) MATCH_ON_SHUTDOWN?: string;
   @IsOptional() @IsString() EVENT_LOG_DIR?: string;
   @IsOptional() @IsInt() @Min(10) @Max(5000) EVENT_LOG_FLUSH_MS?: number;

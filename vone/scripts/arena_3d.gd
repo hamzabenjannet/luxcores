@@ -62,12 +62,15 @@ func _build_zoom_buttons() -> void:
 	_plus_button.tooltip_text = "Zoom in"
 	_plus_button.focus_mode = Control.FOCUS_NONE
 	_plus_button.custom_minimum_size = Vector2(44, 44)
+	# The zoom buttons sit on the right edge, in the middle, clear of the panels at the top and bottom.
 	_plus_button.anchor_left = 1.0
 	_plus_button.anchor_right = 1.0
-	_plus_button.offset_left = -98.0
-	_plus_button.offset_right = -52.0
-	_plus_button.offset_top = 8.0
-	_plus_button.offset_bottom = 54.0
+	_plus_button.anchor_top = 0.5
+	_plus_button.anchor_bottom = 0.5
+	_plus_button.offset_left = -58.0
+	_plus_button.offset_right = -12.0
+	_plus_button.offset_top = -52.0
+	_plus_button.offset_bottom = -6.0
 	_plus_button.pressed.connect(_zoom_in)
 	add_child(_plus_button)
 
@@ -78,10 +81,12 @@ func _build_zoom_buttons() -> void:
 	_minus_button.custom_minimum_size = Vector2(44, 44)
 	_minus_button.anchor_left = 1.0
 	_minus_button.anchor_right = 1.0
-	_minus_button.offset_left = -48.0
-	_minus_button.offset_right = -2.0
-	_minus_button.offset_top = 8.0
-	_minus_button.offset_bottom = 54.0
+	_minus_button.anchor_top = 0.5
+	_minus_button.anchor_bottom = 0.5
+	_minus_button.offset_left = -58.0
+	_minus_button.offset_right = -12.0
+	_minus_button.offset_top = 6.0
+	_minus_button.offset_bottom = 52.0
 	_minus_button.pressed.connect(_zoom_out)
 	add_child(_minus_button)
 

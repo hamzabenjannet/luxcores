@@ -6,6 +6,7 @@ import { KIND, SPEC_VERSION } from '../src/sim/index.js';
 import { creepGroupLabels, entityText, entropyFromText, entropyText, isDay, tickCapFromText, tickCapText } from '../src/client/entity-text.js';
 import { abilityStates, actionsFor, canAfford, endsBuildMode, groupActions, heroLuxChoices, heroPickState, immediateCast, immediateUse, itemStates, mixFor, pendingKept, pendingLine, placement, queueLines, resolveTap, secondsText, shopStates } from '../src/client/ui/controls.js';
 import { HOLD_AIM_PX, clampZoom, holdAimPhase, holdAimRelease, pinchZoom } from '../src/client/input/gestures.js';
+import { leaveCall, leaveNeedsConfirm } from '../src/client/ui/leave.js';
 import { matchSummary } from '../src/client/ui/summary.js';
 import { ROOT, loadData } from './helpers/load-data.js';
 
@@ -104,6 +105,11 @@ test('item cases', () => {
   for (const c of fixture.itemStates) assert.deepEqual(itemStates(fixture.items, c.counts, c.funnelLux), c.expect, c.name);
   for (const c of fixture.immediateUse) assert.deepEqual(immediateUse(c.id, fixture.items), c.expect, JSON.stringify(c));
   for (const c of fixture.shopStates) assert.deepEqual(shopStates(fixture.items, c.coreLuxMilli, c.minLeftLux), c.expect, c.name);
+});
+
+test('leave cases: which call a Leave needs, and when it asks first', () => {
+  for (const c of fixture.leaveCall) assert.equal(leaveCall(c), c.expect, JSON.stringify(c));
+  for (const c of fixture.leaveNeedsConfirm) assert.equal(leaveNeedsConfirm(c), c.expect, JSON.stringify(c));
 });
 
 test('placement cases', () => {

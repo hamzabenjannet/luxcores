@@ -32,7 +32,7 @@ Milestones M1 (map generation), M2 (economy), M3 (combat and physics) and M4 (cr
 | Prose gate | `tools/check_style.py` labels hits `deny` or `ask`, supports `--register informal`, reads `.js` files through their comments and checks the whole repo with `npm run lint:prose:all`; `test/prose.test.js` fails `npm test` on any `deny` hit |
 | Godot project (`vone/`) | Godot 4.6, GL Compatibility renderer, a thin client at M7 (see Client Alignment below): spec check, server data, build, upgrade, recycle, creep orders, queue, groups, merge, split, paths, hero picks and abilities, hero orders, items, combat visuals, bot and spectator modes |
 | Cross-runtime check | `determinism.html` plays the sim inside Chromium. The idle hash at tick 120 (`be35e5ef`, seed 1234567) and the bot hash at tick 1 200 (`d480339c`, seed 777, with creeps, heroes, A* and collisions) equal the Node values |
-| Latest validation (2026-10-19, M9) | `npm test`: 254 passed; `node tools/run-bots.js --soak 1000 5000`: 1 000 seeds of 5 000 ticks, twice each, identical hashes, no crash, no non-integer value (648 s on 9 workers); backend `npm test`: 96 passed and 42 skipped without services; backend `npm run test:e2e`: 86 passed and 13 skipped without services; root `npm run test:e2e`: 19 of 19 passed, with Godot parity, Godot live (112 checks) and Chromium equal to Node. The MongoDB, Redis, RabbitMQ and PostgreSQL tests were not rerun. Nothing was tried on a phone `[UNVERIFIED]` |
+| Latest validation (2026-10-19, M9) | `npm test`: 255 passed; `node tools/run-bots.js --soak 1000 5000`: 1 000 seeds of 5 000 ticks, twice each, identical hashes, no crash, no non-integer value (648 s on 9 workers); backend `npm test`: 96 passed and 42 skipped without services; backend `npm run test:e2e`: 89 passed and 13 skipped without services; root `npm run test:e2e`: 20 of 20 passed, with Godot parity, Godot live (120 checks) and Chromium equal to Node. The MongoDB, Redis, RabbitMQ and PostgreSQL tests were not rerun. Nothing was tried on a phone `[UNVERIFIED]` |
 
 ### Browser and Godot Tests
 
@@ -153,15 +153,16 @@ Open for the owners:
 - **Godot has no interpolation or instancing.** Hamza chose the web client for those, so the Godot arenas still rebuild their nodes on every snapshot.
 - **A stalemate at 5 000 ticks is a test setting.** A match whose host chose no limit ends at the server limit, 10 000 by default. The menus of both clients create matches with the choice Unlimited (`maxTicks` 0) or Capped (1 to 1 000 000), so a played match no longer ends in a draw by default (2026-10-19).
 
-### Playtest Fixes of 2026-10-19
+### Playtest Fixes of 2026-10-19 (Second Round: Leave and the Godot Layout)
 
-Hamza played a bot match and reported a draw at the tick limit, lag when ordering units and heroes, and a queue that moved the buttons. Both clients now share the fixes:
+After Hamza measured 59 to 60 fps on the wide tablet, he asked for a Leave button in the web client and for the Godot layout to use the whole window.
 
-- **Tick limit per match.** The host picks Unlimited (the default in both menus) or Capped with a tick count. The parity cases are `tickCapFromText` and `tickCapText`.
-- **No rebuilt buttons.** The hero, item, order and action buttons were rebuilt whenever the Core's lux changed, which happens every tick, and a click on a replaced button is lost. A control now keeps its node and updates its text and dimming in place. The browser test checks that the order and hero buttons stay the same nodes.
-- **Queue under the actions.** The panel hugs the bottom of the screen, so the queue above the order controls grows the panel upward and no button moves.
-- **Dim queue rows.** A sent order shows in the queue at once and gives way to the real row (parity cases `pendingLine` and `pendingKept`).
-- **GDScript warnings.** Locals and parameters named `position`, `scale`, `size`, `name` and `theme` shadowed properties of `Control` and `Node3D`, and three integer divisions lacked `@warning_ignore`. They are renamed or marked. Headless Godot prints no warnings, so I found them by reading the code against the editor's report `[UNVERIFIED]` for any warning the editor shows that I did not search for.
+- **Leave (both clients).** `POST /matches/:id/quit` leaves a running match: a forfeit in a match for two humans (a win for the other team, end reason `forfeit`, counted on the leaderboard), a stop as a draw against a bot or alone. The web client has a Leave button in the lobby and in the HUD, with a second press in the forfeit case. The Godot LEAVE button used to only close its socket and now calls the server too. The pure rules are `leaveCall` and `leaveNeedsConfirm` (parity cases).
+- **Abandoned matches.** The server stops a running match that no client has been connected to for `MATCH_ABANDON_SECONDS` (120), as a draw with its replay. This matters because Unlimited is the default match type: without it a closed tab left a match running for good.
+- **Godot layout.** The arena is now the whole window, and the controls float over it in translucent panels: the match information and the LEAVE, COPY and START buttons at the top, the palette and the selection, hero and item panels at the bottom, the end-of-match table in the middle. The start card is centered, no wider than the window and scrolls when the window is small. The project base is a 1280 × 720 desktop window; the 600 × 1200 portrait base and its window override are gone. A phone build will get its own scenes later (Hamza's plan).
+- **Default view.** A wide window shows at least 28 tiles top to bottom, so a landscape view is wider than 32 tiles, and it starts 8 tiles nearer the base so the Core is not under the bottom panel. Both clients do the same.
+
+Checks: `backend/nodejs/test/leave.e2e-spec.ts` (quit against a bot, forfeit with a verified replay and the leaderboard, refusals, the watchdog stopping an abandoned match and sparing a watched one), a browser test of Leave in the three cases, and Godot live checks for the layout rectangles, Leave on the server and the return to the start screen.
 
 ## M8 (Touch Controls)
 

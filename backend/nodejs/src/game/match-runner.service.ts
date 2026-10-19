@@ -119,6 +119,8 @@ interface Run {
   /** False once the match has run under changed rules: its replay no longer verifies from the seed. */
   reproducible: boolean;
   startedAt: number;
+  /** The last time (ms) a client was connected to the match, or when it began or resumed. */
+  lastSeenAt: number;
   /** The tick at which an undecided match ends as a draw; Infinity for an unlimited match. */
   maxTicks: number;
   timer?: NodeJS.Timeout;
@@ -149,6 +151,11 @@ export class MatchRunnerService
   private readonly keepFinishedLogs: boolean;
   private readonly adoptEveryMs: number;
   private adoptTimer?: NodeJS.Timeout;
+  private abandonTimer?: NodeJS.Timeout;
+  /** Milliseconds a match may run with nobody connected to it before the server stops it. 0 turns the watchdog off. */
+  private readonly abandonMs: number;
+  /** Asks whether anyone, on any server, is connected to a match. The room hub sets it. */
+  private presence?: (matchId: string) => Promise<boolean>;
   /** Matches being rebuilt right now, so the periodic look does not start a second rebuild. */
   private readonly resuming = new Set<string>();
   private closing = false;
@@ -170,6 +177,7 @@ export class MatchRunnerService
     this.maxTicks = game.matchMaxTicks > 0 ? game.matchMaxTicks : this.sim.stalemateTicks;
     this.snapshotEvery = game.snapshotEveryTicks;
     this.checkpointEvery = game.checkpointEveryTicks;
+    this.abandonMs = game.abandonSeconds * 1000;
     this.onShutdown = game.onShutdown;
     this.keepFinishedLogs = config.get('eventLog', { infer: true }).keepFinished;
     this.tickMs = 1000 / this.sim.tickHz;
@@ -254,6 +262,7 @@ export class MatchRunnerService
         .map((p) => this.sim.createBot(p.simId, p.team, match.seed, options)),
       lastSeq: new Map(),
       startedAt: Date.now(),
+      lastSeenAt: Date.now(),
       ending: false,
       reproducible: true,
       maxTicks: this.limitOf(match),
@@ -313,6 +322,36 @@ export class MatchRunnerService
     const run = this.runs.get(matchId);
     if (!run) throw new ConflictException('The match is not running');
     return this.finish(run, MatchEndReason.Stopped);
+  }
+
+  /** A player left a running match: the other team wins. The replay up to this tick is kept. */
+  async forfeit(matchId: string, loserTeam: number): Promise<MatchDto> {
+    const run = this.runs.get(matchId);
+    if (!run) throw new ConflictException('The match is not running');
+    return this.finish(run, MatchEndReason.Forfeit, 1 - loserTeam);
+  }
+
+  /** The room hub tells the runner how to find out whether anyone is connected to a match. */
+  setPresence(presence: (matchId: string) => Promise<boolean>): void {
+    this.presence = presence;
+  }
+
+  /**
+   * Stops matches that nobody has been connected to for `abandonMs`: a closed tab, a lost connection or a
+   * crashed browser cannot press Leave. The match counts as a draw and keeps its replay.
+   */
+  private async stopAbandoned(): Promise<void> {
+    if (!this.presence) return;
+    const now = Date.now();
+    for (const run of this.runs.values()) {
+      if (run.ending) continue;
+      if (await this.presence(run.matchId).catch(() => true)) {
+        run.lastSeenAt = now;
+      } else if (now - run.lastSeenAt >= this.abandonMs) {
+        this.logger.log(`Match ${run.matchId} stopped: nobody was connected for ${Math.round((now - run.lastSeenAt) / 1000)} s`);
+        await this.finish(run, MatchEndReason.Stopped).catch((err: Error) => this.logger.error(`Stopping ${run.matchId} failed: ${err.message}`));
+      }
+    }
   }
 
   /**
@@ -388,6 +427,7 @@ export class MatchRunnerService
   async onModuleDestroy(): Promise<void> {
     this.closing = true;
     clearInterval(this.adoptTimer);
+    clearInterval(this.abandonTimer);
     if (this.onShutdown === 'resume') {
       // Leave the matches `running` in the database. Their logs hold everything, and the next start rebuilds them.
       const runs = [...this.runs.values()];
@@ -416,6 +456,12 @@ export class MatchRunnerService
         if (!this.closing) void this.resumeAll().catch((err: Error) => this.logger.error(`Looking for orphaned matches failed: ${err.message}`));
       }, this.adoptEveryMs);
       this.adoptTimer.unref();
+    }
+    if (this.abandonMs > 0) {
+      this.abandonTimer = setInterval(() => {
+        if (!this.closing) void this.stopAbandoned();
+      }, Math.max(250, Math.min(5000, this.abandonMs / 4)));
+      this.abandonTimer.unref();
     }
   }
 
@@ -474,6 +520,8 @@ export class MatchRunnerService
         return { nextSeq: this.nextSeq(matchId, rpc.playerId), snapshot: this.snapshot(matchId), team: this.teamOf(matchId, rpc.playerId), private: this.privateFor(matchId, rpc.playerId) } satisfies JoinInfo;
       case 'stop':
         return this.stop(matchId);
+      case 'forfeit':
+        return this.forfeit(matchId, rpc.team);
     }
   }
 
@@ -539,6 +587,7 @@ export class MatchRunnerService
       bots,
       lastSeq: plan.lastSeq,
       startedAt: Date.now() - state.tick * this.tickMs,
+      lastSeenAt: Date.now(),
       ending: false,
       loggedEnd: finishedEvent !== undefined,
       reproducible: plan.reproducible,
@@ -558,8 +607,10 @@ export class MatchRunnerService
         : `Match ${match.id} resumed at tick ${state.tick} (${mode})`,
     );
     if (finishedEvent?.type === 'finished' || state.outcome || state.tick >= run.maxTicks) {
-      const stopped = finishedEvent?.type === 'finished' && finishedEvent.data.result.reason === MatchEndReason.Stopped;
-      await this.finish(run, stopped ? MatchEndReason.Stopped : undefined);
+      // A match that ended by choice keeps the result it logged; any other end is worked out again from the state.
+      const logged = finishedEvent?.type === 'finished' ? finishedEvent.data.result : undefined;
+      const byChoice = logged?.reason === MatchEndReason.Stopped || logged?.reason === MatchEndReason.Forfeit;
+      await this.finish(run, byChoice ? logged.reason : undefined, byChoice ? (logged.winnerTeam ?? undefined) : undefined);
       return;
     }
     await this.serveRun(run);
@@ -657,7 +708,7 @@ export class MatchRunnerService
     return false;
   }
 
-  private async finish(run: Run, forced?: MatchEndReason): Promise<MatchDto> {
+  private async finish(run: Run, forced?: MatchEndReason, winnerTeam?: number): Promise<MatchDto> {
     if (run.ending) return this.matches.get(run.matchId);
     run.ending = true;
     clearTimeout(run.timer);
@@ -665,7 +716,7 @@ export class MatchRunnerService
     await this.commands.unserve(run.matchId).catch(() => undefined); // no more commands for a match that ended
 
     try {
-      return await this.conclude(run, forced);
+      return await this.conclude(run, forced, winnerTeam);
     } finally {
       // Last, so no other node finds the match unowned while it still reads `running`.
       await this.ownership.release(run.matchId);
@@ -673,8 +724,8 @@ export class MatchRunnerService
   }
 
   /** The part of `finish` that saves the result. */
-  private async conclude(run: Run, forced?: MatchEndReason): Promise<MatchDto> {
-    const result = resultOf(run.state, forced);
+  private async conclude(run: Run, forced?: MatchEndReason, winnerTeam?: number): Promise<MatchDto> {
+    const result = resultOf(run.state, forced, winnerTeam);
     if (!run.loggedEnd) {
       this.log.append(run.matchId, {
         type: 'finished',
@@ -827,9 +878,9 @@ function toMatchPlayer(p: RunnerPlayer): MatchPlayerDto {
   };
 }
 
-function resultOf(state: SimState, forced?: MatchEndReason): MatchResultDto {
+function resultOf(state: SimState, forced?: MatchEndReason, winnerTeam?: number): MatchResultDto {
   const stats = statsOf(state);
-  if (forced) return { winnerTeam: null, draw: true, reason: forced, stats };
+  if (forced) return { winnerTeam: winnerTeam ?? null, draw: winnerTeam === undefined, reason: forced, stats };
   const outcome = state.outcome;
   if (outcome && 'winnerTeam' in outcome)
     return {

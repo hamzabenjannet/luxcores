@@ -7,7 +7,8 @@ import type { SimCommand } from '../simulation/sim.types.js';
 export type MatchRpc =
   | { t: 'command'; playerId: string; seq: number; cmd: SimCommand }
   | { t: 'join'; playerId: string }
-  | { t: 'stop' };
+  | { t: 'stop' }
+  | { t: 'forfeit'; team: number };
 
 /** The reply to a `join` request. */
 export interface JoinInfo {
