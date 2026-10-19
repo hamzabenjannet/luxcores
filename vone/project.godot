@@ -15,10 +15,6 @@ run/main_scene="uid://b0rkikfaqj55p"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
 
-[autoload]
-
-MCPRuntimeServer="*res://addons/godot_mcp_toolkit/runtime/mcp_runtime_server.gd"
-
 [display]
 
 window/size/viewport_width=1280
@@ -29,7 +25,7 @@ window/handheld/orientation=1
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/godot_mcp_toolkit/plugin.cfg", "res://addons/poibuilder/plugin.cfg")
+enabled=PackedStringArray("res://addons/poibuilder/plugin.cfg")
 
 [physics]
 

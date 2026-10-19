@@ -36,6 +36,8 @@ var _selected_entity_id := -1
 var _map_width := 96
 var _map_height := 112
 var _camera_target := Vector3.ZERO
+var _camera_yaw := 0.0
+var _camera_pitch := atan(1.0 / 0.8)
 ## The camera size (vertical extent in world units) at zoom 1, which shows 32 tiles across and at least 28 tall (GDD 10.1).
 var _view_size := 100.0
 var _ghost: MeshInstance3D
@@ -52,6 +54,9 @@ var _has_follow_point := false
 const VIEW_TILES_WIDE := 32.0
 ## A wide window shows at least this many tiles top to bottom at zoom 1, as in the web client.
 const VIEW_TILES_TALL_MIN := 28.0
+const CAMERA_ROTATION_STEP := deg_to_rad(5.0)
+const CAMERA_PITCH_MIN := deg_to_rad(15.0)
+const CAMERA_PITCH_MAX := deg_to_rad(75.0)
 
 func _ready() -> void:
 	_camera.current = true
@@ -183,6 +188,12 @@ func pan_camera(screen_delta: Vector2) -> void:
 	_camera_target.z = clampf(_camera_target.z, -float(_map_height) * 0.5, float(_map_height) * 0.5)
 	_position_camera()
 
+func rotate_camera(direction: Vector2) -> void:
+	_following = false
+	_camera_yaw = wrapf(_camera_yaw + direction.x * CAMERA_ROTATION_STEP, -PI, PI)
+	_camera_pitch = clampf(_camera_pitch - direction.y * CAMERA_ROTATION_STEP, CAMERA_PITCH_MIN, CAMERA_PITCH_MAX)
+	_position_camera()
+
 ## The zoom factor; 1 shows 32 tiles across. The limits are GameLogic.ZOOM_MIN and ZOOM_MAX.
 func get_zoom() -> float:
 	return _view_size / _camera.size
@@ -272,7 +283,14 @@ func _fit_camera() -> void:
 
 func _position_camera() -> void:
 	var distance := maxf(float(_map_height), float(_map_width)) * 1.5
-	_camera.position = _camera_target + Vector3(0.0, distance, distance * 0.8)
+	var horizontal_distance := distance * 0.8
+	var radius := sqrt(distance * distance + horizontal_distance * horizontal_distance)
+	var horizontal_offset := radius * cos(_camera_pitch)
+	_camera.position = _camera_target + Vector3(
+		sin(_camera_yaw) * horizontal_offset,
+		radius * sin(_camera_pitch),
+		cos(_camera_yaw) * horizontal_offset
+	)
 	_camera.look_at(_camera_target, Vector3.UP)
 
 func _add_zone_overlays() -> void:

@@ -81,6 +81,32 @@ func _run() -> void:
 	var initial_target: Vector3 = scene.call("get_camera_target")
 	scene.call("pan_camera", Vector2(30, 20))
 	_check("camera drag changes view target", scene.call("get_camera_target") != initial_target, true)
+	var scene_camera := scene.get_node("Camera3D") as Camera3D
+	var initial_camera_position := scene_camera.position
+	if touch_overlay != null:
+		scene.call("set_follow", true)
+		var left_key := InputEventKey.new()
+		left_key.physical_keycode = KEY_LEFT
+		left_key.pressed = true
+		touch_overlay.call("_unhandled_key_input", left_key)
+		_check("left arrow rotates the camera", scene_camera.position != initial_camera_position, true)
+		_check("camera rotation stops hero follow", bool(scene.call("is_following")), false)
+		var position_after_left := scene_camera.position
+		var up_key := InputEventKey.new()
+		up_key.physical_keycode = KEY_UP
+		up_key.pressed = true
+		touch_overlay.call("_unhandled_key_input", up_key)
+		_check("up arrow changes camera elevation", scene_camera.position != position_after_left, true)
+		var right_key := InputEventKey.new()
+		right_key.physical_keycode = KEY_RIGHT
+		right_key.pressed = true
+		touch_overlay.call("_unhandled_key_input", right_key)
+		_check("right arrow rotates the camera back", scene_camera.position != position_after_left, true)
+		var down_key := InputEventKey.new()
+		down_key.physical_keycode = KEY_DOWN
+		down_key.pressed = true
+		touch_overlay.call("_unhandled_key_input", down_key)
+		_check("down arrow reverses the elevation change", scene_camera.position.distance_to(initial_camera_position) < 0.001, true)
 
 	print("%d checks, %d failed" % [_checks, _failures])
 	scene.queue_free()

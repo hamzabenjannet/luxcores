@@ -179,6 +179,23 @@ func _gui_input(event: InputEvent) -> void:
 			_move_pointer(event.position)
 		accept_event()
 
+func _unhandled_key_input(event: InputEvent) -> void:
+	if not event is InputEventKey or not event.pressed or event.echo:
+		return
+	var direction := Vector2.ZERO
+	match event.physical_keycode:
+		KEY_LEFT:
+			direction.x = -1.0
+		KEY_RIGHT:
+			direction.x = 1.0
+		KEY_UP:
+			direction.y = -1.0
+		KEY_DOWN:
+			direction.y = 1.0
+	if not direction.is_zero_approx() and is_instance_valid(_world_root):
+		_world_root.call("rotate_camera", direction)
+		accept_event()
+
 func _finger_distance() -> float:
 	var points: Array = _touches.values()
 	return (points[0] as Vector2).distance_to(points[1] as Vector2)
