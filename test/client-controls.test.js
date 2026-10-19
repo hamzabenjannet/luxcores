@@ -72,8 +72,8 @@ test('without a hero, tapping an enemy does nothing; with a hero, a tap on the g
   const enemy = { ...state.entities[0], id: 50, kind: KIND.TOWER, team: 1, owner: 1, x: 40_500, z: 30_500 };
   const hero = { ...state.entities[0], id: 51, kind: KIND.HERO, team: 0, owner: 0, x: 48_500, z: 90_500 };
   assert.deepEqual(tap({ ground: { x: 40.5, z: 30.5 }, entities: [...state.entities, enemy] }), { select: null });
-  assert.deepEqual(tap({ ground: { x: 40.5, z: 30.5 }, entities: [...state.entities, enemy, hero] }), { command: { t: 'heroAttack', targetId: 50 } });
-  assert.deepEqual(tap({ ground: { x: 20.25, z: 70.75 }, entities: [...state.entities, hero] }), { command: { t: 'heroMove', x: 20_250, z: 70_750 } }, 'coordinates are whole units, 1 tile = 1000');
+  assert.deepEqual(tap({ ground: { x: 40.5, z: 30.5 }, entities: [...state.entities, enemy, hero] }), { command: { t: 'heroAttack', targetId: 50 }, deselect: true }, 'an order from the open map clears the selection');
+  assert.deepEqual(tap({ ground: { x: 20.25, z: 70.75 }, entities: [...state.entities, hero] }), { command: { t: 'heroMove', x: 20_250, z: 70_750 }, deselect: true }, 'coordinates are whole units, 1 tile = 1000');
   assert.deepEqual(tap({ ground: at(t), entities: [...state.entities, hero] }).command.t, 'heroMove');
 });
 

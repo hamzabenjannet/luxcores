@@ -265,6 +265,26 @@ test('a human picks a hero at a barracks, shields it and aims its area ability, 
     await page.click('.ability[data-slot="1"]');
     await until(page, () => document.querySelector('.ability[data-slot="1"]')?.classList.contains('active') === false);
 
+    // A tap on the open map clears the selection: the barracks panel closes and the hero walks.
+    await tapTile(page, barracksTile);
+    await page.waitForSelector('.panel:not([hidden]) .action');
+    const walker = await hero();
+    const bare = await page.evaluate((w) => { // the open-map point nearest to the hero that no panel covers
+      const from = /** @type {any} */ (window).__luxTest.screenOf(w.x / 1000, w.z / 1000);
+      let best = null;
+      for (let y = 8; y < innerHeight - 8; y += 8) {
+        for (let x = 8; x < innerWidth - 8; x += 8) {
+          if (document.elementFromPoint(x, y)?.tagName !== 'CANVAS') continue;
+          const far = Math.hypot(x - from.x, y - from.y);
+          if (best === null || far < best.far) best = { x, y, far };
+        }
+      }
+      return best;
+    }, walker);
+    assert.ok(bare, 'some point of the map is not covered by the panel');
+    await page.touchscreen.tap(bare.x, bare.y);
+    await page.waitForSelector('.panel[hidden]', { state: 'attached' });
+
     // Area: aim, then tap the ground next to the hero. The cast costs lux and starts the cooldown, even over empty ground.
     await page.click('.ability[data-slot="2"]');
     const h = await hero();

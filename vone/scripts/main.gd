@@ -501,6 +501,9 @@ func _on_arena_tapped(ground: Vector2) -> void:
 			_tower_attack_row.visible = false
 			_arena.set_selection(_building, _selected_entity)
 			_refresh_palette()
+		if result.get("deselect", false):
+			_selected_entity = -1
+			_selected_group = -1
 		var acknowledgement: Dictionary = await _backend.send_command(result.command)
 		if acknowledgement.get("accepted", false):
 			_set_status("Order sent. The server will validate it.")

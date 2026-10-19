@@ -386,7 +386,8 @@ static func pick_entity(entities: Array, ground: Vector2) -> Dictionary:
 	return best
 
 ## What a tap does, as a Dictionary with one key: "command", "message", "select"
-## (an entity id, or null to clear) or nothing else. The ctx holds:
+## (an entity id, or null to clear) or nothing else. A hero order from a tap on the open map also
+## carries "deselect": true, and the caller then clears the selected building and group. The ctx holds:
 ##   ground (Vector2, tiles), entities, viewer_team, building ("" for none),
 ##   attack, core_lux_milli, data ({buildings, balance, mapgen}), vents, and for creeps
 ##   mode ("path" adds waypoints, "merge" picks the group to join, "" for none),
@@ -471,15 +472,15 @@ static func resolve_tap(ctx: Dictionary) -> Dictionary:
 	if not picked.is_empty() and (int(picked.kind) == KIND_GROUND_ITEM or int(picked.kind) == KIND_LOOT_BAG):
 		if hero.is_empty():
 			return {"message": "You need a hero to pick that up."}
-		return {"command": {"t": "pickUp", "groundItemId": int(picked.id)}}
+		return {"command": {"t": "pickUp", "groundItemId": int(picked.id)}, "deselect": true}
 	if not picked.is_empty() and is_building_kind(int(picked.kind)) and int(picked.get("owner", -1)) == viewer_team:
 		return {"select": int(picked.id)}
 	if not picked.is_empty() and int(picked.kind) == KIND_CREEP and int(picked.get("owner", -1)) == viewer_team:
 		return {"selectGroup": int(picked.groupId)}
 	if not picked.is_empty() and not hero.is_empty() and int(picked.id) != int(hero.id) and int(picked.get("team", -1)) != viewer_team:
-		return {"command": {"t": "heroAttack", "targetId": int(picked.id)}}
+		return {"command": {"t": "heroAttack", "targetId": int(picked.id)}, "deselect": true}
 	if not hero.is_empty():
-		return {"command": {"t": "heroMove", "x": roundi(ground.x * UNITS_PER_TILE), "z": roundi(ground.y * UNITS_PER_TILE)}}
+		return {"command": {"t": "heroMove", "x": roundi(ground.x * UNITS_PER_TILE), "z": roundi(ground.y * UNITS_PER_TILE)}, "deselect": true}
 	return {"select": null}
 
 ## Actions the panel offers for a selected own building: [{id, label, command, costLux?}].

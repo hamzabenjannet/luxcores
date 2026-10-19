@@ -299,8 +299,10 @@ export function pickEntity(entities, ground) {
 
 /**
  * What a tap does, as a command to send or a message to show. Pure: no DOM, no network.
+ * A tap on the open map (a hero order, not a selection) carries `deselect`: the caller clears the selected
+ * building and group, so the panel closes.
  *
- * @typedef {{ command: import('../../sim/commands.js').Command } | { message: string } | { select: number | null } | { selectGroup: number } | { addWaypoint: number[] }} TapResult
+ * @typedef {{ command: import('../../sim/commands.js').Command, deselect?: true } | { message: string } | { select: number | null } | { selectGroup: number } | { addWaypoint: number[] }} TapResult
  *
  * @param {{
  *   ground: { x: number, z: number },
@@ -375,12 +377,12 @@ export function resolveTap(ctx) {
   }
   const hero = entities.find((e) => e.kind === KIND.HERO && e.owner === viewerTeam);
   if (picked && (picked.kind === KIND.GROUND_ITEM || picked.kind === KIND.LOOT_BAG)) {
-    return hero ? { command: { t: 'pickUp', groundItemId: picked.id } } : { message: 'You need a hero to pick that up.' };
+    return hero ? { command: { t: 'pickUp', groundItemId: picked.id }, deselect: true } : { message: 'You need a hero to pick that up.' };
   }
   if (picked && BUILDING_KINDS.has(picked.kind) && picked.owner === viewerTeam) return { select: picked.id };
   if (picked && picked.kind === KIND.CREEP && picked.owner === viewerTeam) return { selectGroup: picked.groupId };
-  if (picked && hero && picked.id !== hero.id && picked.team !== viewerTeam) return { command: { t: 'heroAttack', targetId: picked.id } };
-  if (hero) return { command: { t: 'heroMove', x: Math.round(ground.x * UNITS_PER_TILE), z: Math.round(ground.z * UNITS_PER_TILE) } };
+  if (picked && hero && picked.id !== hero.id && picked.team !== viewerTeam) return { command: { t: 'heroAttack', targetId: picked.id }, deselect: true };
+  if (hero) return { command: { t: 'heroMove', x: Math.round(ground.x * UNITS_PER_TILE), z: Math.round(ground.z * UNITS_PER_TILE) }, deselect: true };
   return { select: null };
 }
 
@@ -939,6 +941,10 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
         if (endsBuildMode(result.command)) {
           building = null;
           render();
+        }
+        if (result.deselect) {
+          selected = null;
+          selectedGroup = null;
         }
         await issue(result.command);
         if (mode === 'merge') mode = null;

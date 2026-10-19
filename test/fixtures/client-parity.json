@@ -603,7 +603,8 @@
         "command": {
           "t": "heroAttack",
           "targetId": 50
-        }
+        },
+        "deselect": true
       }
     },
     {
@@ -630,7 +631,8 @@
           "t": "heroMove",
           "x": 20250,
           "z": 70750
-        }
+        },
+        "deselect": true
       }
     },
     {
@@ -672,7 +674,8 @@
         "command": {
           "t": "heroAttack",
           "targetId": 70
-        }
+        },
+        "deselect": true
       }
     },
     {
@@ -1307,7 +1310,8 @@
         "command": {
           "t": "pickUp",
           "groundItemId": 6
-        }
+        },
+        "deselect": true
       }
     },
     {
@@ -1397,7 +1401,8 @@
         "command": {
           "t": "pickUp",
           "groundItemId": 7
-        }
+        },
+        "deselect": true
       }
     },
     {
@@ -2197,6 +2202,35 @@
       },
       "expect": {
         "message": "Tap an enemy hero or creep."
+      }
+    },
+    {
+      "name": "a tap on the open map moves the hero and asks the client to clear its selection",
+      "ctx": {
+        "ground": [
+          40.5,
+          80.5
+        ],
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000,
+        "entities": [
+          {
+            "id": 6,
+            "kind": 10,
+            "team": 0,
+            "owner": 0,
+            "x": 20500,
+            "z": 70500
+          }
+        ]
+      },
+      "expect": {
+        "command": {
+          "t": "heroMove",
+          "x": 40500,
+          "z": 80500
+        },
+        "deselect": true
       }
     }
   ],
