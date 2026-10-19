@@ -311,7 +311,8 @@ export function createBot({ playerId, team, config, seed }) {
     const coreX = core ? Math.floor(core.x / 1000) : 48;
     const coreZ = core ? Math.floor(core.z / 1000) : 96;
     const frontZ = team === 0 ? zone.z0 : zone.z1;
-    const columnX = COLUMN_CENTERS[owned % COLUMN_CENTERS.length];
+    // The map is point-mirrored, so team 1 builds on the mirrored columns: its towers then guard its own side, as team 0's do.
+    const columnX = team === 0 ? COLUMN_CENTERS[owned % COLUMN_CENTERS.length] : width - 1 - COLUMN_CENTERS[owned % COLUMN_CENTERS.length];
 
     /** @type {{ score: number, x: number, z: number }[]} */
     const best = [];

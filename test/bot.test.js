@@ -101,7 +101,7 @@ test('a bot builds only in its own zone, off its lanes, and keeps the Core above
 });
 
 test('the rotation builds a collector, a barracks, then a tower, and fills every tower upgrade', () => {
-  const { state, issued } = botMatch(4, 6000);
+  const { state, issued } = botMatch(6, 6000); // seed 6 stalls at the limit with both bases fully built and upgraded
   const first = issued.filter((e) => e.playerId === 0 && e.cmd.t === 'build').slice(0, 3).map((e) => e.cmd.building);
   assert.deepEqual([first[0], first[1], first[2]], ['solar', 'barracks', 'tower']);
   for (const tower of state.entities.filter((e) => e.kind === KIND.TOWER)) {
