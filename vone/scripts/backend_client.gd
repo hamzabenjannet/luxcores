@@ -94,6 +94,7 @@ func connect_match(options: Dictionary) -> Dictionary:
 		var entropy_tenths := GameLogic.entropy_from_text(entropy_text)
 		if entropy_tenths >= 0:
 			create_body["entropyPermillePerSecond"] = entropy_tenths
+		create_body["maxTicks"] = int(options.get("max_ticks", 0))
 		match_response = await _request("/api/matches", HTTPClient.METHOD_POST, create_body, true)
 	else:
 		# A bot match has no slot to take, so an existing one is watched instead of joined.

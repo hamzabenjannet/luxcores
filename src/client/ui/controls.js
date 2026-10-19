@@ -29,6 +29,9 @@ export const ATTACK_TYPES = /** @type {const} */ (['melee', 'ranged', 'area']);
 /** Attack choices of a creep order; Mixed cycles melee, ranged, area. */
 export const ORDER_TYPES = /** @type {const} */ (['melee', 'ranged', 'area', 'mixed']);
 
+/** How long a dim queue row waits for the snapshot after the server accepted the order, in milliseconds. */
+const PENDING_MS = 3000;
+
 /** How close a tap must land to an entity to pick it, in tiles. */
 const PICK_RADIUS_TILES = 1.0;
 
@@ -93,6 +96,20 @@ export function queueLines(orders, barracksId, tickHz, heroNames = [], itemNames
         ? `Item ${itemNames[o.mix[0]] ?? '?'} ${o.held ? 'HELD' : secondsText(o.ticksLeft, tickHz)}`
         : `Group of ${o.mix.length} ${o.mix.map((c) => ATTACK_INITIAL[c] ?? '?').join('')} ${o.held ? 'HELD' : `${(Math.max(0, o.ticksLeft) / tickHz).toFixed(1)}s`}`,
   }));
+}
+
+/**
+ * The queue text of an order the player just sent, shown before the server's snapshot has it.
+ * Returns an empty string for a command that does not enter a barracks queue.
+ * @param {{ t: string, mix?: string[], heroId?: number, lux?: number, itemId?: number }} command
+ * @param {readonly string[]} [heroNames] roster names in roster order
+ * @param {readonly string[]} [itemNames] item names by item id
+ */
+export function pendingLine(command, heroNames = [], itemNames = []) {
+  if (command.t === 'orderCreeps' && command.mix) return `Group of ${command.mix.length} ${command.mix.map((c) => c.charAt(0).toUpperCase()).join('')} ...`;
+  if (command.t === 'pickHero') return `Hero ${heroNames[command.heroId ?? -1] ?? '?'} ${command.lux} lux ...`;
+  if (command.t === 'orderItem') return `Item ${itemNames[command.itemId ?? -1] ?? '?'} ...`;
+  return '';
 }
 
 /** The four abilities in slot order: the type in data/abilities.json, its letter and how it is aimed. */
@@ -533,17 +550,45 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     toastTimer = window.setTimeout(() => toast.classList.remove('show'), 2500);
   }
 
-  /** @param {import('../../sim/commands.js').Command} command */
-  async function issue(command) {
+  /**
+   * @param {import('../../sim/commands.js').Command} command
+   * @param {{ barracksId: number, text: string }} [queued]  a barracks order: it shows in the queue at once, as a dim row
+   */
+  async function issue(command, queued) {
+    const mark = queued && {
+      id: ++pendingSeq,
+      barracksId: queued.barracksId,
+      text: queued.text,
+      // The real orders of this barracks plus the dim rows already waiting: the order is in a snapshot once the real count passes it.
+      base: view.orders().filter((o) => o.barracksId === queued.barracksId).length + pending.filter((p) => p.barracksId === queued.barracksId).length,
+      expires: Infinity,
+    };
+    if (mark) {
+      pending.push(mark);
+      render();
+    }
     try {
       const ack = await send(command);
-      if (!ack.accepted) say(ack.reason ?? 'The server refused the command.');
+      if (!ack.accepted) {
+        drop(mark);
+        say(ack.reason ?? 'The server refused the command.');
+      } else if (mark) mark.expires = performance.now() + PENDING_MS;
     } catch (err) {
+      drop(mark);
       say(`Command failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
+  /** @param {{ id: number } | undefined} mark */
+  function drop(mark) {
+    if (!mark) return;
+    pending = pending.filter((p) => p.id !== mark.id);
+    render();
+  }
+
   function render() {
+    const now = performance.now();
+    pending = pending.filter((p) => p.expires > now && view.orders().filter((o) => o.barracksId === p.barracksId).length <= p.base);
     const lux = view.team(viewerTeam).coreLux;
     for (const [key, b] of buttons) {
       b.classList.toggle('active', building === key);
@@ -647,7 +692,9 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   const heroRow = el('div', 'panel-row hero-row');
   const shopRow = el('div', 'panel-row shop-row');
   const queueList = el('div', 'queue');
-  panel.append(panelTitle, panelRow, orderRow, heroRow, shopRow, queueList);
+  // The queue sits right under the actions (Recycle) and above the order controls. The panel hugs the
+  // bottom of the screen, so a new queue row grows it upward and the buttons below stay where they are.
+  panel.append(panelTitle, panelRow, queueList, orderRow, heroRow, shopRow);
   let panelKey = '';
   let orderKey = '';
   let heroKey = '';
@@ -655,6 +702,19 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   let queueKey = '';
   /** @type {Map<number, HTMLElement>} */
   const queueStatus = new Map();
+  /** Orders sent and not yet in a snapshot; `expires` is Infinity until the server has answered. */
+  let pending = /** @type {{ id: number, barracksId: number, text: string, base: number, expires: number }[]} */ ([]);
+  let pendingSeq = 0;
+  /** @type {HTMLButtonElement | undefined} */
+  let orderButton;
+  /** The hero lux choices of the latest render, which a hero button reads when it is pressed. */
+  let heroChoices = /** @type {{ label: string, lux: number }[]} */ ([]);
+  /** @type {HTMLElement | undefined} */
+  let heroNote;
+  /** @type {Map<string, HTMLElement>} */
+  const heroAllocButtons = new Map();
+  /** @type {Map<number, HTMLElement>} */
+  const shopButtons = new Map();
 
   /**
    * @param {string} label @param {() => void} onClick @param {string} [className]
@@ -786,13 +846,14 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   }
 
   /**
-   * Order controls and the queue of a barracks.
+   * Order controls and the queue of a barracks. A control is built once and then updated in place:
+   * lux changes every tick, and a button replaced between a press and its release loses the click.
    * @param {import('../../sim/state.js').Entity} e @param {number} lux
    */
   function renderBarracks(e, lux) {
     const cost = orderCount * data.balance.creep.costLux; // whole lux: the data files are not converted
     const poor = !canAfford(lux, cost, minLeft);
-    const key = `${e.id}|${orderCount}|${orderType}|${poor}|${e.waypoints.length}`;
+    const key = `${e.id}|${orderCount}|${orderType}|${e.waypoints.length}`;
     if (key !== orderKey) {
       orderKey = key;
       const counts = el('div', 'segments');
@@ -807,32 +868,53 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
         b.dataset.orderType = t;
         types.append(b);
       }
-      const order = button(`Order ${orderCount}`, () => issue({ t: 'orderCreeps', barracksId: e.id, mix: mixFor(orderCount, orderType) }), poor ? 'action order poor' : 'action order');
-      order.append(el('span', 'tool-cost', String(cost)));
+      const mix = mixFor(orderCount, orderType);
+      orderButton = button(`Order ${orderCount}`, () => issue({ t: 'orderCreeps', barracksId: e.id, mix }, { barracksId: e.id, text: pendingLine({ t: 'orderCreeps', mix }) }), 'action order');
+      orderButton.append(el('span', 'tool-cost', String(cost)));
       const path = button(e.waypoints.length > 0 ? 'Default Path' : 'Set Default Path', () => {
         mode = 'path';
         pathTarget = { type: 'barracks', id: e.id };
         pathPoints = [];
         render();
       });
-      const rows = [counts, types, order, path];
+      const rows = [counts, types, orderButton, path];
       if (e.waypoints.length > 0) rows.push(button('Clear Path', () => issue({ t: 'setBarracksPath', barracksId: e.id, waypoints: [] })));
       orderRow.replaceChildren(...rows);
     }
+    orderButton?.classList.toggle('poor', poor);
     renderHeroPicks(e, lux);
     renderShop(e, lux);
+    renderQueue(e);
+  }
+
+  /**
+   * The queue of a barracks, above the order controls so a new row never moves them. Orders just sent
+   * show at once as dim rows and give way to the real rows when the next snapshot has them.
+   * @param {import('../../sim/state.js').Entity} e
+   */
+  function renderQueue(e) {
     const lines = queueLines(view.orders(), e.id, tickHz, heroNames, itemNames);
-    const lineKey = `${e.id}|${view.orders().filter((o) => o.barracksId === e.id).map((o) => `${o.id}:${o.held}`).join(',')}`;
+    const waiting = pending.filter((p) => p.barracksId === e.id);
+    const lineKey = `${e.id}|${view.orders().filter((o) => o.barracksId === e.id).map((o) => `${o.id}:${o.held}`).join(',')}|${waiting.map((p) => p.id).join(',')}`;
     if (lineKey !== queueKey) {
       queueKey = lineKey;
       queueStatus.clear();
-      queueList.replaceChildren(...lines.map((line) => {
-        const row = el('div', 'queue-row');
-        const text = el('span', 'queue-text', line.text);
-        queueStatus.set(line.index, text);
-        row.append(text, button('✕', () => issue({ t: 'cancelQueue', barracksId: e.id, orderId: line.orderId }), 'action cancel'));
-        return row;
-      }));
+      queueList.replaceChildren(
+        ...lines.map((line) => {
+          const row = el('div', 'queue-row');
+          const text = el('span', 'queue-text', line.text);
+          queueStatus.set(line.index, text);
+          row.append(text, button('✕', () => issue({ t: 'cancelQueue', barracksId: e.id, orderId: line.orderId }), 'action cancel'));
+          return row;
+        }),
+        ...waiting.map((p) => {
+          const row = el('div', 'queue-row pending');
+          const cancel = /** @type {HTMLButtonElement} */ (button('✕', () => {}, 'action cancel'));
+          cancel.disabled = true;
+          row.append(el('span', 'queue-text', p.text), cancel);
+          return row;
+        }),
+      );
     } else {
       for (const line of lines) {
         const node = queueStatus.get(line.index);
@@ -854,28 +936,43 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
       roster,
       tickHz,
     });
-    const choices = heroLuxChoices(lux, minLeft);
-    const chosen = choices.find((c) => c.label === heroAlloc) ?? choices[0];
-    const key = `${e.id}|${pickState.note}|${pickState.options.map((o) => `${o.id}${o.locked ? 'L' : ''}${o.enabled ? 'E' : ''}`).join(',')}|${choices.map((c) => c.lux).join(',')}|${chosen?.label}`;
-    if (key === heroKey) return;
-    heroKey = key;
-    const allocation = el('div', 'segments');
-    for (const c of choices) {
-      const b = button(`${c.label} ${c.lux}`, () => { heroAlloc = c.label; render(); }, c === chosen ? 'segment active' : 'segment');
-      b.dataset.alloc = c.label;
-      allocation.append(b);
+    heroChoices = heroLuxChoices(lux, minLeft);
+    const chosen = heroChoices.find((c) => c.label === heroAlloc) ?? heroChoices[0];
+    // The amounts change with the Core's lux, so the key holds the labels only and the texts follow in place.
+    const key = `${e.id}|${heroChoices.map((c) => c.label).join(',')}|${pickState.options.map((o) => `${o.id}${o.locked ? 'L' : ''}${o.enabled ? 'E' : ''}`).join(',')}`;
+    if (key !== heroKey) {
+      heroKey = key;
+      heroAllocButtons.clear();
+      const allocation = el('div', 'segments');
+      for (const c of heroChoices) {
+        const b = button('', () => { heroAlloc = c.label; render(); }, 'segment');
+        b.dataset.alloc = c.label;
+        heroAllocButtons.set(c.label, b);
+        allocation.append(b);
+      }
+      const heroes = el('div', 'segments');
+      for (const o of pickState.options) {
+        const b = button(`${o.name} ${o.primary.charAt(0).toUpperCase()}`, () => {
+          const now = heroChoices.find((c) => c.label === heroAlloc) ?? heroChoices[0];
+          if (!now) return say('Not enough lux for a hero.');
+          issue({ t: 'pickHero', heroId: o.id, lux: now.lux, barracksId: e.id }, { barracksId: e.id, text: pendingLine({ t: 'pickHero', heroId: o.id, lux: now.lux }, heroNames) });
+        }, o.enabled ? 'segment hero-pick' : 'segment hero-pick poor');
+        b.dataset.hero = String(o.id);
+        if (o.locked) b.title = 'Locked until the other heroes were picked';
+        heroes.append(b);
+      }
+      heroNote = el('div', 'hero-note');
+      heroRow.replaceChildren(heroNote, allocation, heroes);
     }
-    const heroes = el('div', 'segments');
-    for (const o of pickState.options) {
-      const b = button(`${o.name} ${o.primary.charAt(0).toUpperCase()}`, () => {
-        if (!chosen) return say('Not enough lux for a hero.');
-        issue({ t: 'pickHero', heroId: o.id, lux: chosen.lux, barracksId: e.id });
-      }, o.enabled ? 'segment hero-pick' : 'segment hero-pick poor');
-      b.dataset.hero = String(o.id);
-      if (o.locked) b.title = 'Locked until the other heroes were picked';
-      heroes.append(b);
+    const note = pickState.note ? `Hero: ${pickState.note}` : 'Hero: pick one, with the lux below';
+    if (heroNote && heroNote.textContent !== note) heroNote.textContent = note;
+    for (const c of heroChoices) {
+      const b = heroAllocButtons.get(c.label);
+      if (!b) continue;
+      const text = `${c.label} ${c.lux}`;
+      if (b.textContent !== text) b.textContent = text;
+      b.classList.toggle('active', c === chosen);
     }
-    heroRow.replaceChildren(el('div', 'hero-note', pickState.note ? `Hero: ${pickState.note}` : 'Hero: pick one, with the lux below'), allocation, heroes);
   }
 
   /**
@@ -885,17 +982,21 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
    */
   function renderShop(e, lux) {
     const shop = shopStates(itemList, lux, minLeft);
-    const key = `${e.id}|${shop.map((s) => `${s.id}${s.poor ? 'P' : ''}`).join(',')}`;
-    if (key === shopKey) return;
-    shopKey = key;
-    const buttonsRow = el('div', 'segments');
-    for (const s of shop) {
-      const b = button(s.name, () => issue({ t: 'orderItem', barracksId: e.id, itemId: s.id }), s.poor ? 'segment shop-item poor' : 'segment shop-item');
-      b.dataset.shopItem = String(s.id);
-      b.append(el('span', 'tool-cost', String(s.costLux)));
-      buttonsRow.append(b);
+    const key = `${e.id}|${shop.map((s) => s.id).join(',')}`;
+    if (key !== shopKey) {
+      shopKey = key;
+      shopButtons.clear();
+      const buttonsRow = el('div', 'segments');
+      for (const s of shop) {
+        const b = button(s.name, () => issue({ t: 'orderItem', barracksId: e.id, itemId: s.id }, { barracksId: e.id, text: pendingLine({ t: 'orderItem', itemId: s.id }, heroNames, itemNames) }), 'segment shop-item');
+        b.dataset.shopItem = String(s.id);
+        b.append(el('span', 'tool-cost', String(s.costLux)));
+        shopButtons.set(s.id, b);
+        buttonsRow.append(b);
+      }
+      shopRow.replaceChildren(el('div', 'hero-note', 'Items: bought here, carried by your hero'), buttonsRow);
     }
-    shopRow.replaceChildren(el('div', 'hero-note', 'Items: bought here, carried by your hero'), buttonsRow);
+    for (const s of shop) shopButtons.get(s.id)?.classList.toggle('poor', s.poor);
   }
 
   /** Paths to draw: the selected group's remaining route, a barracks default path, and the path being drawn. */

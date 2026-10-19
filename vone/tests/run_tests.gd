@@ -51,6 +51,10 @@ func _init() -> void:
 		_check("entropy from text %s" % JSON.stringify(c.text), GameLogic.entropy_from_text(String(c.text)), int(c.expect))
 	for c in fixture.entropyText:
 		_check("entropy text %s" % JSON.stringify(c.tenths), GameLogic.entropy_text(int(c.tenths)), String(c.expect))
+	for c in fixture.tickCapFromText:
+		_check("tick cap from text %s" % JSON.stringify(c.text), GameLogic.tick_cap_from_text(String(c.text)), int(c.expect))
+	for c in fixture.tickCapText:
+		_check("tick cap text %s" % JSON.stringify(c.maxTicks), GameLogic.tick_cap_text(int(c.maxTicks)), String(c.expect))
 	for c in fixture.secondsText:
 		_check("seconds text %s" % JSON.stringify(c), GameLogic.seconds_text(int(c.ticks), int(c.tickHz)), String(c.expect))
 	for c in fixture.abilityStates:

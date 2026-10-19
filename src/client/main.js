@@ -13,6 +13,7 @@
  *   vsBot=1      with match=new: play against a bot
  *   botVsBot=1   with match=new: two bots play and this page watches
  *   seed         with match=new: map seed
+ *   maxTicks     with match=new: tick limit of the match, 0 for unlimited (the server's own limit applies without it)
  *   entropy      with match=new: entropy rate in percent of the maximum HP per second (0 to 100, one decimal, such as 0.5)
  *   autostart=1  start the match as soon as the lobby exists
  *   recover      a recovery code that moves a profile to this device
@@ -32,7 +33,7 @@ import { joinServerMatch } from './net/server-session.js';
 import { createControls } from './ui/controls.js';
 import { showLobby } from './ui/lobby.js';
 import { showMenu } from './ui/menu.js';
-import { entropyFromText, isDay } from './entity-text.js';
+import { entropyFromText, isDay, tickCapFromText } from './entity-text.js';
 import { matchSummary } from './ui/summary.js';
 
 const query = new URLSearchParams(location.search);
@@ -79,9 +80,10 @@ while (!session) {
         vsBot: query.get('vsBot') === '1',
         botVsBot: query.get('botVsBot') === '1',
         seed: query.has('seed') ? Number(query.get('seed')) : undefined,
+        maxTicks: query.has('maxTicks') && (query.get('maxTicks') === '0' || tickCapFromText(query.get('maxTicks') ?? '') >= 0) ? Number(query.get('maxTicks')) : undefined,
         entropy: query.has('entropy') && entropyFromText(query.get('entropy') ?? '') >= 0 ? entropyFromText(query.get('entropy') ?? '') : undefined,
       }
-    : await showMenu($('menu'), { server, error: problem, entropyDefault: data.balance.economy.entropyPermillePerSecond });
+    : await showMenu($('menu'), { server, error: problem, entropyDefault: data.balance.economy.entropyPermillePerSecond, capDefault: data.balance.match.stalemateTicks });
   $('hud-debug').textContent = `Connecting to ${server} ...`;
   try {
     session = await joinServerMatch({
@@ -92,6 +94,7 @@ while (!session) {
       botVsBot: choice.botVsBot,
       seed: choice.seed,
       entropyPermillePerSecond: choice.entropy,
+      maxTicks: choice.maxTicks,
       specVersion: SPEC_VERSION,
       recoveryCode: query.get('recover') ?? undefined,
     });

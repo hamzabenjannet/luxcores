@@ -19,6 +19,8 @@ var _name_input: LineEdit
 var _match_input: LineEdit
 var _seed_input: SpinBox
 var _entropy_input: LineEdit
+var _limit_selector: OptionButton
+var _cap_input: LineEdit
 var _mode_selector: OptionButton
 var _status_label: Label
 var _match_label: Label
@@ -144,6 +146,20 @@ func _build_interface() -> void:
 	_entropy_input.custom_minimum_size = Vector2(220, 52)
 	match_options.add_child(_entropy_input)
 	_home.add_child(match_options)
+	var limit_options := HBoxContainer.new()
+	_limit_selector = OptionButton.new()
+	_limit_selector.add_item("Unlimited")
+	_limit_selector.add_item("Capped")
+	_limit_selector.tooltip_text = "Unlimited runs until a Core falls. Capped ends as a draw at the tick limit. The host of a match sets it."
+	_limit_selector.custom_minimum_size = Vector2(260, 52)
+	_limit_selector.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	limit_options.add_child(_limit_selector)
+	_cap_input = LineEdit.new()
+	_cap_input.placeholder_text = "Tick limit (20 per second)"
+	_cap_input.text = "10000"
+	_cap_input.custom_minimum_size = Vector2(220, 52)
+	limit_options.add_child(_cap_input)
+	_home.add_child(limit_options)
 	var connect_button := _make_button("CONNECT / CREATE MATCH", Color("#315f95"))
 	connect_button.pressed.connect(_connect_match)
 	_home.add_child(connect_button)
@@ -371,6 +387,11 @@ func _panel_style(color: Color) -> StyleBoxFlat:
 	return style
 
 func _connect_match() -> void:
+	var capped := _limit_selector.selected == 1
+	var cap_ticks := GameLogic.tick_cap_from_text(_cap_input.text)
+	if capped and cap_ticks < 0 and _match_input.text.strip_edges() == "":
+		_set_status("The tick limit is a whole number from 1 to %d." % GameLogic.MAX_TICK_CAP)
+		return
 	_set_status("Signing in and opening the match...")
 	var result: Dictionary = await _backend.connect_match({
 		"server": _server_input.text,
@@ -380,6 +401,7 @@ func _connect_match() -> void:
 		"bot_vs_bot": _mode_selector.selected == 1,
 		"seed": int(_seed_input.value),
 		"entropy": _entropy_input.text,
+		"max_ticks": cap_ticks if capped else 0,
 	})
 	if not result.ok:
 		_set_status(str(result.get("message", "Could not connect to the match.")))
@@ -404,11 +426,14 @@ func _connect_match() -> void:
 	_set_match_phase(str(_current_match.get("status", "lobby")))
 	_update_start_button()
 	_refresh_palette()
-	var entropy_text := "Entropy %s%% per second." % GameLogic.entropy_text(int(_current_match.get("entropyPermillePerSecond", _data.balance.economy.entropyPermillePerSecond)))
+	var rules_text := "Entropy %s%% per second. Tick limit: %s." % [
+		GameLogic.entropy_text(int(_current_match.get("entropyPermillePerSecond", _data.balance.economy.entropyPermillePerSecond))),
+		GameLogic.tick_cap_text(int(_current_match.get("maxTicks", _backend.get_spec().get("matchMaxTicks", 0)))),
+	]
 	if _is_host:
-		_set_status("Lobby connected. %s Start the match when ready." % entropy_text)
+		_set_status("Lobby connected. %s Start the match when ready." % rules_text)
 	else:
-		_set_status("Lobby connected. %s Waiting for the host to start the match." % entropy_text)
+		_set_status("Lobby connected. %s Waiting for the host to start the match." % rules_text)
 	_arena.set_world(_current_map, _current_snapshot, _viewer_team)
 	_update_world_label()
 

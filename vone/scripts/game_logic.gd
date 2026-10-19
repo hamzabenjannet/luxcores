@@ -364,6 +364,25 @@ static func entropy_text(tenths: int) -> String:
 	var tenth := tenths % 10
 	return str(whole) if tenth == 0 else "%d.%d" % [whole, tenth]
 
+## The largest tick limit the server takes: 1 000 000 ticks, about 14 hours at 20 Hz.
+const MAX_TICK_CAP := 1000000
+
+## The tick limit a player typed for a capped match, as the whole number of ticks the server takes.
+## Anything else, zero included (the server reads 0 as unlimited), gives -1.
+## Examples: "10000" gives 10000, " 600 " gives 600, "0" gives -1, "1000001" gives -1.
+static func tick_cap_from_text(text: String) -> int:
+	var re := RegEx.new()
+	re.compile("^\\d{1,7}$")
+	var trimmed := text.strip_edges()
+	if re.search(trimmed) == null:
+		return -1
+	var ticks := int(trimmed)
+	return ticks if ticks >= 1 and ticks <= MAX_TICK_CAP else -1
+
+## A match's tick limit as the lobby shows it. 0 is unlimited. Examples: 0 gives "Unlimited", 10000 gives "Capped at 10000 ticks".
+static func tick_cap_text(max_ticks: int) -> String:
+	return "Unlimited" if max_ticks == 0 else "Capped at %d ticks" % max_ticks
+
 ## Whether the day half of the cycle is on (GDD 4.1). The match starts at dawn.
 static func is_day(tick: int, day_night: Dictionary) -> bool:
 	var day := int(day_night.get("dayTicks", 800))

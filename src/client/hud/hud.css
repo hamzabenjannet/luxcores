@@ -81,7 +81,9 @@ html, body {
 .card .player { padding: 6px 10px; background: #0d1220; border-radius: 6px; }
 .card .status { color: var(--dim); min-height: 1.3em; }
 .card label { display: flex; flex-direction: column; gap: 4px; color: var(--dim); font-size: 12px; }
-.card input {
+.card [hidden] { display: none; } /* the label rule above would otherwise show a hidden field */
+.card input,
+.card select {
   font: inherit;
   font-size: 16px; /* 16px keeps iOS Safari from zooming on focus */
   padding: 10px 12px;
@@ -177,7 +179,8 @@ button:disabled { opacity: 0.4; }
 .segments { display: flex; gap: 6px; }
 .segments .segment { flex: 1; }
 .action.active { border-color: var(--blue); background: #1b2c52; }
-.queue { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.queue { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+.queue-row.pending { color: var(--dim); }
 .queue:empty { display: none; }
 .queue-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
 .queue-row .cancel { padding: 4px 10px; }

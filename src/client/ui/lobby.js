@@ -4,7 +4,7 @@
  * snapshot arrives: the match id, who is in, and the Start button for the host.
  */
 
-import { entropyText } from '../entity-text.js';
+import { entropyText, tickCapText } from '../entity-text.js';
 
 /**
  * @param {HTMLElement} root
@@ -19,6 +19,7 @@ export function showLobby(root, session, { shareLink, entropyDefault = 1 }) {
   const idLine = div('subtitle', `Match ${session.matchId}`);
   const players = div('players');
   const rules = div('subtitle');
+  const limit = div('subtitle');
   const status = div('status');
   const copy = document.createElement('button');
   copy.textContent = 'Copy Invite Link';
@@ -41,7 +42,7 @@ export function showLobby(root, session, { shareLink, entropyDefault = 1 }) {
       status.textContent = err instanceof Error ? err.message : String(err);
     }
   });
-  card.append(title, idLine, players, rules, status, copy, start);
+  card.append(title, idLine, players, rules, limit, status, copy, start);
   root.replaceChildren(card);
 
   function update() {
@@ -49,6 +50,7 @@ export function showLobby(root, session, { shareLink, entropyDefault = 1 }) {
     const names = match.botVsBot ? ['Bot Blue', 'Bot Red'] : match.players.map((/** @type {any} */ p) => p.name);
     if (match.vsBot) names.push('Bot');
     rules.textContent = `Entropy ${entropyText(match.entropyPermillePerSecond ?? entropyDefault)}% per second${session.isHost ? '' : ' (set by the host)'}`;
+    limit.textContent = `Tick limit: ${tickCapText(match.maxTicks ?? session.serverMaxTicks)}${session.isHost ? '' : ' (set by the host)'}`;
     players.replaceChildren(...names.map((/** @type {string} */ n) => div('player', n)));
     const ready = match.botVsBot || match.vsBot || match.players.length >= 2;
     start.hidden = !session.isHost;

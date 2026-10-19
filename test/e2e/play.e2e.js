@@ -333,6 +333,7 @@ test('the menu and lobby work by hand: a bot match, then a match for two humans'
     await solo.waitForSelector('#menu .card .title:has-text("Lobby")');
     assert.deepEqual(await solo.$$eval('#menu .player', (n) => n.map((x) => x.textContent)), ['Halo', 'Bot']);
     assert.ok((await solo.$$eval('#menu .subtitle', (n) => n.map((x) => x.textContent))).includes('Entropy 0.1% per second'), 'the lobby shows the default entropy rate');
+    assert.ok((await solo.$$eval('#menu .subtitle', (n) => n.map((x) => x.textContent))).includes('Tick limit: Unlimited'), 'a match from the menu is unlimited unless the host caps it');
     await solo.click('#menu button:has-text("Start Match")');
     await solo.waitForSelector('.palette:not([hidden])', { timeout: 30_000 });
     await solo.waitForFunction(() => document.getElementById('hud-core')?.textContent?.startsWith('Core'));
@@ -343,6 +344,13 @@ test('the menu and lobby work by hand: a bot match, then a match for two humans'
     await host.fill('#menu input[placeholder="Your name"]', 'Host');
     await host.fill('#menu input[placeholder^="Map seed"]', '42');
     await host.fill('#menu input[placeholder$="(default)"]', '0.7');
+    // A capped match needs a whole number of ticks; a bad one stays on the menu with a message.
+    await host.selectOption('#menu select', 'capped');
+    await host.fill('#menu input[placeholder$="20 per second)"]', '12.5');
+    await host.click('#menu button:has-text("Host a Match for Two")');
+    await host.waitForSelector('#menu .error:not([hidden])');
+    assert.match((await host.textContent('#menu .error:not([hidden])')) ?? '', /whole number from 1 to 1000000/);
+    await host.fill('#menu input[placeholder$="20 per second)"]', '900');
     await host.click('#menu button:has-text("Host a Match for Two")');
     await host.waitForSelector('#menu .card .title:has-text("Lobby")');
     assert.equal(await host.isDisabled('#menu button:has-text("Start Match")'), true, 'one human cannot start a match for two');
@@ -357,6 +365,8 @@ test('the menu and lobby work by hand: a bot match, then a match for two humans'
     assert.equal(await guest.isHidden('#menu button:has-text("Start Match")'), true, 'only the host starts');
     assert.ok((await guest.$$eval('#menu .subtitle', (n) => n.map((x) => x.textContent))).includes('Entropy 0.7% per second (set by the host)'), 'the guest sees the host\'s entropy rate');
     assert.ok((await host.$$eval('#menu .subtitle', (n) => n.map((x) => x.textContent))).includes('Entropy 0.7% per second'));
+    assert.ok((await guest.$$eval('#menu .subtitle', (n) => n.map((x) => x.textContent))).includes('Tick limit: Capped at 900 ticks (set by the host)'), 'the guest sees the host\'s tick limit');
+    assert.ok((await host.$$eval('#menu .subtitle', (n) => n.map((x) => x.textContent))).includes('Tick limit: Capped at 900 ticks'));
     await host.waitForFunction(() => [...document.querySelectorAll('#menu button')].some((b) => b.textContent === 'Start Match' && !(/** @type {HTMLButtonElement} */ (b)).disabled));
     await host.click('#menu button:has-text("Start Match")');
     for (const page of [host, guest]) await page.waitForSelector('.palette:not([hidden])', { timeout: 30_000 });
@@ -385,6 +395,19 @@ test('a human orders creeps, then splits, merges and sends a group, through the 
     assert.equal(await page.locator('button[data-building].active').count(), 0, 'the barracks placement freed the palette');
     await tapTile(page, barracksTile);
     await page.waitForSelector('.order-row .order');
+    await page.waitForSelector('.hero-row [data-hero]');
+
+    // The queue sits between the actions and the order controls, so a new row never pushes the buttons.
+    assert.equal(await page.evaluate(() => document.querySelector('.panel-row + .queue + .order-row') !== null), true, 'the queue is above the order controls');
+    // Lux changes every tick, and a button replaced between press and release loses the click: the same nodes must stay.
+    await page.evaluate(() => {
+      Object.assign(window, { __kept: [document.querySelector('.order-row .order'), document.querySelector('.hero-row [data-hero]'), document.querySelector('.hero-row [data-alloc]'), document.querySelector('.shop-row [data-shop-item]')] });
+    });
+    await page.waitForTimeout(1500);
+    assert.equal(await page.evaluate(() => {
+      const kept = /** @type {any} */ (window).__kept;
+      return kept.every((/** @type {Element} */ n) => n.isConnected) && kept[0] === document.querySelector('.order-row .order') && kept[1] === document.querySelector('.hero-row [data-hero]');
+    }), true, 'the order, hero and shop buttons are not rebuilt while lux changes');
 
     // One group through the panel: 2 ranged creeps, 10 lux. The queue lists it.
     await page.click('.order-row [data-count="2"]');

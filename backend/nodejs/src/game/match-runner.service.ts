@@ -119,6 +119,8 @@ interface Run {
   /** False once the match has run under changed rules: its replay no longer verifies from the seed. */
   reproducible: boolean;
   startedAt: number;
+  /** The tick at which an undecided match ends as a draw; Infinity for an unlimited match. */
+  maxTicks: number;
   timer?: NodeJS.Timeout;
   ending: boolean;
 }
@@ -254,6 +256,7 @@ export class MatchRunnerService
       startedAt: Date.now(),
       ending: false,
       reproducible: true,
+      maxTicks: this.limitOf(match),
     };
     this.runs.set(match.id, run);
 
@@ -342,6 +345,12 @@ export class MatchRunnerService
   }
 
   /** The settings the host chose for a match, or undefined for the defaults. */
+  /** A match's own limit wins (0 is unlimited); without one the server default applies. */
+  private limitOf(match: MatchDto): number {
+    if (match.maxTicks === undefined) return this.maxTicks;
+    return match.maxTicks === 0 ? Infinity : match.maxTicks;
+  }
+
   private optionsOf(match: MatchDto): { entropyPermillePerSecond: number } | undefined {
     return match.entropyPermillePerSecond === undefined ? undefined : { entropyPermillePerSecond: match.entropyPermillePerSecond };
   }
@@ -533,6 +542,7 @@ export class MatchRunnerService
       ending: false,
       loggedEnd: finishedEvent !== undefined,
       reproducible: plan.reproducible,
+      maxTicks: this.limitOf(match),
     };
     this.runs.set(match.id, run);
     await this.log.continueNumbering(match.id);
@@ -547,7 +557,7 @@ export class MatchRunnerService
         ? `Match ${match.id} resumed at tick ${state.tick} from the checkpoint at tick ${used.checkpoint?.tick}, under rules that changed since it began`
         : `Match ${match.id} resumed at tick ${state.tick} (${mode})`,
     );
-    if (finishedEvent?.type === 'finished' || state.outcome || state.tick >= this.maxTicks) {
+    if (finishedEvent?.type === 'finished' || state.outcome || state.tick >= run.maxTicks) {
       const stopped = finishedEvent?.type === 'finished' && finishedEvent.data.result.reason === MatchEndReason.Stopped;
       await this.finish(run, stopped ? MatchEndReason.Stopped : undefined);
       return;
@@ -638,7 +648,7 @@ export class MatchRunnerService
         this.emitter.emit('private', this.privateOf(run, team));
       }
     }
-    if (state.outcome || state.tick >= this.maxTicks) {
+    if (state.outcome || state.tick >= run.maxTicks) {
       this.finish(run).catch((err: Error) =>
         this.logger.error(`Finishing ${run.matchId} failed: ${err.message}`),
       );

@@ -2,11 +2,20 @@
 
 Working title. A strategy game mixing hero control (Dota 2), creep waypoint paths (Age of Empires) and base building with tower defense (Generals Zero Hour, Clash Royale). Everything in the world is made of light energy, measured in **lux**. Destroyed things dissolve into light; there is no blood or gore.
 
-Status: draft v0.9.11. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
+Status: draft v0.9.12. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
 
 ---
 
 ## 0. Changelog
+
+### v0.9.11 → v0.9.12
+
+Hamza asked on 2026-10-19 that a match against a bot run until someone wins, and that the host choose between an unlimited and a capped match.
+
+| Area | Change |
+|---|---|
+| Tick limit | The host picks the limit when the match is created: 0 for unlimited, or a number of ticks from 1 to 1000000. The start menus offer Unlimited (the default) and Capped. A match with no choice keeps the server limit (`MATCH_MAX_TICKS`, else `match.stalemateTicks`), so tests and tools are unchanged (section 2) |
+| Queue panel | The barracks panel shows the queue directly under the actions, above the order controls, and shows a new order at once (section 11.4) |
 
 ### v0.9.10 → v0.9.11
 
@@ -211,7 +220,7 @@ Single hero with a 5-hero rotation, funnel unit replaced by the Energy Grab item
 | Unlimited | A Lumen Core reaches 0 lux | The team whose Core survives |
 | Timed (10 min) | Core at 0, or timer reaches 10:00 | Core survivor; at the buzzer, the team with the higher **total lux value** |
 
-A match that nobody has won ends as a draw after 10000 ticks (about 8 minutes), so a stalemate cannot run forever. Tests and test servers raise the limit with the `MATCH_MAX_TICKS` setting.
+The host of a match chooses its tick limit when creating it: Unlimited, which runs until a Core falls, or Capped, which ends an undecided match as a draw at the chosen tick (1 to 1000000, 20 ticks per second). A match whose host chose nothing takes the server limit, `match.stalemateTicks` (10000, about 8 minutes) or the `MATCH_MAX_TICKS` setting that tests and test servers raise.
 
 **Total lux value** = Core lux + lux value of every building, creep and hero the team owns. Items are not counted.
 
@@ -603,6 +612,8 @@ A hero told to attack a target walks until the target is in reach, hits it, and 
  | [it1][it2][it3][it4] [bag] [BUILD]  |
  ---------------------------------------
 ```
+
+The barracks panel stacks the title, the actions (Recycle), the queue, then the order, hero and item controls. The panel hugs the bottom of the screen, so the queue sits above the controls and a new row grows the panel upward without moving a button the player is tapping. An order shows in the queue as a dim row the moment the player taps, and the real row replaces it when the next snapshot arrives. A control that shows an amount of lux updates its text in place, so a press is never lost to a rebuilt button.
 
 ## 12. MVP opponent
 

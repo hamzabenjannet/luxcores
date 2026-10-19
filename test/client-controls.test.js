@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { KIND, createState } from '../src/sim/index.js';
-import { ABILITY_SLOTS, ATTACK_TYPES, PALETTE, abilityStates, actionsFor, canAfford, heroLuxChoices, heroPickState, immediateCast, pickEntity, resolveTap, secondsText } from '../src/client/ui/controls.js';
+import { ABILITY_SLOTS, ATTACK_TYPES, PALETTE, abilityStates, actionsFor, canAfford, heroLuxChoices, heroPickState, immediateCast, pendingLine, pickEntity, resolveTap, secondsText } from '../src/client/ui/controls.js';
 import { loadData } from './helpers/load-data.js';
 
 const { raw, config } = loadData();
@@ -150,4 +150,12 @@ test('an aimed ranged ability needs an enemy or a blocker, and an aimed area abi
   assert.deepEqual(tap({ entities, ground: { x: 42, z: 60 }, ability: 1 }), { command: { t: 'castAbility', slot: 1, targetId: 3 } });
   assert.deepEqual(tap({ entities, ground: { x: 44, z: 90 }, ability: 1 }), { message: 'Tap an enemy to hit.' });
   assert.deepEqual(tap({ entities, ground: { x: 10.25, z: 20.75 }, ability: 2 }), { command: { t: 'castAbility', slot: 2, x: 10250, z: 20750 } });
+});
+
+test('an order just sent shows in the queue before the snapshot has it', () => {
+  assert.equal(pendingLine({ t: 'orderCreeps', mix: ['ranged', 'ranged', 'melee'] }), 'Group of 3 RRM ...');
+  assert.equal(pendingLine({ t: 'orderCreeps', mix: ['melee', 'ranged', 'area'] }), 'Group of 3 MRA ...');
+  assert.equal(pendingLine({ t: 'pickHero', heroId: 1, lux: 40 }, ['Prism', 'Halo']), 'Hero Halo 40 lux ...');
+  assert.equal(pendingLine({ t: 'orderItem', itemId: 0 }, [], ['Haste']), 'Item Haste ...');
+  assert.equal(pendingLine({ t: 'recycle' }), '');
 });

@@ -37,6 +37,7 @@
  * @property {string} playerName
  * @property {'player' | 'spectator'} role  a spectator watches a bot match and cannot send commands
  * @property {boolean} isHost  true for the player who opened the lobby, who also starts the match
+ * @property {number} serverMaxTicks  the server's own tick limit, which applies to a match whose host chose none
  * @property {() => any} getMatch  the latest lobby or match record (`MatchDto`), kept current by the server
  * @property {string | undefined} recoveryCode  set when this session came from a recovery: the replacement code, shown once
  * @property {() => Promise<string>} requestRecoveryCode  makes a new recovery code; the old one stops working
@@ -57,13 +58,14 @@
  *   vsBot?: boolean,         // with 'new': fill the second slot with a bot
  *   botVsBot?: boolean,      // with 'new': two bots play and this client only watches
  *   seed?: number,           // with 'new': map and RNG seed
+ *   maxTicks?: number,       // with 'new': tick limit of the match, 0 for unlimited; the server's limit applies when omitted
  *   entropyPermillePerSecond?: number, // with 'new': entropy rate of the match in tenths of a percent per second, 0 to 1000; the host's choice
  *   specVersion: string,     // SPEC_VERSION of this client's sim
  *   recoveryCode?: string,   // move a profile to this device instead of signing in
  * }} opts
  * @returns {Promise<ServerSession>}
  */
-export async function joinServerMatch({ server, name, matchId, vsBot = false, botVsBot = false, seed, entropyPermillePerSecond, specVersion, recoveryCode }) {
+export async function joinServerMatch({ server, name, matchId, vsBot = false, botVsBot = false, seed, entropyPermillePerSecond, maxTicks, specVersion, recoveryCode }) {
   const base = server.replace(/\/$/, '');
   const spec = await request(`${base}/api/game/spec`);
   if (spec.specVersion !== specVersion) {
@@ -76,7 +78,7 @@ export async function joinServerMatch({ server, name, matchId, vsBot = false, bo
   const existing = matchId === 'new' ? null : await request(`${base}/api/matches/${matchId}`, { token });
   let match =
     matchId === 'new'
-      ? await request(`${base}/api/matches`, { token, body: { name: `${name}'s match`, vsBot, botVsBot, ...(seed === undefined ? {} : { seed }), ...(entropyPermillePerSecond === undefined ? {} : { entropyPermillePerSecond }) } })
+      ? await request(`${base}/api/matches`, { token, body: { name: `${name}'s match`, vsBot, botVsBot, ...(seed === undefined ? {} : { seed }), ...(entropyPermillePerSecond === undefined ? {} : { entropyPermillePerSecond }), ...(maxTicks === undefined ? {} : { maxTicks }) } })
       : existing.botVsBot
         ? existing
         : await request(`${base}/api/matches/${matchId}/join`, { token, method: 'POST' });
@@ -169,6 +171,7 @@ export async function joinServerMatch({ server, name, matchId, vsBot = false, bo
     playerName: auth.player.name,
     role: joined.role,
     isHost: match.hostId === auth.player.id,
+    serverMaxTicks: spec.matchMaxTicks,
     getMatch: () => match,
     recoveryCode: recoveryCode ? auth.recoveryCode : undefined,
     requestRecoveryCode: async () => (await request(`${base}/api/auth/recovery-code`, { token, method: 'POST' })).recoveryCode,

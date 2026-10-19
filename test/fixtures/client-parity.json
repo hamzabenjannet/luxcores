@@ -3979,5 +3979,65 @@
       "tenths": 999,
       "expect": "99.9"
     }
+  ],
+  "tickCapFromText": [
+    {
+      "text": "10000",
+      "expect": 10000
+    },
+    {
+      "text": " 600 ",
+      "expect": 600
+    },
+    {
+      "text": "1",
+      "expect": 1
+    },
+    {
+      "text": "1000000",
+      "expect": 1000000
+    },
+    {
+      "text": "1000001",
+      "expect": -1
+    },
+    {
+      "text": "0",
+      "expect": -1
+    },
+    {
+      "text": "",
+      "expect": -1
+    },
+    {
+      "text": "-5",
+      "expect": -1
+    },
+    {
+      "text": "12.5",
+      "expect": -1
+    },
+    {
+      "text": "abc",
+      "expect": -1
+    },
+    {
+      "text": "99999999",
+      "expect": -1
+    }
+  ],
+  "tickCapText": [
+    {
+      "maxTicks": 0,
+      "expect": "Unlimited"
+    },
+    {
+      "maxTicks": 10000,
+      "expect": "Capped at 10000 ticks"
+    },
+    {
+      "maxTicks": 1,
+      "expect": "Capped at 1 ticks"
+    }
   ]
 }

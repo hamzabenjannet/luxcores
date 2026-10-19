@@ -121,6 +121,31 @@ export function entropyText(tenths) {
   return tenth === 0 ? String(whole) : `${whole}.${tenth}`;
 }
 
+/** The largest tick limit the server takes: 1 000 000 ticks, about 14 hours at 20 Hz. */
+export const MAX_TICK_CAP = 1_000_000;
+
+/**
+ * The tick limit a player typed for a capped match, as the whole number of ticks the server takes.
+ * Anything else, zero included (the server reads 0 as unlimited), gives -1.
+ * Examples: "10000" gives 10000, " 600 " gives 600, "0" gives -1, "1000001" gives -1.
+ * @param {string} text
+ * @returns {number}
+ */
+export function tickCapFromText(text) {
+  if (!/^\d{1,7}$/.test(text.trim())) return -1;
+  const ticks = Number(text.trim());
+  return ticks >= 1 && ticks <= MAX_TICK_CAP ? ticks : -1;
+}
+
+/**
+ * A match's tick limit as the lobby shows it. 0 is unlimited.
+ * Examples: 0 gives "Unlimited", 10000 gives "Capped at 10000 ticks".
+ * @param {number} maxTicks
+ */
+export function tickCapText(maxTicks) {
+  return maxTicks === 0 ? 'Unlimited' : `Capped at ${maxTicks} ticks`;
+}
+
 /**
  * Whether the day half of the cycle is on (GDD 4.1). The match starts at dawn.
  * @param {number} tick

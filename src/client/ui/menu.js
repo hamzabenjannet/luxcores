@@ -5,7 +5,7 @@
  * the menu (see main.js), so tests and shared links go straight in.
  */
 
-import { entropyFromText, entropyText } from '../entity-text.js';
+import { entropyFromText, entropyText, tickCapFromText } from '../entity-text.js';
 
 /**
  * @typedef {Object} MenuChoice
@@ -14,6 +14,7 @@ import { entropyFromText, entropyText } from '../entity-text.js';
  * @property {boolean} vsBot
  * @property {boolean} botVsBot
  * @property {number | undefined} seed
+ * @property {number | undefined} maxTicks  tick limit of a match this player creates, 0 for unlimited; undefined keeps the server's limit
  * @property {number | undefined} entropy  entropy rate in tenths of a percent of the maximum HP per second, for a match this player creates; undefined keeps the default
  */
 
@@ -39,10 +40,10 @@ function remember(name) {
 
 /**
  * @param {HTMLElement} root
- * @param {{ server: string, error?: string, entropyDefault?: number }} opts  `entropyDefault` is the rate of data/balance.json, in tenths of a percent per second
+ * @param {{ server: string, error?: string, entropyDefault?: number, capDefault?: number }} opts  `entropyDefault` is the rate of data/balance.json, in tenths of a percent per second; `capDefault` is the tick limit it suggests for a capped match
  * @returns {Promise<MenuChoice>}
  */
-export function showMenu(root, { server, error, entropyDefault = 1 }) {
+export function showMenu(root, { server, error, entropyDefault = 1, capDefault = 10000 }) {
   root.hidden = false;
   root.replaceChildren();
   return new Promise((resolve) => {
@@ -63,10 +64,33 @@ export function showMenu(root, { server, error, entropyDefault = 1 }) {
     entropy.title = 'Percent of the maximum HP that buildings, creeps and heroes lose per second, 0 to 100 with one decimal. The host of a match sets it.';
     const matchId = /** @type {HTMLInputElement} */ (document.createElement('input'));
     matchId.placeholder = 'Match id to join';
-    card.append(label('Name', name), label('Seed', seed), label('Entropy % per second', entropy));
+    const matchType = /** @type {HTMLSelectElement} */ (document.createElement('select'));
+    matchType.title = 'Unlimited runs until a Core falls. Capped ends as a draw at the tick limit. The host of a match sets it.';
+    matchType.append(new Option('Unlimited', 'unlimited'), new Option('Capped', 'capped'));
+    const cap = /** @type {HTMLInputElement} */ (document.createElement('input'));
+    cap.inputMode = 'numeric';
+    cap.placeholder = `${capDefault} (ticks, 20 per second)`;
+    cap.title = 'Ticks after which an undecided match ends as a draw, 1 to 1000000.';
+    const capLabel = label('Tick limit', cap);
+    capLabel.hidden = true;
+    matchType.addEventListener('change', () => {
+      capLabel.hidden = matchType.value !== 'capped';
+      if (!capLabel.hidden) cap.focus();
+    });
+    const problem = div('error');
+    problem.hidden = true;
+    card.append(label('Name', name), label('Seed', seed), label('Match type', matchType), capLabel, problem, label('Entropy % per second', entropy));
 
     /** @param {Partial<MenuChoice>} part */
     const choose = (part) => {
+      const capped = matchType.value === 'capped';
+      const capValue = tickCapFromText(cap.value.trim() === '' ? String(capDefault) : cap.value);
+      if (capped && capValue < 0 && !part.matchId) {
+        problem.textContent = 'The tick limit is a whole number from 1 to 1000000.';
+        problem.hidden = false;
+        cap.focus();
+        return;
+      }
       const chosen = name.value.trim() || 'Guest';
       remember(chosen);
       const seedValue = Number(seed.value);
@@ -78,6 +102,7 @@ export function showMenu(root, { server, error, entropyDefault = 1 }) {
         vsBot: false,
         botVsBot: false,
         seed: seed.value.trim() !== '' && Number.isSafeInteger(seedValue) ? seedValue : undefined,
+        maxTicks: capped ? capValue : 0,
         entropy: entropyValue >= 0 ? entropyValue : undefined,
         ...part,
       });

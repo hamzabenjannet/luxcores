@@ -13,6 +13,9 @@ import {
 import { MAX_SEED } from '../../common/pipes/parse-seed.pipe.js';
 import { MatchMode } from './match.dto.js';
 
+/** The largest tick limit a host can choose: 1 000 000 ticks, about 14 hours at 20 Hz. 0 means unlimited. */
+export const MAX_MATCH_TICKS = 1_000_000;
+
 export class CreateMatchDto {
   @ApiProperty({ example: 'Friday duel', minLength: 3, maxLength: 40 })
   @Transform(({ value }: { value: unknown }) =>
@@ -52,6 +55,19 @@ export class CreateMatchDto {
   @Min(0)
   @Max(1000)
   entropyPermillePerSecond?: number;
+
+  @ApiPropertyOptional({
+    example: 0,
+    minimum: 0,
+    maximum: MAX_MATCH_TICKS,
+    description:
+      'Tick limit of this match: an undecided match ends as a draw at this tick. 0 means unlimited, so the match runs until a Core falls. The server default (`MATCH_MAX_TICKS`, or `match.stalemateTicks` in data/balance.json) applies when omitted.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(MAX_MATCH_TICKS)
+  maxTicks?: number;
 
   @ApiPropertyOptional({
     default: false,
