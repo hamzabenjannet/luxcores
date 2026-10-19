@@ -236,13 +236,14 @@ func _add_lane_overlays() -> void:
 		for index in tiles.size():
 			var tile_index := int(tiles[index])
 			var tile_x := tile_index % _map_width
-			var tile_z := int(tile_index / _map_width)
-			var position := Vector3(
+			@warning_ignore("integer_division")
+			var tile_z := tile_index / _map_width
+			var tile_center := Vector3(
 				float(tile_x) + 0.5 - float(_map_width) * 0.5,
 				0.035,
 				float(tile_z) + 0.5 - float(_map_height) * 0.5
 			)
-			multi_mesh.set_instance_transform(index, Transform3D(Basis.IDENTITY, position))
+			multi_mesh.set_instance_transform(index, Transform3D(Basis.IDENTITY, tile_center))
 		var lane_mesh := MultiMeshInstance3D.new()
 		lane_mesh.multimesh = multi_mesh
 		lane_mesh.material_override = _flat_material(Color(tint.r, tint.g, tint.b, 0.22))

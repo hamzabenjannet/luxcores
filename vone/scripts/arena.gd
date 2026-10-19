@@ -70,8 +70,8 @@ func set_balance(balance: Dictionary, heroes: Dictionary = {}, items: Dictionary
 	queue_redraw()
 
 ## Screen pixels to tile coordinates, for the tap and the tests.
-func ground_at(position: Vector2) -> Vector2:
-	return (position - _bounds.position) / _tile_size
+func ground_at(point: Vector2) -> Vector2:
+	return (point - _bounds.position) / _tile_size
 
 func set_paths(new_paths: Array) -> void:
 	paths = new_paths
@@ -99,9 +99,9 @@ func _draw() -> void:
 	var width := int(map_data.get("width", 96))
 	var height := int(map_data.get("height", 112))
 	var margin := 12.0
-	var scale := minf((size.x - margin * 2.0) / width, (size.y - margin * 2.0) / height) * _zoom
-	_tile_size = Vector2(scale, scale)
-	var map_size := Vector2(width * scale, height * scale)
+	var tile_pixels := minf((size.x - margin * 2.0) / width, (size.y - margin * 2.0) / height) * _zoom
+	_tile_size = Vector2(tile_pixels, tile_pixels)
+	var map_size := Vector2(width * tile_pixels, height * tile_pixels)
 	_bounds = Rect2((size - map_size) * 0.5 + _pan_offset, map_size)
 	draw_rect(_bounds, Color("#101d2a"))
 
@@ -130,7 +130,8 @@ func _draw_lanes() -> void:
 		for tile_index in lane.get("tiles", []):
 			var index := int(tile_index)
 			var tile_x := index % int(map_data.get("width", 96))
-			var tile_z := int(index / int(map_data.get("width", 96)))
+			@warning_ignore("integer_division")
+			var tile_z := index / int(map_data.get("width", 96))
 			draw_rect(_tile_rect(tile_x, tile_z), lane_color)
 		var points: Array = lane.get("points", [])
 		for point_index in range(points.size() - 1):
@@ -140,9 +141,9 @@ func _draw_lanes() -> void:
 
 func _draw_markers(markers: Array, color: Color, radius_factor: float, label: String) -> void:
 	for marker in markers:
-		var position := _tile_center(int(marker.get("tileX", 0)), int(marker.get("tileZ", 0)))
-		draw_circle(position, maxf(1.5, _tile_size.x * radius_factor), color)
-		_draw_map_label(label, position, color)
+		var point := _tile_center(int(marker.get("tileX", 0)), int(marker.get("tileZ", 0)))
+		draw_circle(point, maxf(1.5, _tile_size.x * radius_factor), color)
+		_draw_map_label(label, point, color)
 
 func _draw_entities(entities: Array) -> void:
 	var by_id := {}
@@ -264,16 +265,16 @@ func _tile_center(tile_x: float, tile_z: float) -> Vector2:
 	return _bounds.position + (Vector2(tile_x, tile_z) + Vector2(0.5, 0.5)) * _tile_size
 
 func _gui_input(event: InputEvent) -> void:
-	var position: Vector2
+	var point: Vector2
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		position = event.position
-		if _handle_zoom_control(position):
+		point = event.position
+		if _handle_zoom_control(point):
 			accept_event()
 			return
 		_dragging = true
 		_pointer_moved = false
-		_last_pointer = position
-		_press_position = position
+		_last_pointer = point
+		_press_position = point
 		return
 	elif event is InputEventMouseButton and not event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		_dragging = false
@@ -291,14 +292,14 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 		return
 	elif event is InputEventScreenTouch and event.pressed:
-		position = event.position
-		if _handle_zoom_control(position):
+		point = event.position
+		if _handle_zoom_control(point):
 			accept_event()
 			return
 		_dragging = true
 		_pointer_moved = false
-		_last_pointer = position
-		_press_position = position
+		_last_pointer = point
+		_press_position = point
 		return
 	elif event is InputEventScreenTouch and not event.pressed:
 		_dragging = false
@@ -318,26 +319,26 @@ func _gui_input(event: InputEvent) -> void:
 	else:
 		return
 
-func _handle_map_tap(position: Vector2) -> void:
-	if not _bounds.has_point(position):
+func _handle_map_tap(point: Vector2) -> void:
+	if not _bounds.has_point(point):
 		return
-	var ground := ground_at(position)
+	var ground := ground_at(point)
 	# A finger is wider than a 6 px tile. Outside build mode, snap a tap near an entity onto it,
 	# so the shared tap rules see the entity at the pick radius they know.
 	# In build mode the tap is a tile choice, so it never snaps: a building goes exactly where the finger lands.
-	var near := _entity_near(position) if selected_building.is_empty() else {}
+	var near := _entity_near(point) if selected_building.is_empty() else {}
 	if not near.is_empty():
 		ground = Vector2(float(near.get("x", 0)) / GameLogic.UNITS_PER_TILE, float(near.get("z", 0)) / GameLogic.UNITS_PER_TILE)
 	tapped.emit(ground)
 
-func _handle_zoom_control(position: Vector2) -> bool:
+func _handle_zoom_control(point: Vector2) -> bool:
 	var origin := Vector2(size.x - 84, 8)
 	var plus_rect := Rect2(origin, Vector2(34, 34))
 	var minus_rect := Rect2(origin + Vector2(38, 0), Vector2(34, 34))
-	if plus_rect.has_point(position):
+	if plus_rect.has_point(point):
 		_set_zoom(_zoom * 1.25)
 		return true
-	if minus_rect.has_point(position):
+	if minus_rect.has_point(point):
 		_set_zoom(_zoom / 1.25)
 		return true
 	return false
@@ -362,14 +363,14 @@ func _set_zoom(value: float) -> void:
 
 ## The entity whose center is nearest to a screen point, within the touch radius, as
 ## GameLogic.pick_entity would choose it. Empty when none is close.
-func _entity_near(position: Vector2) -> Dictionary:
+func _entity_near(point: Vector2) -> Dictionary:
 	var best := {}
 	var best_distance := INF
 	var hit_radius := maxf(TOUCH_RADIUS_PIXELS, _tile_size.x * 0.55)
 	for entity in snapshot.get("entities", []):
 		if not entity is Dictionary or int(entity.get("kind", 0)) == KIND_PROJECTILE:
 			continue
-		var distance := position.distance_squared_to(_world_center(entity))
+		var distance := point.distance_squared_to(_world_center(entity))
 		if distance <= hit_radius * hit_radius and distance < best_distance:
 			best = entity
 			best_distance = distance

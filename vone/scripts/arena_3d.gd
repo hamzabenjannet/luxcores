@@ -110,30 +110,30 @@ func _gui_input(event: InputEvent) -> void:
 		_move_pointer(event.position)
 		accept_event()
 
-func _begin_pointer(position: Vector2) -> void:
+func _begin_pointer(point: Vector2) -> void:
 	_dragging = true
 	_pointer_moved = false
-	_last_pointer = position
-	_press_position = position
+	_last_pointer = point
+	_press_position = point
 
-func _end_pointer(position: Vector2) -> void:
+func _end_pointer(point: Vector2) -> void:
 	_dragging = false
 	if not _pointer_moved:
-		_handle_map_tap(position)
+		_handle_map_tap(point)
 
-func _move_pointer(position: Vector2) -> void:
-	var delta := position - _last_pointer
-	if _press_position.distance_squared_to(position) > DRAG_THRESHOLD_SQUARED:
+func _move_pointer(point: Vector2) -> void:
+	var delta := point - _last_pointer
+	if _press_position.distance_squared_to(point) > DRAG_THRESHOLD_SQUARED:
 		_pointer_moved = true
 	if _pointer_moved and is_instance_valid(_world_root):
 		var viewport_delta := get_global_transform_with_canvas().basis_xform(delta)
 		_world_root.call("pan_camera", viewport_delta)
-	_last_pointer = position
+	_last_pointer = point
 
-func _handle_map_tap(position: Vector2) -> void:
+func _handle_map_tap(screen_point: Vector2) -> void:
 	if _map.is_empty() or not is_instance_valid(_world_root):
 		return
-	var viewport_position := get_global_transform_with_canvas() * position
+	var viewport_position := get_global_transform_with_canvas() * screen_point
 	var ray_origin: Vector3 = _world_root.call("camera_ray_origin", viewport_position)
 	var ray_direction: Vector3 = _world_root.call("camera_ray_direction", viewport_position)
 	if is_zero_approx(ray_direction.y):
