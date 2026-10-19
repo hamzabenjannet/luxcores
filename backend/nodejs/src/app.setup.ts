@@ -30,6 +30,7 @@ export function configureApp(app: INestApplication): void {
       { path: '/', method: RequestMethod.GET },
       { path: 'favicon.ico', method: RequestMethod.GET },
       { path: 'determinism.html', method: RequestMethod.GET },
+      { path: 'tests', method: RequestMethod.GET },
     ],
   });
   app.enableCors({
@@ -53,7 +54,7 @@ export function setupSwagger(app: INestApplication): void {
     new DocumentBuilder()
       .setTitle('Luxcores Backend')
       .setDescription(
-        'REST API and Socket.IO match server for Luxcores multiplayer. The server runs the deterministic sim of the repo (`src/sim`) at 20 Hz and streams snapshots. The Socket.IO events are listed under `GET /api/game/spec`.',
+        'REST API and Socket.IO match server for Luxcores multiplayer. The server runs the deterministic sim of the repo (`src/sim`) at 20 Hz and streams snapshots. The Socket.IO events are listed under `GET /api/game/spec`. **Trying the build? Open [/tests](/tests)**: test pages, parameters and ready-made links in one place.',
       )
       .setVersion(APP_VERSION)
       .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' })
@@ -64,6 +65,7 @@ export function setupSwagger(app: INestApplication): void {
       .addTag('game', 'Sim spec, maps and the socket reference')
       .addTag('replays', 'Upload, list and verify replays')
       .addTag('admin', 'Operator routes (x-api-key)')
+      .addTag('dev', 'Test pages and ready-made links; the same list as the page at /tests')
       .addTag('health', 'Liveness')
       .build(),
   );

@@ -217,6 +217,8 @@ button:disabled { opacity: 0.4; }
     inset: 0;
     z-index: 50;
     display: flex;
+    flex-direction: column;
+    gap: 12px;
     align-items: center;
     justify-content: center;
     padding: 24px;
@@ -225,4 +227,6 @@ button:disabled { opacity: 0.4; }
     color: var(--fg);
     background: #05060a;
   }
+  #rotate.dismissed { display: none; }
+  #rotate p { margin: 0; }
 }

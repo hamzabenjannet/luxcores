@@ -63,6 +63,8 @@ export interface AppConfig {
     retentionDays: number;
   };
   static: { publicDir: string };
+  /** Whether `/tests` and `GET /api/dev/links` answer. They list the addresses of the server, so production turns them off by default. */
+  testHub: boolean;
   rateLimit: { perMinute: number; authPerMinute: number };
   /** Reverse proxies in front of the app. The client address then comes from X-Forwarded-For. */
   trustProxy: number;
@@ -136,6 +138,7 @@ export default (): AppConfig => {
       retentionDays: int(env.EVENT_LOG_RETENTION_DAYS, 14),
     },
     static: { publicDir: resolve(env.PUBLIC_DIR ?? 'public') },
+    testHub: env.TEST_HUB === undefined ? !isProd : env.TEST_HUB === 'true',
     rateLimit: {
       perMinute: int(env.RATE_LIMIT_PER_MINUTE, 300),
       authPerMinute: int(env.RATE_LIMIT_AUTH_PER_MINUTE, 10),

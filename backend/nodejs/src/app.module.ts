@@ -21,6 +21,7 @@ import { RedisModule } from './redis/redis.module.js';
 import { ReplaysModule } from './replays/replays.module.js';
 import { SimulationModule } from './simulation/simulation.module.js';
 import { StaticModule } from './static/static.module.js';
+import { TestHubModule } from './testhub/testhub.module.js';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { StaticModule } from './static/static.module.js';
     HealthModule,
     AdminModule,
     StaticModule,
+    TestHubModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: HttpThrottlerGuard },

@@ -21,7 +21,8 @@ To play against the server from a browser, open `http://localhost:3000/?server=&
 |---|---|
 | `/ws` | The plain WebSocket match channel (see Plain WebSocket Protocol) |
 | `/` | The game page, so a phone on the LAN can play against this server |
-| `/api/docs` | Swagger UI (`/api/docs-json` holds the raw OpenAPI document) |
+| `/tests` | The test hub: ready-made links (play, watch, host, frame meter, determinism suite), a form per page that takes URL parameters, the LAN addresses of this server and the API links. Open it on a phone to start from there. Off when `TEST_HUB=false` (the default in production) |
+| `/api/docs` | Swagger UI (`/api/docs-json` holds the raw OpenAPI document). Its description links to `/tests` |
 | `/api/health` | Liveness, database state and event bus mode |
 | `/determinism.html?suite=1` | Plays every golden replay (`/replays/golden/`) in the browser and compares each hash with Node's, for the cross-browser check of M10 |
 | `/public/` | Files that belong to the backend (`backend/nodejs/public`) |
@@ -59,6 +60,7 @@ To play against the server from a browser, open `http://localhost:3000/?server=&
 | `EVENT_LOG_RETENTION_DAYS` | `14` | Days a finished match keeps its events in MongoDB. `0` deletes them when the match ends |
 | `CHECKPOINT_EVERY_TICKS` | `400` | Ticks between two checkpoints of a running match, a multiple of 20. `0` turns them off |
 | `MATCH_MAX_TICKS` | `match.stalemateTicks` in `data/balance.json` (10000) | An undecided match ends as a draw after this many ticks (about 8 minutes at 20 Hz), unless its host chose a limit with `maxTicks`. Set it higher for long test runs. The repo's own tests and tools stop at 5000 ticks |
+| `TEST_HUB` | `true`, `false` in production | Whether `/tests` and `GET /api/dev/links` answer. They list the addresses of the server |
 | `SNAPSHOT_EVERY_TICKS` | `2` | Ticks between snapshots (10 per second) |
 
 ## Architecture
@@ -134,6 +136,7 @@ All routes live under `/api`. A route needs `Authorization: Bearer <token>` unle
 | `GET /game/maps/:seed` | public | The generated map for a seed |
 | `POST /replays`, `GET /replays`, `GET /replays/:id` | token | Replay storage |
 | `POST /replays/:id/verify` | token | Re-simulate a replay and compare every hash |
+| `GET /dev/links` | none | The data behind `/tests`: the origins (LAN addresses included), the pages with each URL parameter described, the ready-made links and the golden replays. 404 when `TEST_HUB` is off |
 | `GET /admin/stats`, `DELETE /admin/replays/:id` | `x-api-key` | Operator routes |
 | `GET /health` | public | Liveness |
 

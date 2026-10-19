@@ -32,7 +32,7 @@ Milestones M1 (map generation), M2 (economy), M3 (combat and physics) and M4 (cr
 | Prose gate | `tools/check_style.py` labels hits `deny` or `ask`, supports `--register informal`, reads `.js` files through their comments and checks the whole repo with `npm run lint:prose:all`; `test/prose.test.js` fails `npm test` on any `deny` hit |
 | Godot project (`vone/`) | Godot 4.6, GL Compatibility renderer, a thin client at M7 (see Client Alignment below): spec check, server data, build, upgrade, recycle, creep orders, queue, groups, merge, split, paths, hero picks and abilities, hero orders, items, combat visuals, bot and spectator modes |
 | Cross-runtime check | `determinism.html` plays the sim inside Chromium. The idle hash at tick 120 (`be35e5ef`, seed 1234567) and the bot hash at tick 1 200 (`d480339c`, seed 777, with creeps, heroes, A* and collisions) equal the Node values |
-| Latest validation (2026-10-19, M9) | `npm test`: 252 passed; `node tools/run-bots.js --soak 1000 5000`: 1 000 seeds of 5 000 ticks, twice each, identical hashes, no crash, no non-integer value (648 s on 9 workers); backend `npm test`: 93 passed and 42 skipped without services; backend `npm run test:e2e`: 83 passed and 13 skipped without services; root `npm run test:e2e`: 18 of 18 passed, with Godot parity, Godot live (112 checks) and Chromium equal to Node. The MongoDB, Redis, RabbitMQ and PostgreSQL tests were not rerun. Nothing was tried on a phone `[UNVERIFIED]` |
+| Latest validation (2026-10-19, M9) | `npm test`: 254 passed; `node tools/run-bots.js --soak 1000 5000`: 1 000 seeds of 5 000 ticks, twice each, identical hashes, no crash, no non-integer value (648 s on 9 workers); backend `npm test`: 96 passed and 42 skipped without services; backend `npm run test:e2e`: 86 passed and 13 skipped without services; root `npm run test:e2e`: 19 of 19 passed, with Godot parity, Godot live (112 checks) and Chromium equal to Node. The MongoDB, Redis, RabbitMQ and PostgreSQL tests were not rerun. Nothing was tried on a phone `[UNVERIFIED]` |
 
 ### Browser and Godot Tests
 
@@ -149,7 +149,7 @@ Checks: `test/stats.test.js` (7), `test/options.test.js` (3), `test/interpolatio
 Open for the owners:
 
 - **Hama's review of the new interface:** the Follow button, the group label text (`Creeps x5 50`), the end-of-match table and the entropy field in the menu.
-- **60 creeps at 60 fps on a mid-range Android phone is not measured** `[UNVERIFIED]`. The browser test counts instances and checks the blend, but the container renders in software, so it says nothing about frame rate.
+- **60 creeps at 60 fps on the reference device is not measured** `[UNVERIFIED]`. The browser test counts instances and checks the blend, but the container renders in software, so it says nothing about frame rate.
 - **Godot has no interpolation or instancing.** Hamza chose the web client for those, so the Godot arenas still rebuild their nodes on every snapshot.
 - **A stalemate at 5 000 ticks is a test setting.** A match whose host chose no limit ends at the server limit, 10 000 by default. The menus of both clients create matches with the choice Unlimited (`maxTicks` 0) or Capped (1 to 1 000 000), so a played match no longer ends in a draw by default (2026-10-19).
 
@@ -196,7 +196,7 @@ Open for the owners:
 
 ## Next Milestone: M10 (Cross-Browser Determinism and the Performance Pass)
 
-From `docs/TECH_ARCHITECTURE.md` section 14. Done when Node, Chrome on Android and Safari on iOS print identical hashes, and the performance numbers of a mid-range Android phone are recorded here.
+From `docs/TECH_ARCHITECTURE.md` section 14. Done when Node, Chrome on Android and Safari on iOS print identical hashes, and the performance numbers of the reference device are recorded here. Hamza's answers of 2026-10-19: the reference device is a Galaxy Wide class phone or a similar wide device, and the web client already plays comfortably on a Galaxy Tab Active3 (a wide tablet), so no tuning is due before the first numbers. The portrait lock is optional: the prompt in landscape now has a Play anyway button. The Godot UI adapts to wide screens later, when its interface gets its next pass.
 
 ### Already Built for M10 (2026-10-19)
 
@@ -205,9 +205,10 @@ From `docs/TECH_ARCHITECTURE.md` section 14. Done when Node, Chrome on Android a
 
 ### The Phone Runbook
 
-1. Start the server with `npm run serve` and find the computer's LAN address. The phone and the computer must share a network. Plain `http://` works for everything the page uses.
-2. On each phone (Chrome on Android, Safari on iOS) open `http://<address>:3000/determinism.html?suite=1`. Expected: a green `PASS: all 7 replays match Node`. Send a screenshot, and for a failure the JSON under the list, which names the first tick that differs.
-3. Open `http://<address>:3000/?perf=1` and play a full match against the bot (Play Against Bot, Unlimited). Note the meter at three moments: the first minute, the middle of a creep fight and the end. A bot-versus-bot match (Watch Bot Against Bot, any seed) reaches 60 creeps too, with no tapping.
+0. **The test hub.** Open `/tests` on the server (the Swagger page at `/api/docs` links to it). It lists the LAN addresses of the server, ready-made links for every check below (play, watch, host, frame meter, the determinism suite), a form for each page that takes URL parameters, and the API and golden-replay links. Open it on the phone itself to start from there, or pick a LAN address on the computer and copy a link to the phone. `GET /api/dev/links` returns the same list as JSON, and `TEST_HUB=false` (the default in production) turns both off.
+1. Start the server with `npm run serve`. The phone and the computer must share a network. Plain `http://` works for everything the page uses.
+2. On each phone (Chrome on Android, Safari on iOS) open the determinism suite link of the hub, `http://<address>:3000/determinism.html?suite=1`. Expected: a green `PASS: all 7 replays match Node`. Send a screenshot, and for a failure the JSON under the list, which names the first tick that differs.
+3. Open the frame-meter link of the hub (`/?perf=1` with a match) and play a full match against the bot (Play Against Bot, Unlimited). Note the meter at three moments: the first minute, the middle of a creep fight and the end. A bot-versus-bot match (Watch Bot Against Bot, any seed) reaches 60 creeps too, with no tapping.
 4. Record per phone: model, browser version, fps, p95 frame time, JavaScript ms, draw calls and anything that stutters (a tap that lags, a frozen frame while the camera pans).
 
 ### Targets (a first proposal, for the owners to change)
@@ -229,7 +230,7 @@ In the order I would try, each one measured with the meter before and after: low
 - `screen.orientation.lock` is unsupported on iOS, where the rotate prompt does the work.
 - Float math: the sim uses integers and tables only, so a hash difference should not happen; the first real test of that claim on a phone is this milestone `[UNVERIFIED]`.
 
-Questions for the owners: which Android phone counts as mid-range for the target, and are the targets above right?
+Question for the owners: are the targets above right for the reference device?
 
 ## Interpretations Made in the Scaffold
 

@@ -506,8 +506,9 @@ test('touch controls: a build ghost to confirm, pinch zoom, hold-to-aim and the 
     assert.equal(await call(page, 'zoom'), 0.6, 'and at its lower limit');
     await page.evaluate(() => /** @type {any} */ (window).__luxTest.setZoom(1));
 
-    // The upright prompt is in the page and hidden for a portrait screen.
+    // The upright prompt is in the page and hidden for a portrait screen. Landscape may dismiss it.
     assert.equal(await page.isHidden('#rotate'), true);
+    assert.equal(await page.locator('#rotate #rotate-dismiss').count(), 1, 'the prompt has a Play anyway button');
     assert.equal(await page.evaluate(() => document.querySelector('link[rel="manifest"]')?.getAttribute('href')), '/src/client/manifest.webmanifest');
 
     assert.deepEqual(errors, [], 'the page must log no console or page errors');

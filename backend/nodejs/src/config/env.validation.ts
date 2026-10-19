@@ -97,6 +97,7 @@ class EnvironmentVariables {
   @IsOptional() @IsString() EVENT_LOG_DIR?: string;
   @IsOptional() @IsInt() @Min(10) @Max(5000) EVENT_LOG_FLUSH_MS?: number;
   @IsOptional() @IsIn(['true', 'false']) EVENT_LOG_KEEP_FINISHED?: string;
+  @IsOptional() @IsIn(['true', 'false']) TEST_HUB?: string;
   @IsOptional() @IsInt() @Min(0) @Max(3650) EVENT_LOG_RETENTION_DAYS?: number;
   @IsOptional() @IsInt() @Min(1) @Max(20) SNAPSHOT_EVERY_TICKS?: number;
   @IsOptional() @IsInt() @Min(0) @Max(100000) @IsMultipleOf(20) CHECKPOINT_EVERY_TICKS?: number;

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Luxcores Tests</title>
+  <style>
+    :root { --bg: #05060a; --card: #0d1220; --line: #2a3550; --fg: #e8ecf5; --dim: #8a93a6; --blue: #3d8bff; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; }
+    h1 { margin: 0 0 4px; font-size: 24px; }
+    h2 { margin: 24px 0 8px; font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+    a { color: var(--blue); }
+    .help { color: var(--dim); font-size: 13px; }
+    .error { color: #ff9b9b; }
+    select, input[type="text"] { width: 100%; padding: 10px 12px; font: inherit; font-size: 16px; color: var(--fg); background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+    .card { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; margin: 8px 0; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+    .url { display: block; font: 12px/1.4 ui-monospace, Menlo, monospace; color: #b7c7da; word-break: break-all; -webkit-user-select: text; user-select: text; }
+    .buttons { display: flex; gap: 8px; }
+    .buttons a, .buttons button { flex: 1; padding: 10px; text-align: center; font: inherit; color: var(--fg); background: #162038; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; cursor: pointer; }
+    .buttons a.open { background: #1d3f73; border-color: var(--blue); }
+    summary { cursor: pointer; font-weight: 600; }
+    .row { display: grid; grid-template-columns: 1fr; gap: 2px; margin: 8px 0; }
+    .row input[type="checkbox"] { width: 22px; height: 22px; }
+    .row.flag { grid-template-columns: 30px 1fr; align-items: center; }
+    .row.flag small { grid-column: 2; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Luxcores Tests</h1>
+    <p class="help">Ready-made links and the URL parameters of every page, from this server. The API docs are at <a href="/api/docs">/api/docs</a>.</p>
+    <div id="hub"></div>
+  </main>
+  <script type="module" src="src/client/test-hub.js"></script>
+</body>
+</html>

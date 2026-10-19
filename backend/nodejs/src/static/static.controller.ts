@@ -14,7 +14,7 @@ import { Public } from '../common/decorators/public.decorator.js';
 
 /**
  * The routes that live outside `/api`: the game page at `/`, the determinism
- * page, and an empty favicon so browsers do not log a 404 for it. Every other
+ * page, the test hub at `/tests`, and an empty favicon so browsers do not log a 404 for it. Every other
  * static file comes from `StaticModule`.
  */
 @ApiExcludeController()
@@ -32,6 +32,16 @@ export class StaticController {
   @Get('determinism.html')
   determinism(@Res() res: Response): void {
     this.sendPage(res, 'determinism.html');
+  }
+
+  /** The test hub: pages, parameters and ready-made links. Off when `TEST_HUB` is off. */
+  @Get('tests')
+  tests(@Res() res: Response): void {
+    if (!this.config.get('testHub', { infer: true })) {
+      res.status(404).json(new NotFoundException('The test hub is off').getResponse());
+      return;
+    }
+    this.sendPage(res, 'tests.html');
   }
 
   private sendPage(res: Response, file: string): void {

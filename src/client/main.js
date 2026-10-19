@@ -18,6 +18,7 @@
  *   autostart=1  start the match as soon as the lobby exists
  *   recover      a recovery code that moves a profile to this device
  *   showcode=1   print a new recovery code in the debug text
+ *   perf=1       show the frame meter (fps, frame times, draw calls, entities)
  *   test=1       expose window.__luxTest for test/e2e
  * No game logic here; the sim owns the rules.
  */
@@ -147,6 +148,8 @@ $('hud-core').style.color = viewerTeam === 0 ? 'var(--blue)' : 'var(--red)';
 $('hud-enemy').style.color = viewerTeam === 0 ? 'var(--red)' : 'var(--blue)';
 
 lockPortrait();
+// Landscape is allowed: a wide phone or a tablet plays fine that way, so the prompt can be set aside.
+$('rotate-dismiss').addEventListener('click', () => $('rotate').classList.add('dismissed'));
 const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('view'));
 const scene = createScene(canvas, raw.mapgen, view, raw.balance.hpFactor, viewerTeam, data.heroes.roster.map((/** @type {{ name: string }} */ r) => r.name), data.items.list.map((/** @type {{ name: string }} */ i) => i.name));
 const controls = createControls({

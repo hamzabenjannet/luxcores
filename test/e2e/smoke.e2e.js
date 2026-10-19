@@ -52,6 +52,35 @@ test('Chromium replays every golden replay hash for hash, as a phone will (deter
   });
 });
 
+test('the test hub lists ready-made links and builds a link from the parameters', { timeout: 120_000, skip }, async () => {
+  await withBackend(async ({ plain, errors }) => {
+    const page = await plain('/tests');
+    const url = new URL(page.url()).origin; // the address the browser reached the server at
+    await page.waitForSelector('#hub[data-ready="1"]', { timeout: 30_000 });
+    // Ready-made links open the right pages on this server.
+    const suite = await page.getAttribute('.card:has-text("Determinism suite (for phones)") a.open', 'href');
+    assert.equal(suite, `${url}/determinism.html?suite=1`);
+    const bot = await page.getAttribute('.card:has-text("Play against the bot") a.open >> nth=0', 'href');
+    assert.equal(bot, `${url}/?name=Tester&match=new&vsBot=1&maxTicks=0&autostart=1`);
+    assert.ok((await page.locator('.card:has-text("bots-seed-777.json") a').count()) >= 1, 'the golden replays are listed');
+
+    // The form for the game page builds a link from what is set.
+    await page.click('summary:has-text("The game")');
+    await page.fill('details:has(summary:has-text("The game")) input[placeholder="Tester"]', 'Hala');
+    await page.check('details:has(summary:has-text("The game")) label:has-text("Frame meter") input');
+    await page.check('details:has(summary:has-text("The game")) label:has-text("Play against a bot") input');
+    await page.fill('details:has(summary:has-text("The game")) label:has-text("Map seed") input', '777');
+    assert.equal(await page.textContent('details:has(summary:has-text("The game")) code.url'), `${url}/?name=Hala&vsBot=1&seed=777&perf=1`);
+
+    // Choosing another address rewrites every link; the first entry is the address of the request.
+    const options = await page.$$eval('select option', (o) => o.map((x) => x.getAttribute('value')));
+    assert.equal(options[0], url);
+    mkdirSync(SHOTS, { recursive: true });
+    await page.screenshot({ path: join(SHOTS, 'test-hub.png'), fullPage: false });
+    assert.deepEqual(errors, []);
+  });
+});
+
 test('the game page loads from the backend and offers the start menu', { timeout: 120_000, skip }, async () => {
   await withBackend(async ({ plain, errors }) => {
     const page = await plain('/');
