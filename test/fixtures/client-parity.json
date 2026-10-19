@@ -4039,5 +4039,115 @@
       "maxTicks": 1,
       "expect": "Capped at 1 ticks"
     }
+  ],
+  "pendingLine": [
+    {
+      "command": {
+        "t": "orderCreeps",
+        "barracksId": 3,
+        "mix": [
+          "ranged",
+          "ranged",
+          "melee"
+        ]
+      },
+      "expect": "Group of 3 RRM ..."
+    },
+    {
+      "command": {
+        "t": "orderCreeps",
+        "barracksId": 3,
+        "mix": [
+          "melee",
+          "ranged",
+          "area"
+        ]
+      },
+      "expect": "Group of 3 MRA ..."
+    },
+    {
+      "command": {
+        "t": "pickHero",
+        "barracksId": 3,
+        "heroId": 1,
+        "lux": 40
+      },
+      "expect": "Hero Halo 40 lux ..."
+    },
+    {
+      "command": {
+        "t": "pickHero",
+        "barracksId": 3,
+        "heroId": 9,
+        "lux": 40
+      },
+      "expect": "Hero ? 40 lux ..."
+    },
+    {
+      "command": {
+        "t": "orderItem",
+        "barracksId": 3,
+        "itemId": 0
+      },
+      "expect": "Item Haste ..."
+    },
+    {
+      "command": {
+        "t": "recycle",
+        "buildingId": 3
+      },
+      "expect": ""
+    }
+  ],
+  "pendingNames": {
+    "heroNames": [
+      "Prism",
+      "Halo"
+    ],
+    "itemNames": [
+      "Haste"
+    ]
+  },
+  "pendingKept": [
+    {
+      "name": "waiting, snapshot has not the order",
+      "base": 0,
+      "expires": 1000000000000.0,
+      "realCount": 0,
+      "now": 100,
+      "expect": true
+    },
+    {
+      "name": "snapshot has the order",
+      "base": 0,
+      "expires": 1000000000000.0,
+      "realCount": 1,
+      "now": 100,
+      "expect": false
+    },
+    {
+      "name": "second row of two stays while one order is real",
+      "base": 1,
+      "expires": 1000000000000.0,
+      "realCount": 1,
+      "now": 100,
+      "expect": true
+    },
+    {
+      "name": "time ran out",
+      "base": 0,
+      "expires": 100,
+      "realCount": 0,
+      "now": 100,
+      "expect": false
+    },
+    {
+      "name": "an order that left the queue",
+      "base": 2,
+      "expires": 1000000000000.0,
+      "realCount": 1,
+      "now": 100,
+      "expect": true
+    }
   ]
 }

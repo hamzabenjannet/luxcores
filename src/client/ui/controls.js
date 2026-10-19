@@ -30,7 +30,7 @@ export const ATTACK_TYPES = /** @type {const} */ (['melee', 'ranged', 'area']);
 export const ORDER_TYPES = /** @type {const} */ (['melee', 'ranged', 'area', 'mixed']);
 
 /** How long a dim queue row waits for the snapshot after the server accepted the order, in milliseconds. */
-const PENDING_MS = 3000;
+export const PENDING_MS = 3000;
 
 /** How close a tap must land to an entity to pick it, in tiles. */
 const PICK_RADIUS_TILES = 1.0;
@@ -110,6 +110,18 @@ export function pendingLine(command, heroNames = [], itemNames = []) {
   if (command.t === 'pickHero') return `Hero ${heroNames[command.heroId ?? -1] ?? '?'} ${command.lux} lux ...`;
   if (command.t === 'orderItem') return `Item ${itemNames[command.itemId ?? -1] ?? '?'} ...`;
   return '';
+}
+
+/**
+ * Whether a dim queue row stays. It goes when its time ran out or when the barracks has more real orders
+ * than the row counted when it was added (`base`), because the snapshot then holds the order.
+ * @param {number} base
+ * @param {number} expires  milliseconds on the clock of `now`; Infinity until the server has answered
+ * @param {number} realCount
+ * @param {number} now
+ */
+export function pendingKept(base, expires, realCount, now) {
+  return expires > now && realCount <= base;
 }
 
 /** The four abilities in slot order: the type in data/abilities.json, its letter and how it is aimed. */
@@ -551,18 +563,20 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   }
 
   /**
+   * Sends a command. A barracks order shows in the queue at once, as a dim row.
    * @param {import('../../sim/commands.js').Command} command
-   * @param {{ barracksId: number, text: string }} [queued]  a barracks order: it shows in the queue at once, as a dim row
    */
-  async function issue(command, queued) {
-    const mark = queued && {
+  async function issue(command) {
+    const text = pendingLine(command, heroNames, itemNames);
+    const barracksId = /** @type {{ barracksId?: number }} */ (command).barracksId;
+    const mark = text && barracksId !== undefined ? {
       id: ++pendingSeq,
-      barracksId: queued.barracksId,
-      text: queued.text,
+      barracksId,
+      text,
       // The real orders of this barracks plus the dim rows already waiting: the order is in a snapshot once the real count passes it.
-      base: view.orders().filter((o) => o.barracksId === queued.barracksId).length + pending.filter((p) => p.barracksId === queued.barracksId).length,
+      base: view.orders().filter((o) => o.barracksId === barracksId).length + pending.filter((p) => p.barracksId === barracksId).length,
       expires: Infinity,
-    };
+    } : undefined;
     if (mark) {
       pending.push(mark);
       render();
@@ -588,7 +602,7 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
 
   function render() {
     const now = performance.now();
-    pending = pending.filter((p) => p.expires > now && view.orders().filter((o) => o.barracksId === p.barracksId).length <= p.base);
+    pending = pending.filter((p) => pendingKept(p.base, p.expires, view.orders().filter((o) => o.barracksId === p.barracksId).length, now));
     const lux = view.team(viewerTeam).coreLux;
     for (const [key, b] of buttons) {
       b.classList.toggle('active', building === key);
@@ -825,16 +839,17 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
       ...action,
       poor: action.costLux !== undefined && !canAfford(lux, action.costLux, minLeft),
     }));
-    const key = `${e.id}|${actions.map((a) => `${a.id}:${a.poor}`).join(',')}`;
+    // The key holds the action ids only: affordability follows the lux, and a button replaced between press and release loses the click.
+    const key = `${e.id}|${actions.map((a) => a.id).join(',')}`;
     if (key !== panelKey) {
       panelKey = key;
       panelRow.replaceChildren(...actions.map((action) => {
         const b = button(action.label, () => issue(action.command));
         if (action.costLux !== undefined) b.append(el('span', 'tool-cost', String(action.costLux)));
-        b.classList.toggle('poor', action.poor);
         return b;
       }));
     }
+    actions.forEach((action, i) => panelRow.children[i]?.classList.toggle('poor', action.poor));
     if (e.kind === KIND.BARRACKS && e.recycle === 0) renderBarracks(e, lux);
     else {
       orderRow.replaceChildren();
@@ -869,7 +884,7 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
         types.append(b);
       }
       const mix = mixFor(orderCount, orderType);
-      orderButton = button(`Order ${orderCount}`, () => issue({ t: 'orderCreeps', barracksId: e.id, mix }, { barracksId: e.id, text: pendingLine({ t: 'orderCreeps', mix }) }), 'action order');
+      orderButton = button(`Order ${orderCount}`, () => issue({ t: 'orderCreeps', barracksId: e.id, mix }), 'action order');
       orderButton.append(el('span', 'tool-cost', String(cost)));
       const path = button(e.waypoints.length > 0 ? 'Default Path' : 'Set Default Path', () => {
         mode = 'path';
@@ -955,7 +970,7 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
         const b = button(`${o.name} ${o.primary.charAt(0).toUpperCase()}`, () => {
           const now = heroChoices.find((c) => c.label === heroAlloc) ?? heroChoices[0];
           if (!now) return say('Not enough lux for a hero.');
-          issue({ t: 'pickHero', heroId: o.id, lux: now.lux, barracksId: e.id }, { barracksId: e.id, text: pendingLine({ t: 'pickHero', heroId: o.id, lux: now.lux }, heroNames) });
+          issue({ t: 'pickHero', heroId: o.id, lux: now.lux, barracksId: e.id });
         }, o.enabled ? 'segment hero-pick' : 'segment hero-pick poor');
         b.dataset.hero = String(o.id);
         if (o.locked) b.title = 'Locked until the other heroes were picked';
@@ -988,7 +1003,7 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
       shopButtons.clear();
       const buttonsRow = el('div', 'segments');
       for (const s of shop) {
-        const b = button(s.name, () => issue({ t: 'orderItem', barracksId: e.id, itemId: s.id }, { barracksId: e.id, text: pendingLine({ t: 'orderItem', itemId: s.id }, heroNames, itemNames) }), 'segment shop-item');
+        const b = button(s.name, () => issue({ t: 'orderItem', barracksId: e.id, itemId: s.id }), 'segment shop-item');
         b.dataset.shopItem = String(s.id);
         b.append(el('span', 'tool-cost', String(s.costLux)));
         shopButtons.set(s.id, b);

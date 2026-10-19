@@ -153,6 +153,16 @@ Open for the owners:
 - **Godot has no interpolation or instancing.** Hamza chose the web client for those, so the Godot arenas still rebuild their nodes on every snapshot.
 - **A stalemate at 5 000 ticks is a test setting.** A match whose host chose no limit ends at the server limit, 10 000 by default. The menus of both clients create matches with the choice Unlimited (`maxTicks` 0) or Capped (1 to 1 000 000), so a played match no longer ends in a draw by default (2026-10-19).
 
+### Playtest Fixes of 2026-10-19
+
+Hamza played a bot match and reported a draw at the tick limit, lag when ordering units and heroes, and a queue that moved the buttons. Both clients now share the fixes:
+
+- **Tick limit per match.** The host picks Unlimited (the default in both menus) or Capped with a tick count. The parity cases are `tickCapFromText` and `tickCapText`.
+- **No rebuilt buttons.** The hero, item, order and action buttons were rebuilt whenever the Core's lux changed, which happens every tick, and a click on a replaced button is lost. A control now keeps its node and updates its text and dimming in place. The browser test checks that the order and hero buttons stay the same nodes.
+- **Queue under the actions.** The panel hugs the bottom of the screen, so the queue above the order controls grows the panel upward and no button moves.
+- **Dim queue rows.** A sent order shows in the queue at once and gives way to the real row (parity cases `pendingLine` and `pendingKept`).
+- **GDScript warnings.** Locals and parameters named `position`, `scale`, `size`, `name` and `theme` shadowed properties of `Control` and `Node3D`, and three integer divisions lacked `@warning_ignore`. They are renamed or marked. Headless Godot prints no warnings, so I found them by reading the code against the editor's report `[UNVERIFIED]` for any warning the editor shows that I did not search for.
+
 ## Next Milestone: M8
 
 From `docs/TECH_ARCHITECTURE.md` section 14. Each milestone ends with tests green and a short demo on a phone. Both clients grow together: put every UI decision in `src/client/ui/controls.js` and `vone/scripts/game_logic.gd`, and add parity cases.

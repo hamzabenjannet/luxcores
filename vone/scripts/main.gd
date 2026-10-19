@@ -57,6 +57,17 @@ var _ability := -1
 var _hero_alloc := "50%"
 var _queue_key := ""
 var _queue_labels := {}
+## Orders sent and not yet in a snapshot, as dim queue rows: {id, barracks_id, text, base, expires_ms}.
+## expires_ms is INF until the server has answered.
+var _pending: Array = []
+var _pending_seq := 0
+var _action_buttons: Array = []
+var _order_button: Button
+## The hero lux choices of the latest refresh, which a hero button reads when it is pressed.
+var _hero_choices: Array = []
+var _hero_note: Label
+var _hero_alloc_buttons := {}
+var _shop_buttons := {}
 var _mode := ""
 var _selected_group := -1
 var _path_target := {}
@@ -262,6 +273,11 @@ func _build_interface() -> void:
 	_panel_row = HBoxContainer.new()
 	_panel_row.add_theme_constant_override("separation", 10)
 	_panel.add_child(_panel_row)
+	# The queue sits right under the actions and above the order controls. The panel hugs the bottom of the
+	# screen, so a new queue row grows it upward and the buttons below stay where they are.
+	_queue_box = VBoxContainer.new()
+	_queue_box.add_theme_constant_override("separation", 4)
+	_panel.add_child(_queue_box)
 	_order_box = VBoxContainer.new()
 	_order_box.add_theme_constant_override("separation", 6)
 	_panel.add_child(_order_box)
@@ -271,9 +287,6 @@ func _build_interface() -> void:
 	_shop_box = VBoxContainer.new()
 	_shop_box.add_theme_constant_override("separation", 6)
 	_panel.add_child(_shop_box)
-	_queue_box = VBoxContainer.new()
-	_queue_box.add_theme_constant_override("separation", 4)
-	_panel.add_child(_queue_box)
 	_game.add_child(_panel)
 
 	# The hero bar: the hero's label and its four abilities, M R A S. It shows while a hero lives.
@@ -351,19 +364,19 @@ func _make_button(caption: String, color: Color) -> Button:
 	return button
 
 func _set_dark_theme() -> void:
-	var theme := Theme.new()
-	theme.set_color("font_color", "Label", Color("#e4edf8"))
-	theme.set_color("font_color", "Button", Color("#f4f7fc"))
-	theme.set_color("font_hover_color", "Button", Color.WHITE)
-	theme.set_font_size("font_size", "Button", 19)
-	theme.set_font_size("font_size", "LineEdit", 20)
-	theme.set_font_size("font_size", "SpinBox", 18)
-	theme.set_color("font_color", "LineEdit", Color("#f3f6fb"))
-	theme.set_color("font_placeholder_color", "LineEdit", Color("#78889b"))
-	theme.set_stylebox("normal", "LineEdit", _panel_style(Color("#111d2b")))
-	theme.set_stylebox("focus", "LineEdit", _panel_style(Color("#17283c")))
-	theme.set_stylebox("normal", "SpinBox", _panel_style(Color("#111d2b")))
-	self.theme = theme
+	var dark_theme := Theme.new()
+	dark_theme.set_color("font_color", "Label", Color("#e4edf8"))
+	dark_theme.set_color("font_color", "Button", Color("#f4f7fc"))
+	dark_theme.set_color("font_hover_color", "Button", Color.WHITE)
+	dark_theme.set_font_size("font_size", "Button", 19)
+	dark_theme.set_font_size("font_size", "LineEdit", 20)
+	dark_theme.set_font_size("font_size", "SpinBox", 18)
+	dark_theme.set_color("font_color", "LineEdit", Color("#f3f6fb"))
+	dark_theme.set_color("font_placeholder_color", "LineEdit", Color("#78889b"))
+	dark_theme.set_stylebox("normal", "LineEdit", _panel_style(Color("#111d2b")))
+	dark_theme.set_stylebox("focus", "LineEdit", _panel_style(Color("#17283c")))
+	dark_theme.set_stylebox("normal", "SpinBox", _panel_style(Color("#111d2b")))
+	self.theme = dark_theme
 
 ## Opens at the largest window the screen allows. The scene stretches with the window (project.godot:
 ## canvas_items with an expanding aspect), so the interface and the 3D view follow every resize. Phones and
@@ -479,16 +492,16 @@ func _select_building(building: String) -> void:
 	_set_status("Selected " + building.capitalize() + ".")
 
 func _building_selection_description(building: String) -> String:
-	var name := building.capitalize()
+	var title := building.capitalize()
 	match building:
 		"solar":
-			name = "Solar collector"
+			title = "Solar collector"
 		"wind":
-			name = "Wind collector"
+			title = "Wind collector"
 		"geothermal":
-			name = "Geothermal collector"
+			title = "Geothermal collector"
 	var description := "%s costs %d lux. Tap a free tile in your build zone." % [
-		name,
+		title,
 		int(_data.buildings[building].costLux),
 	]
 	if building == "geothermal":
@@ -586,6 +599,9 @@ func _refresh_panel() -> void:
 		return
 	_arena.set_paths(_paths_to_draw())
 	_refresh_hero_bar()
+	var now_ms := float(Time.get_ticks_msec())
+	_pending = _pending.filter(func(entry: Dictionary) -> bool:
+		return GameLogic.pending_kept(int(entry.base), float(entry.expires_ms), _real_order_count(int(entry.barracks_id)), now_ms))
 	if _mode == "path":
 		_show_path_bar()
 		return
@@ -698,9 +714,9 @@ func _show_group_panel(group: Dictionary) -> void:
 	_shop_key = ""
 	_clear_box(_shop_box)
 	_queue_key = ""
-	var size := GameLogic.group_size(_current_snapshot.get("entities", []), int(group.id))
-	_panel_title.text = "Group of %d: tap another of your groups to merge." % size if _mode == "merge" else "Group of %d, %s" % [size, "custom path" if int(group.get("custom", 0)) == 1 else "lane route"]
-	var actions := GameLogic.group_actions(size, int(group.get("custom", 0)) == 1)
+	var member_count := GameLogic.group_size(_current_snapshot.get("entities", []), int(group.id))
+	_panel_title.text = "Group of %d: tap another of your groups to merge." % member_count if _mode == "merge" else "Group of %d, %s" % [member_count, "custom path" if int(group.get("custom", 0)) == 1 else "lane route"]
+	var actions := GameLogic.group_actions(member_count, int(group.get("custom", 0)) == 1)
 	var key := "group|%d|%s" % [int(group.id), _mode]
 	for action in actions:
 		key += "|" + String(action.id)
@@ -735,10 +751,11 @@ func _show_building_panel(selected: Dictionary) -> void:
 	var lux := _viewer_core_lux_milli()
 	var min_left := int(_data.balance.core.minLeftAfterSpendLux)
 	var actions := GameLogic.actions_for(selected, _data.buildings.tower)
+	# The key holds the action ids only: whether an upgrade is affordable changes with the lux, and a button
+	# replaced between press and release loses the click. The dimming follows in place below.
 	var key := str(selected.id)
 	for action in actions:
-		var poor: bool = action.has("costLux") and not GameLogic.can_afford(lux, int(action.costLux), min_left)
-		key += "|%s:%s" % [action.id, str(poor)]
+		key += "|%s" % action.id
 	if key != _panel_key:
 		_panel_key = key
 		var items: Array = []
@@ -753,6 +770,11 @@ func _show_building_panel(selected: Dictionary) -> void:
 				"dim": action.has("costLux") and not GameLogic.can_afford(lux, int(action.costLux), min_left),
 			})
 		_fill_row(_panel_row, items)
+		_action_buttons = _panel_row.get_children()
+	for index in actions.size():
+		if index < _action_buttons.size():
+			var poor: bool = actions[index].has("costLux") and not GameLogic.can_afford(lux, int(actions[index].costLux), min_left)
+			(_action_buttons[index] as Button).modulate = Color(1, 1, 1, 0.5) if poor else Color.WHITE
 	if int(selected.kind) == GameLogic.KIND_BARRACKS and int(selected.get("recycle", 0)) == 0:
 		_show_barracks_controls(selected, lux, min_left)
 	else:
@@ -771,7 +793,7 @@ func _show_barracks_controls(barracks: Dictionary, lux: int, min_left: int) -> v
 	var cost := _order_count * int(creep.costLux)
 	var poor := not GameLogic.can_afford(lux, cost, min_left)
 	var waypoints: Array = barracks.get("waypoints", [])
-	var order_key := "%d|%d|%s|%s|%d" % [int(barracks.id), _order_count, _order_type, str(poor), waypoints.size()]
+	var order_key := "%d|%d|%s|%d" % [int(barracks.id), _order_count, _order_type, waypoints.size()]
 	if order_key != _order_key:
 		_order_key = order_key
 		_clear_box(_order_box)
@@ -791,12 +813,10 @@ func _show_barracks_controls(barracks: Dictionary, lux: int, min_left: int) -> v
 			type_button.pressed.connect(_set_order_type.bind(String(type)))
 			types.add_child(type_button)
 		_order_box.add_child(types)
-		var order_button := _make_button("Order %d creeps  %d lux" % [_order_count, cost], Color("#287557"))
-		order_button.custom_minimum_size = Vector2(0, 48)
-		if poor:
-			order_button.modulate = Color(1, 1, 1, 0.5)
-		order_button.pressed.connect(_run_panel_action.bind({"t": "orderCreeps", "barracksId": int(barracks.id), "mix": GameLogic.mix_for(_order_count, _order_type)}))
-		_order_box.add_child(order_button)
+		_order_button = _make_button("Order %d creeps  %d lux" % [_order_count, cost], Color("#287557"))
+		_order_button.custom_minimum_size = Vector2(0, 48)
+		_order_button.pressed.connect(_run_panel_action.bind({"t": "orderCreeps", "barracksId": int(barracks.id), "mix": GameLogic.mix_for(_order_count, _order_type)}))
+		_order_box.add_child(_order_button)
 		var path_button := _make_button("Default Path" if not waypoints.is_empty() else "Set Default Path", Color("#2f4c75"))
 		path_button.custom_minimum_size = Vector2(0, 48)
 		path_button.pressed.connect(_start_barracks_path.bind(int(barracks.id)))
@@ -807,13 +827,24 @@ func _show_barracks_controls(barracks: Dictionary, lux: int, min_left: int) -> v
 			clear_button.pressed.connect(_run_panel_action.bind({"t": "setBarracksPath", "barracksId": int(barracks.id), "waypoints": []}))
 			_order_box.add_child(clear_button)
 
+	if is_instance_valid(_order_button):
+		_order_button.modulate = Color(1, 1, 1, 0.5) if poor else Color.WHITE
 	_show_hero_picks(barracks, lux, min_left)
 	_show_shop(barracks, lux, min_left)
+	_show_queue(barracks)
+
+## The queue of a barracks, above the order controls. Orders just sent show at once as dim rows and give
+## way to the real rows when the next snapshot has them.
+func _show_queue(barracks: Dictionary) -> void:
 	var lines := GameLogic.queue_lines(_current_snapshot.get("orders", []), int(barracks.id), _tick_hz, _hero_names(), _item_names())
+	var waiting: Array = _pending.filter(func(entry: Dictionary) -> bool: return int(entry.barracks_id) == int(barracks.id))
 	var queue_key := str(barracks.id)
 	for order in _current_snapshot.get("orders", []):
 		if int(order.barracksId) == int(barracks.id):
 			queue_key += "|%d:%d" % [int(order.id), int(order.held)]
+	queue_key += "|p"
+	for entry in waiting:
+		queue_key += ",%d" % int(entry.id)
 	if queue_key != _queue_key:
 		_queue_key = queue_key
 		_queue_labels.clear()
@@ -830,6 +861,18 @@ func _show_barracks_controls(barracks: Dictionary, lux: int, min_left: int) -> v
 			row.add_child(cancel)
 			_queue_box.add_child(row)
 			_queue_labels[int(line.index)] = label
+		for entry in waiting:
+			var pending_row := HBoxContainer.new()
+			pending_row.modulate = Color(1, 1, 1, 0.55)
+			var pending_label := Label.new()
+			pending_label.text = String(entry.text)
+			pending_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			pending_row.add_child(pending_label)
+			var pending_cancel := _make_button("✕", Color("#52313b"))
+			pending_cancel.custom_minimum_size = Vector2(56, 40)
+			pending_cancel.disabled = true
+			pending_row.add_child(pending_cancel)
+			_queue_box.add_child(pending_row)
 	else:
 		for line in lines:
 			var node: Label = _queue_labels.get(int(line.index))
@@ -891,42 +934,54 @@ func _show_hero_picks(barracks: Dictionary, lux: int, min_left: int) -> void:
 			chosen = choice
 	if chosen.is_empty() and not choices.is_empty():
 		chosen = choices[0]
-	var key := "%d|%s" % [int(barracks.id), String(pick_state.note)]
+	_hero_choices = choices
+	# The key holds labels and flags only: the amounts follow the Core's lux every tick, and a button
+	# replaced between press and release loses the click. The texts update in place below.
+	var key := "%d" % int(barracks.id)
 	for option in pick_state.options:
 		key += "|%d%s%s" % [int(option.id), "L" if option.locked else "", "E" if option.enabled else ""]
 	for choice in choices:
-		key += "|%d" % int(choice.lux)
+		key += "|" + String(choice.label)
 	key += "|" + (String(chosen.label) if not chosen.is_empty() else "")
-	if key == _hero_key:
-		return
-	_hero_key = key
-	_clear_box(_hero_box)
-	var note := Label.new()
-	note.add_theme_font_size_override("font_size", 15)
-	note.add_theme_color_override("font_color", Color("#8a93a6"))
-	note.text = "Hero: %s" % pick_state.note if not String(pick_state.note).is_empty() else "Hero: pick one, with the lux below"
-	_hero_box.add_child(note)
-	var allocation := HBoxContainer.new()
-	allocation.add_theme_constant_override("separation", 6)
+	if key != _hero_key:
+		_hero_key = key
+		_hero_alloc_buttons.clear()
+		_clear_box(_hero_box)
+		_hero_note = Label.new()
+		_hero_note.add_theme_font_size_override("font_size", 15)
+		_hero_note.add_theme_color_override("font_color", Color("#8a93a6"))
+		_hero_box.add_child(_hero_note)
+		var allocation := HBoxContainer.new()
+		allocation.add_theme_constant_override("separation", 6)
+		for choice in choices:
+			var alloc_button := _make_button("", Color("#315f95") if choice == chosen else Color("#24364a"))
+			alloc_button.custom_minimum_size = Vector2(0, 44)
+			alloc_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			alloc_button.pressed.connect(_set_hero_alloc.bind(String(choice.label)))
+			allocation.add_child(alloc_button)
+			_hero_alloc_buttons[String(choice.label)] = alloc_button
+		_hero_box.add_child(allocation)
+		var heroes := HBoxContainer.new()
+		heroes.add_theme_constant_override("separation", 6)
+		for option in pick_state.options:
+			var hero_button := _make_button("%s %s" % [option.name, String(option.primary).substr(0, 1).to_upper()], Color("#24364a"))
+			hero_button.custom_minimum_size = Vector2(0, 44)
+			hero_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			hero_button.name = "HeroPick%d" % int(option.id)
+			if not bool(option.enabled):
+				hero_button.modulate = Color(1, 1, 1, 0.5)
+			hero_button.pressed.connect(_pick_hero.bind(int(option.id), int(barracks.id)))
+			heroes.add_child(hero_button)
+		_hero_box.add_child(heroes)
+	var note_text := "Hero: %s" % pick_state.note if not String(pick_state.note).is_empty() else "Hero: pick one, with the lux below"
+	if is_instance_valid(_hero_note) and _hero_note.text != note_text:
+		_hero_note.text = note_text
 	for choice in choices:
-		var alloc_button := _make_button("%s %d" % [choice.label, int(choice.lux)], Color("#315f95") if choice == chosen else Color("#24364a"))
-		alloc_button.custom_minimum_size = Vector2(0, 44)
-		alloc_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		alloc_button.pressed.connect(_set_hero_alloc.bind(String(choice.label)))
-		allocation.add_child(alloc_button)
-	_hero_box.add_child(allocation)
-	var heroes := HBoxContainer.new()
-	heroes.add_theme_constant_override("separation", 6)
-	for option in pick_state.options:
-		var hero_button := _make_button("%s %s" % [option.name, String(option.primary).substr(0, 1).to_upper()], Color("#24364a"))
-		hero_button.custom_minimum_size = Vector2(0, 44)
-		hero_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		hero_button.name = "HeroPick%d" % int(option.id)
-		if not bool(option.enabled):
-			hero_button.modulate = Color(1, 1, 1, 0.5)
-		hero_button.pressed.connect(_pick_hero.bind(int(option.id), int(barracks.id), int(chosen.lux) if not chosen.is_empty() else 0))
-		heroes.add_child(hero_button)
-	_hero_box.add_child(heroes)
+		var alloc: Button = _hero_alloc_buttons.get(String(choice.label))
+		if alloc != null:
+			var alloc_text := "%s %d" % [choice.label, int(choice.lux)]
+			if alloc.text != alloc_text:
+				alloc.text = alloc_text
 
 ## The item part of a barracks panel (GDD 8.1): one button per item with its price. A bought item
 ## waits in the queue and reaches the hero's inventory when it is built.
@@ -934,38 +989,47 @@ func _show_shop(barracks: Dictionary, lux: int, min_left: int) -> void:
 	var shop := GameLogic.shop_states(_item_list(), lux, min_left)
 	var key := str(int(barracks.id))
 	for entry in shop:
-		key += "|%d%s" % [int(entry.id), "P" if entry.poor else ""]
-	if key == _shop_key:
-		return
-	_shop_key = key
-	_clear_box(_shop_box)
-	var note := Label.new()
-	note.add_theme_font_size_override("font_size", 15)
-	note.add_theme_color_override("font_color", Color("#8a93a6"))
-	note.text = "Items: bought here, carried by your hero"
-	_shop_box.add_child(note)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
+		key += "|%d" % int(entry.id)
+	if key != _shop_key:
+		_shop_key = key
+		_shop_buttons.clear()
+		_clear_box(_shop_box)
+		var note := Label.new()
+		note.add_theme_font_size_override("font_size", 15)
+		note.add_theme_color_override("font_color", Color("#8a93a6"))
+		note.text = "Items: bought here, carried by your hero"
+		_shop_box.add_child(note)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		for entry in shop:
+			var item_button := _make_button("%s %d" % [entry.name, int(entry.costLux)], Color("#24364a"))
+			item_button.custom_minimum_size = Vector2(0, 44)
+			item_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			item_button.name = "ShopItem%d" % int(entry.id)
+			item_button.pressed.connect(_run_panel_action.bind({"t": "orderItem", "barracksId": int(barracks.id), "itemId": int(entry.id)}))
+			row.add_child(item_button)
+			_shop_buttons[int(entry.id)] = item_button
+		_shop_box.add_child(row)
 	for entry in shop:
-		var item_button := _make_button("%s %d" % [entry.name, int(entry.costLux)], Color("#24364a"))
-		item_button.custom_minimum_size = Vector2(0, 44)
-		item_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		item_button.name = "ShopItem%d" % int(entry.id)
-		if bool(entry.poor):
-			item_button.modulate = Color(1, 1, 1, 0.5)
-		item_button.pressed.connect(_run_panel_action.bind({"t": "orderItem", "barracksId": int(barracks.id), "itemId": int(entry.id)}))
-		row.add_child(item_button)
-	_shop_box.add_child(row)
+		var shop_button: Button = _shop_buttons.get(int(entry.id))
+		if shop_button != null:
+			shop_button.modulate = Color(1, 1, 1, 0.5) if bool(entry.poor) else Color.WHITE
 
 func _set_hero_alloc(label: String) -> void:
 	_hero_alloc = label
 	_refresh_panel()
 
-func _pick_hero(hero_id: int, barracks_id: int, lux: int) -> void:
-	if lux < 1:
+func _pick_hero(hero_id: int, barracks_id: int) -> void:
+	var chosen: Dictionary = {}
+	for choice in _hero_choices:
+		if String(choice.label) == _hero_alloc:
+			chosen = choice
+	if chosen.is_empty() and not _hero_choices.is_empty():
+		chosen = _hero_choices[0]
+	if chosen.is_empty():
 		_set_status("Not enough lux for a hero.")
 		return
-	_run_panel_action({"t": "pickHero", "heroId": hero_id, "lux": lux, "barracksId": barracks_id})
+	_run_panel_action({"t": "pickHero", "heroId": hero_id, "lux": int(chosen.lux), "barracksId": barracks_id})
 
 ## The hero bar: the ability buttons show the letter and cost, or the seconds until ready.
 func _refresh_hero_bar() -> void:
@@ -1118,10 +1182,38 @@ func _entity_exists(entity_id: int) -> bool:
 			return true
 	return false
 
+## The real orders of one barracks in the latest snapshot.
+func _real_order_count(barracks_id: int) -> int:
+	var count := 0
+	for order in _current_snapshot.get("orders", []):
+		if int(order.get("barracksId", -1)) == barracks_id:
+			count += 1
+	return count
+
+## Sends a command. A barracks order shows in the queue at once as a dim row, and the row goes away when
+## the snapshot has the real one, when the server refuses it, or a few seconds after the server accepted it.
 func _run_panel_action(command: Dictionary) -> void:
+	var text := GameLogic.pending_line(command, _hero_names(), _item_names())
+	var mark := {}
+	if not text.is_empty() and command.has("barracksId"):
+		var barracks_id := int(command.barracksId)
+		var waiting := 0
+		for entry in _pending:
+			if int(entry.barracks_id) == barracks_id:
+				waiting += 1
+		_pending_seq += 1
+		# The order is in a snapshot once the real count passes this base.
+		mark = {"id": _pending_seq, "barracks_id": barracks_id, "text": text, "base": _real_order_count(barracks_id) + waiting, "expires_ms": INF}
+		_pending.append(mark)
+		_refresh_panel()
 	var acknowledgement: Dictionary = await _backend.send_command(command)
 	if acknowledgement.get("accepted", false):
+		if not mark.is_empty():
+			mark["expires_ms"] = float(Time.get_ticks_msec()) + GameLogic.PENDING_MS
 		_set_status("Order sent. The server will validate it.")
+	elif not mark.is_empty():
+		_pending = _pending.filter(func(entry: Dictionary) -> bool: return int(entry.id) != int(mark.id))
+		_refresh_panel()
 
 func _on_snapshot(world_snapshot: Dictionary) -> void:
 	_current_snapshot = world_snapshot
@@ -1206,10 +1298,13 @@ func _update_world_label() -> void:
 		mine = float(teams[_viewer_team].get("coreLux", 0)) / 1000.0
 	if 1 - _viewer_team < teams.size():
 		other = float(teams[1 - _viewer_team].get("coreLux", 0)) / 1000.0
+	@warning_ignore("integer_division")
 	var seconds := tick / _tick_hz
 	var day := GameLogic.is_day(tick, _data.balance.dayNight) if not _data.is_empty() else true
+	@warning_ignore("integer_division")
+	var minutes := seconds / 60
 	_world_label.text = "%s · %02d:%02d %s · %s %.0f · %s %.0f" % [
-		"RUNNING", seconds / 60, seconds % 60, "DAY" if day else "NIGHT",
+		"RUNNING", minutes, seconds % 60, "DAY" if day else "NIGHT",
 		"Blue" if _role == "spectator" else "Core", mine,
 		"Red" if _role == "spectator" else "Enemy", other,
 	]

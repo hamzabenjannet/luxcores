@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { KIND, SPEC_VERSION } from '../src/sim/index.js';
 import { creepGroupLabels, entityText, entropyFromText, entropyText, isDay, tickCapFromText, tickCapText } from '../src/client/entity-text.js';
-import { abilityStates, actionsFor, canAfford, endsBuildMode, groupActions, heroLuxChoices, heroPickState, immediateCast, immediateUse, itemStates, mixFor, queueLines, resolveTap, secondsText, shopStates } from '../src/client/ui/controls.js';
+import { abilityStates, actionsFor, canAfford, endsBuildMode, groupActions, heroLuxChoices, heroPickState, immediateCast, immediateUse, itemStates, mixFor, pendingKept, pendingLine, queueLines, resolveTap, secondsText, shopStates } from '../src/client/ui/controls.js';
 import { matchSummary } from '../src/client/ui/summary.js';
 import { ROOT, loadData } from './helpers/load-data.js';
 
@@ -43,6 +43,11 @@ test('creep group label cases', () => {
 test('entropy rate cases', () => {
   for (const c of fixture.entropyFromText) assert.equal(entropyFromText(c.text), c.expect, JSON.stringify(c.text));
   for (const c of fixture.entropyText) assert.equal(entropyText(c.tenths), c.expect, JSON.stringify(c.tenths));
+});
+
+test('pending queue rows', () => {
+  for (const c of fixture.pendingLine) assert.equal(pendingLine(c.command, fixture.pendingNames.heroNames, fixture.pendingNames.itemNames), c.expect, JSON.stringify(c.command));
+  for (const c of fixture.pendingKept) assert.equal(pendingKept(c.base, c.expires, c.realCount, c.now), c.expect, c.name);
 });
 
 test('tick limit cases', () => {

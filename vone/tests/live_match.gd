@@ -126,7 +126,9 @@ func _run() -> void:
 	_main._set_order_count(2)
 	_main._set_order_type("ranged")
 	_main._order_box.get_child(2).pressed.emit()
-	_check("the queue lists the order", await _until(func(): return _main._queue_box.get_child_count() == 1 and _main._queue_labels[0].text.begins_with("Group of 2 RR")), true)
+	_check("a sent order shows in the queue at once, as a dim row", _main._queue_box.get_child_count() == 1 and _main._queue_box.get_child(0).get_child(0).text == "Group of 2 RR ...", true)
+	_check("the queue lists the order", await _until(func(): return _main._queue_box.get_child_count() == 1 and _main._queue_labels.has(0) and _main._queue_labels[0].text.begins_with("Group of 2 RR")), true)
+	_check("the queue sits under the actions, above the order controls", _main._panel.get_children().find(_main._queue_box) == _main._panel.get_children().find(_main._panel_row) + 1 and _main._panel.get_children().find(_main._queue_box) < _main._panel.get_children().find(_main._order_box), true)
 	# A group of 5 and three of 1 go in at once; the panel cancels the last.
 	for mix in [["melee", "ranged", "area", "melee", "ranged"], ["melee"], ["melee"], ["melee"]]:
 		await _main._backend.send_command({"t": "orderCreeps", "barracksId": barracks_id, "mix": mix})
@@ -184,7 +186,7 @@ func _run() -> void:
 	_check("the barracks panel offers the whole roster", _main._hero_box.get_child_count() == 3 and _main._hero_box.get_child(2).get_child_count() == 5, true)
 	_check("no hero, no hero bar", _main._hero_bar.visible, false)
 	_main._hero_box.get_child(2).get_child(1).pressed.emit() # Prism, with the default allocation
-	_check("the queue lists the hero pick", await _until(func(): return _main._queue_box.get_child_count() == 1 and _main._queue_labels[0].text.begins_with("Hero Prism")), true)
+	_check("the queue lists the hero pick", await _until(func(): return _main._queue_box.get_child_count() == 1 and _main._queue_labels.has(0) and _main._queue_labels[0].text.begins_with("Hero Prism")), true)
 	_check("the hero stands next to its barracks", await _until(func(): return _find(GameLogic.KIND_HERO, 0).size() == 1), true)
 	var hero: Dictionary = _find(GameLogic.KIND_HERO, 0)[0]
 	_check("the hero is Prism with its allocated HP", int(hero.heroType) == 2 and int(hero.hp) >= 290000, true)

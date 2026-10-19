@@ -364,6 +364,31 @@ static func entropy_text(tenths: int) -> String:
 	var tenth := tenths % 10
 	return str(whole) if tenth == 0 else "%d.%d" % [whole, tenth]
 
+## How long a dim queue row waits for the snapshot after the server accepted the order, in milliseconds.
+const PENDING_MS := 3000.0
+
+## The queue text of an order the player just sent, shown before the server's snapshot has it.
+## Empty for a command that does not enter a barracks queue.
+static func pending_line(command: Dictionary, hero_names: Array = [], item_names: Array = []) -> String:
+	var kind := String(command.get("t", ""))
+	if kind == "orderCreeps" and command.has("mix"):
+		var initials := ""
+		for attack in command.mix:
+			initials += String(attack).substr(0, 1).to_upper()
+		return "Group of %d %s ..." % [command.mix.size(), initials]
+	if kind == "pickHero":
+		var hero_id := int(command.get("heroId", -1))
+		return "Hero %s %d lux ..." % [String(hero_names[hero_id]) if hero_id >= 0 and hero_id < hero_names.size() else "?", int(command.get("lux", 0))]
+	if kind == "orderItem":
+		var item_id := int(command.get("itemId", -1))
+		return "Item %s ..." % (String(item_names[item_id]) if item_id >= 0 and item_id < item_names.size() else "?")
+	return ""
+
+## Whether a dim queue row stays. It goes when its time ran out or when the barracks has more real orders
+## than the row counted at the moment it was added (base), because the snapshot then holds the order.
+static func pending_kept(base: int, expires_ms: float, real_count: int, now_ms: float) -> bool:
+	return expires_ms > now_ms and real_count <= base
+
 ## The largest tick limit the server takes: 1 000 000 ticks, about 14 hours at 20 Hz.
 const MAX_TICK_CAP := 1000000
 
