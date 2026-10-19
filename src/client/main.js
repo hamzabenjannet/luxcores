@@ -36,6 +36,7 @@ import { showMenu } from './ui/menu.js';
 import { entropyFromText, isDay, tickCapFromText } from './entity-text.js';
 import { matchSummary } from './ui/summary.js';
 import { lockPortrait } from './orientation.js';
+import { createPerfMeter } from './perf.js';
 
 const query = new URLSearchParams(location.search);
 const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
@@ -194,12 +195,20 @@ function cell(tag, text, className = '') {
   return node;
 }
 
+// ?perf=1 shows the frame meter of M10 in a corner.
+const perf = query.get('perf') === '1'
+  ? createPerfMeter($('perf'), () => `entities ${view.entities().length}  dpr ${window.devicePixelRatio}  canvas ${canvas.width}x${canvas.height}`)
+  : null;
+Object.assign(luxTest, { perf: () => perf?.read() ?? null });
+
 startLoop((timeSec) => {
+  const jsStart = performance.now();
   scene.render(timeSec, interpolator.at(performance.now()));
   controls.update();
   scene.setPaths(controls.overlay());
   scene.setGhost(controls.ghost());
   scene.setAim(controls.aim());
+  perf?.frame(timeSec * 1000, performance.now() - jsStart, scene.renderInfo());
   const secs = Math.floor(view.tick() / TICK_HZ);
   $('hud-clock').textContent = `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
   $('hud-phase').textContent = isDay(view.tick(), data.balance.dayNight) ? '☀' : '☾';

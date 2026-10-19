@@ -430,6 +430,10 @@ describe('REST API', () => {
       expect(((await manifest.json()) as { orientation: string }).orientation).toBe('portrait');
 
       expect((await fetch(`${t.url}/src/sim/index.js`)).status).toBe(200);
+      const golden = await fetch(`${t.url}/replays/golden/bots-seed-777.json`);
+      expect(golden.status).toBe(200);
+      expect(((await golden.json()) as { seed: number }).seed).toBe(777);
+      expect((await fetch(`${t.url}/replays/`)).status).toBe(404);
       const data = await fetch(`${t.url}/data/mapgen.json`);
       expect(data.status).toBe(200);
       expect(((await data.json()) as { width: number }).width).toBe(96);

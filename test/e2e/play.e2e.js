@@ -361,6 +361,21 @@ test('a human picks a hero at a barracks, shields it and aims its area ability, 
   }, { MATCH_MAX_TICKS: '2400' });
 });
 
+test('?perf=1 shows the frame meter with what the renderer draws', { timeout: 120_000, skip }, async () => {
+  await withBackend(async ({ errors, newContext, open }) => {
+    const page = await open(await newContext(), `name=Halo&match=new&vsBot=1&autostart=1&seed=${SEED}&perf=1`);
+    await until(page, () => /** @type {any} */ (window).__luxTest.entities().length > 0);
+    await until(page, () => /\d+ fps/.test(document.getElementById('perf')?.textContent ?? ''));
+    const read = await page.evaluate(() => /** @type {any} */ (window).__luxTest.perf());
+    assert.ok(read.calls > 0 && read.triangles > 0, `the renderer drew something: ${JSON.stringify(read)}`);
+    assert.ok(read.fps > 0 && read.jsAvgMs >= 0);
+    assert.match(await page.textContent('#perf') ?? '', /entities \d+ {2}dpr [\d.]+ {2}canvas \d+x\d+/);
+    assert.equal(await page.isVisible('#perf'), true);
+    console.log(`Chromium in the container (software rendering, so only the shape of the numbers counts): ${await page.textContent('#perf')}`.replace(/\n/g, ' | '));
+    assert.deepEqual(errors, [], 'the page must log no console or page errors');
+  }, { MATCH_MAX_TICKS: '1200' });
+});
+
 test('a spectator watches two bots play to the end', { timeout: 180_000, skip }, async () => {
   await withBackend(async ({ errors, newContext, open }) => {
     const page = await open(await newContext(), 'name=Watcher&match=new&botVsBot=1&autostart=1&seed=777');

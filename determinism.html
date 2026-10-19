@@ -7,6 +7,10 @@
   <style>
     body { margin: 16px; background: #05060a; color: #e8ecf5; font: 14px/1.4 ui-monospace, Menlo, monospace; }
     pre { white-space: pre-wrap; word-break: break-all; }
+    #verdict { font-size: 22px; font-weight: 700; margin: 12px 0; }
+    .pass { color: #4cf3a0; }
+    .fail { color: #ff6b6b; }
+    #lines div { margin: 2px 0; word-break: break-all; }
   </style>
 </head>
 <body>
@@ -14,7 +18,10 @@
   <p>Plays the sim in this browser and prints the state hash. Compare it with
   <code>node tools/run-bots.js SEED TICKS</code> or the headless runner on any machine.
   Parameters: <code>seed</code>, <code>ticks</code>, <code>bots=1</code> (two bots play; without it nobody sends commands).</p>
-  <pre id="result">running ...</pre>
+  <p>For the phone check open <code>determinism.html?suite=1</code>: it plays every golden replay of <code>replays/golden/</code> and compares each recorded hash.</p>
+  <div id="verdict">running ...</div>
+  <div id="lines"></div>
+  <pre id="result"></pre>
   <script type="module" src="src/client/determinism.js"></script>
 </body>
 </html>

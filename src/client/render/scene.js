@@ -35,6 +35,8 @@ const VIEW_TILES_WIDE = 32;
  */
 export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0, heroNames = [], itemNames = []) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+  // The composer draws in several passes; counting over the whole frame needs a reset of our own.
+  renderer.info.autoReset = false;
   const coarse = window.matchMedia('(pointer: coarse)');
   const scene = new THREE.Scene();
   // scene.background (sRGB-aware Color) instead of setClearColor: the clear
@@ -205,6 +207,7 @@ export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0, hero
     }
     lastTime = timeSec;
     placeCamera();
+    renderer.info.reset();
     composer.render();
   }
 
@@ -220,6 +223,8 @@ export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0, hero
     /** Whether the camera follows the viewer's hero. Dragging the map turns it off. @param {boolean} on */
     setFollow(on) { following = on; },
     isFollowing: () => following,
+    /** What the renderer drew in the last frame. */
+    renderInfo: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }),
     /** Counts of drawn things, for the tests. */
     stats: () => entityMeshes.stats(),
   };

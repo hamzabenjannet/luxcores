@@ -40,6 +40,18 @@ test('Chromium and Node agree on the sim hash, with idle players and with two bo
   });
 });
 
+test('Chromium replays every golden replay hash for hash, as a phone will (determinism.html?suite=1)', { timeout: 180_000, skip }, async () => {
+  await withBackend(async ({ plain, errors }) => {
+    const page = await plain('/determinism.html?suite=1');
+    const run = await determinism(page);
+    assert.equal(run.ok, true, `P0: a golden replay disagrees in Chromium: ${JSON.stringify(run.results.filter((/** @type {any} */ r) => !r.ok))}`);
+    assert.equal(run.results.length, 7);
+    assert.match(await page.textContent('#verdict') ?? '', /^PASS: all 7 replays match Node$/);
+    assert.deepEqual(errors, []);
+    console.log(`Chromium plays ${run.results.length} golden replays at ${run.ticksPerSecond} ticks per second (the game needs 20)`);
+  });
+});
+
 test('the game page loads from the backend and offers the start menu', { timeout: 120_000, skip }, async () => {
   await withBackend(async ({ plain, errors }) => {
     const page = await plain('/');

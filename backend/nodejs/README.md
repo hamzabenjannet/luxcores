@@ -23,6 +23,7 @@ To play against the server from a browser, open `http://localhost:3000/?server=&
 | `/` | The game page, so a phone on the LAN can play against this server |
 | `/api/docs` | Swagger UI (`/api/docs-json` holds the raw OpenAPI document) |
 | `/api/health` | Liveness, database state and event bus mode |
+| `/determinism.html?suite=1` | Plays every golden replay (`/replays/golden/`) in the browser and compares each hash with Node's, for the cross-browser check of M10 |
 | `/public/` | Files that belong to the backend (`backend/nodejs/public`) |
 
 ## Configuration

@@ -32,7 +32,7 @@ Milestones M1 (map generation), M2 (economy), M3 (combat and physics) and M4 (cr
 | Prose gate | `tools/check_style.py` labels hits `deny` or `ask`, supports `--register informal`, reads `.js` files through their comments and checks the whole repo with `npm run lint:prose:all`; `test/prose.test.js` fails `npm test` on any `deny` hit |
 | Godot project (`vone/`) | Godot 4.6, GL Compatibility renderer, a thin client at M7 (see Client Alignment below): spec check, server data, build, upgrade, recycle, creep orders, queue, groups, merge, split, paths, hero picks and abilities, hero orders, items, combat visuals, bot and spectator modes |
 | Cross-runtime check | `determinism.html` plays the sim inside Chromium. The idle hash at tick 120 (`be35e5ef`, seed 1234567) and the bot hash at tick 1 200 (`d480339c`, seed 777, with creeps, heroes, A* and collisions) equal the Node values |
-| Latest validation (2026-10-19, M9) | `npm test`: 248 passed; `node tools/run-bots.js --soak 1000 5000`: 1 000 seeds of 5 000 ticks, twice each, identical hashes, no crash, no non-integer value (648 s on 9 workers); backend `npm test`: 93 passed and 42 skipped without services; backend `npm run test:e2e`: 83 passed and 13 skipped without services; root `npm run test:e2e`: 16 of 16 passed, with Godot parity, Godot live (112 checks) and Chromium equal to Node. The MongoDB, Redis, RabbitMQ and PostgreSQL tests were not rerun. Nothing was tried on a phone `[UNVERIFIED]` |
+| Latest validation (2026-10-19, M9) | `npm test`: 252 passed; `node tools/run-bots.js --soak 1000 5000`: 1 000 seeds of 5 000 ticks, twice each, identical hashes, no crash, no non-integer value (648 s on 9 workers); backend `npm test`: 93 passed and 42 skipped without services; backend `npm run test:e2e`: 83 passed and 13 skipped without services; root `npm run test:e2e`: 18 of 18 passed, with Godot parity, Godot live (112 checks) and Chromium equal to Node. The MongoDB, Redis, RabbitMQ and PostgreSQL tests were not rerun. Nothing was tried on a phone `[UNVERIFIED]` |
 
 ### Browser and Godot Tests
 
@@ -190,19 +190,46 @@ Result of 1 000 seeds of 5 000 ticks, twice each, on 9 workers (648 s): 0 crashe
 
 Open for the owners:
 
-- **Team 1 wins far more often.** Of the 735 victories, team 1 won 648 and team 0 won 87, with the same bot on both sides and a point-mirrored map. I did not look for the cause. It may be a bot asymmetry, the order in which the pipeline treats the two teams, or the map. This is worth a day before any balance tuning `[UNVERIFIED]` as a diagnosis.
+- **Team 1 wins far more often.** Of the 735 victories, team 1 won 648 and team 0 won 87, with the same bot on both sides and a point-mirrored map. Hamza suspects the bot logic and will look at it with human-versus-bot runs; I did not look for the cause (2026-10-19). A bot-versus-bot soak would show the same split, so it is a bot or sim question, not a soak problem `[UNVERIFIED]`.
 - **No CI.** The repo has no CI configuration, so "soak in CI" is a command to run, not a pipeline. Adding a workflow is an infrastructure choice for Hamza.
 - **Hot seat (GDD 12.2).** Deferred. The design stays in the GDD: a server match type that gives both teams to the host, commands that carry a side and a Side button.
 
-## Next Milestone: M10
+## Next Milestone: M10 (Cross-Browser Determinism and the Performance Pass)
 
-From `docs/TECH_ARCHITECTURE.md` section 14. Each milestone ends with tests green and a short demo on a phone.
+From `docs/TECH_ARCHITECTURE.md` section 14. Done when Node, Chrome on Android and Safari on iOS print identical hashes, and the performance numbers of a mid-range Android phone are recorded here.
 
-| # | Scope | Done when |
-|---|---|---|
-| M10 | Cross-browser determinism page (Chrome Android, iOS Safari vs Node), performance pass on a mid-range Android phone | Identical final hashes on all three |
+### Already Built for M10 (2026-10-19)
 
-Before M10, play a full match on a phone against the current build (the M8 acceptance test) and send the findings to Hama.
+- **`determinism.html?suite=1`.** Plays every golden replay of `replays/golden/` in the browser and compares each recorded hash, so one tap shows PASS or the first tick that differs. The backend serves the replays at `/replays/golden/`, `src/client/determinism-suite.js` holds the list (a test checks it against the directory), and a Chromium test passes it. In the test container Chromium plays 7 replays at about 1 760 ticks per second, and the game needs 20.
+- **`?perf=1`.** Adds the frame meter (`src/client/perf.js`) to the game page: frames per second, the average, 95th percentile and worst frame time of the last 120 frames, the JavaScript time per frame, draw calls, triangles, entities, pixel ratio and canvas size. `window.__luxTest.perf()` returns the same numbers. In the container (software rendering) the page's own JavaScript took about 3 ms per frame with 40 draw calls; the frame rate there says nothing about a phone.
+
+### The Phone Runbook
+
+1. Start the server with `npm run serve` and find the computer's LAN address. The phone and the computer must share a network. Plain `http://` works for everything the page uses.
+2. On each phone (Chrome on Android, Safari on iOS) open `http://<address>:3000/determinism.html?suite=1`. Expected: a green `PASS: all 7 replays match Node`. Send a screenshot, and for a failure the JSON under the list, which names the first tick that differs.
+3. Open `http://<address>:3000/?perf=1` and play a full match against the bot (Play Against Bot, Unlimited). Note the meter at three moments: the first minute, the middle of a creep fight and the end. A bot-versus-bot match (Watch Bot Against Bot, any seed) reaches 60 creeps too, with no tapping.
+4. Record per phone: model, browser version, fps, p95 frame time, JavaScript ms, draw calls and anything that stutters (a tap that lags, a frozen frame while the camera pans).
+
+### Targets (a first proposal, for the owners to change)
+
+| Measure | Target |
+|---|---|
+| Hashes | Identical on all three engines for all 7 golden replays |
+| Frame rate with 60 creeps | 60 fps if the phone allows it, never below 30 fps |
+| 95th percentile frame time | At most 33 ms |
+| JavaScript per frame | At most 8 ms |
+
+### If the Numbers Miss
+
+In the order I would try, each one measured with the meter before and after: lower the pixel ratio cap on touch from 2 to 1.5 (`render/pixel-ratio.js`); turn bloom off or to a quarter of the resolution (`render/scene.js`); cut the label work for far or crowded entities (`render/labels.js`); merge more instanced meshes (`render/entity-meshes.js`). A difference in hashes is a sim bug (P0): find the first tick with the suite, then the field with `hashState`.
+
+### Risks
+
+- Safari needs an import map (16.4 or newer) and the page loads `three` and `socket.io-client` from jsDelivr, so an offline phone cannot play.
+- `screen.orientation.lock` is unsupported on iOS, where the rotate prompt does the work.
+- Float math: the sim uses integers and tables only, so a hash difference should not happen; the first real test of that claim on a phone is this milestone `[UNVERIFIED]`.
+
+Questions for the owners: which Android phone counts as mid-range for the target, and are the targets above right?
 
 ## Interpretations Made in the Scaffold
 

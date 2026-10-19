@@ -12,6 +12,7 @@ import { StaticController } from './static.controller.js';
  *   /src/**      client and sim modules of the game
  *   /data/**     game data (`data/*.json`)
  *   /assets/**   models and textures
+ *   /replays/golden/**  the golden replays, which determinism.html?suite=1 plays in the browser
  *   /public/**   files that belong to the backend itself (`backend/nodejs/public`)
  *
  * The game folders come from the Luxcores repo root (`LUXCORES_ROOT`). Each one
@@ -38,6 +39,11 @@ import { StaticController } from './static.controller.js';
           {
             rootPath: join(root, 'assets'),
             serveRoot: '/assets',
+            serveStaticOptions: options,
+          },
+          {
+            rootPath: join(root, 'replays', 'golden'),
+            serveRoot: '/replays/golden',
             serveStaticOptions: options,
           },
           {
