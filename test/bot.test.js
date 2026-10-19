@@ -32,13 +32,25 @@ function botMatch(seed, ticks) {
     const cmds = bots.flatMap((bot, i) => bot.think(views[i]));
     issued.push(...cmds);
     const nextId = state.nextId;
+    const ordersBefore = new Set(state.orders.map((o) => o.id));
     const levels = new Map(state.entities.filter((e) => e.kind === KIND.TOWER).map((e) => [e.id, e.powerLevel + e.shellLevel]));
     step(state, cmds);
-    // The bots act on different ticks, so a tick holds at most one command and its id is `nextId`.
+    // Both bots act on the same ticks, so a tick can hold two commands. An accepted order or building is new
+    // after the step, and each command claims the one it made (by owner, barracks and size, or by tile).
+    const newOrders = state.orders.filter((o) => !ordersBefore.has(o.id));
+    const newEntities = state.entities.filter((x) => x.id >= nextId);
     for (const e of cmds) {
-      if (e.cmd.t === 'orderCreeps' && !state.orders.some((o) => o.id === nextId)) refusedOrders++;
-      if (e.cmd.t === 'pickHero' && !state.orders.some((o) => o.id === nextId && o.type === 2)) refusedHeroCommands++;
-      if (e.cmd.t === 'build' && !state.entities.some((x) => x.id === nextId)) refusedBuilds++;
+      if (e.cmd.t === 'orderCreeps') {
+        const at = newOrders.findIndex((o) => o.owner === e.playerId && o.barracksId === e.cmd.barracksId && o.type !== 2 && o.mix.length === e.cmd.mix.length);
+        if (at < 0) refusedOrders++;
+        else newOrders.splice(at, 1);
+      }
+      if (e.cmd.t === 'pickHero') {
+        const at = newOrders.findIndex((o) => o.owner === e.playerId && o.type === 2);
+        if (at < 0) refusedHeroCommands++;
+        else newOrders.splice(at, 1);
+      }
+      if (e.cmd.t === 'build' && !newEntities.some((x) => x.owner === e.playerId && Math.floor(x.x / 1000) === e.cmd.tileX && Math.floor(x.z / 1000) === e.cmd.tileZ)) refusedBuilds++;
       if (e.cmd.t === 'upgrade') {
         const tower = state.entities.find((x) => x.id === e.cmd.towerId);
         if (!tower || tower.powerLevel + tower.shellLevel !== levels.get(tower.id) + 1) refusedUpgrades++;
@@ -101,7 +113,7 @@ test('a bot builds only in its own zone, off its lanes, and keeps the Core above
 });
 
 test('the rotation builds a collector, a barracks, then a tower, and fills every tower upgrade', () => {
-  const { state, issued } = botMatch(6, 6000); // seed 6 stalls at the limit with both bases fully built and upgraded
+  const { state, issued } = botMatch(4, 6000); // seed 4 stalls at the limit with both bases fully built and upgraded
   const first = issued.filter((e) => e.playerId === 0 && e.cmd.t === 'build').slice(0, 3).map((e) => e.cmd.building);
   assert.deepEqual([first[0], first[1], first[2]], ['solar', 'barracks', 'tower']);
   for (const tower of state.entities.filter((e) => e.kind === KIND.TOWER)) {

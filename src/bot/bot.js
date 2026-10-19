@@ -50,8 +50,8 @@ const COLLECTOR_KINDS = new Set([KIND.SOLAR, KIND.WIND, KIND.GEOTHERMAL, KIND.NU
  */
 export function createBot({ playerId, team, config, seed }) {
   const rng = createRng((seed ^ Math.imul(playerId + 1, 0x9e3779b1)) >>> 0);
-  // Two bots with different phases do not act on the same tick.
-  const phase = (playerId * 7) % THINK_EVERY;
+  // Every bot decides on the same ticks. A phase that depends on the player would give one side the first move.
+  const phase = 0;
   const heroPhase = (phase + 3) % HERO_EVERY;
   const zone = buildZoneOf(config, team);
   let seq = 0;
@@ -316,8 +316,12 @@ export function createBot({ playerId, team, config, seed }) {
 
     /** @type {{ score: number, x: number, z: number }[]} */
     const best = [];
-    for (let z = zone.z0; z <= zone.z1; z++) {
-      for (let x = 0; x < width; x++) {
+    // The scan order breaks ties between equal scores, and the map is point-mirrored, so team 1 scans in the
+    // mirrored order: its picks are then the mirror images of team 0's.
+    for (let zi = 0; zi <= zone.z1 - zone.z0; zi++) {
+      const z = team === 0 ? zone.z0 + zi : zone.z1 - zi;
+      for (let xi = 0; xi < width; xi++) {
+        const x = team === 0 ? xi : width - 1 - xi;
         if (taken.has(z * width + x)) continue;
         if (Math.abs(x - coreX) <= 2 && Math.abs(z - coreZ) <= 2) continue; // keep the Core's surroundings open
         const score = where === 'front'

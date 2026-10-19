@@ -10,8 +10,8 @@ import { playReplay } from '../sim/index.js';
 
 /** The files of `replays/golden/`, served at `/replays/golden/<name>`. */
 export const GOLDEN_FILES = Object.freeze([
-  'bots-seed-17-victory.json',
   'bots-seed-4-stalemate.json',
+  'bots-seed-7-victory.json',
   'bots-seed-777.json',
   'economy-seed-424242.json',
   'heroes-seed-515151.json',
