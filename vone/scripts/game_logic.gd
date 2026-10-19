@@ -77,32 +77,96 @@ static func seconds_text(ticks: int, tick_hz: int) -> String:
 	@warning_ignore("integer_division")
 	return "%d.%ds" % [tenths / 10, tenths % 10]
 
+## What an order is, without its timer: "Group of 3 RRM", "Hero Prism 40 lux" or "Item Haste".
+static func order_label(order: Dictionary, hero_names: Array = [], item_names: Array = []) -> String:
+	var mix: Array = order.get("mix", [])
+	if int(order.get("type", 1)) == HERO_ORDER:
+		var hero_name := String(hero_names[int(mix[0])]) if int(mix[0]) < hero_names.size() else "?"
+		return "Hero %s %d lux" % [hero_name, int(mix[1])]
+	if int(order.get("type", 1)) == ITEM_ORDER:
+		return "Item %s" % (String(item_names[int(mix[0])]) if int(mix[0]) < item_names.size() else "?")
+	var initials := {1: "M", 2: "R", 3: "A"}
+	var letters := ""
+	for code in mix:
+		letters += String(initials.get(int(code), "?"))
+	return "Group of %d %s" % [mix.size(), letters]
+
+## The timer of a queued order: HELD while it waits for room (a group at the creep cap, an item with no hero), else the seconds left.
+static func order_wait(order: Dictionary, tick_hz: int) -> String:
+	if int(order.get("type", 1)) == HERO_ORDER:
+		return seconds_text(int(order.get("ticksLeft", 0)), tick_hz)
+	if int(order.get("held", 0)) == 1:
+		return "HELD"
+	if int(order.get("type", 1)) == ITEM_ORDER:
+		return seconds_text(int(order.get("ticksLeft", 0)), tick_hz)
+	return "%.1fs" % (maxf(0.0, float(order.get("ticksLeft", 0))) / float(tick_hz))
+
 ## The lines of a barracks queue, in queue order: [{index, orderId, text}]. A held group shows HELD.
 ## A hero pick shows the hero's name and the lux allocated to it, and an item shows its name and HELD
 ## while it waits for a hero or a free slot.
 static func queue_lines(orders: Array, barracks_id: int, tick_hz: int, hero_names: Array = [], item_names: Array = []) -> Array:
-	var initials := {1: "M", 2: "R", 3: "A"}
 	var out: Array = []
 	var index := 0
 	for order in orders:
 		if int(order.get("barracksId", -1)) != barracks_id:
 			continue
-		var mix: Array = order.get("mix", [])
-		if int(order.get("type", 1)) == HERO_ORDER:
-			var hero_name := String(hero_names[int(mix[0])]) if int(mix[0]) < hero_names.size() else "?"
-			out.append({"index": index, "orderId": int(order.id), "text": "Hero %s %d lux %s" % [hero_name, int(mix[1]), seconds_text(int(order.get("ticksLeft", 0)), tick_hz)]})
-		elif int(order.get("type", 1)) == ITEM_ORDER:
-			var item_name := String(item_names[int(mix[0])]) if int(mix[0]) < item_names.size() else "?"
-			var wait := "HELD" if int(order.get("held", 0)) == 1 else seconds_text(int(order.get("ticksLeft", 0)), tick_hz)
-			out.append({"index": index, "orderId": int(order.id), "text": "Item %s %s" % [item_name, wait]})
-		else:
-			var letters := ""
-			for code in mix:
-				letters += String(initials.get(int(code), "?"))
-			var status := "HELD" if int(order.get("held", 0)) == 1 else "%.1fs" % (maxf(0.0, float(order.get("ticksLeft", 0))) / float(tick_hz))
-			out.append({"index": index, "orderId": int(order.id), "text": "Group of %d %s %s" % [mix.size(), letters, status]})
+		out.append({"index": index, "orderId": int(order.id), "text": "%s %s" % [order_label(order, hero_names, item_names), order_wait(order, tick_hz)]})
 		index += 1
 	return out
+
+## Entries the orders window keeps, newest last. The oldest go first.
+const LOG_MAX := 60
+
+## Match time as the log writes it, minutes and seconds.
+static func clock_text(tick: int, tick_hz: int) -> String:
+	@warning_ignore("integer_division")
+	var seconds := maxi(tick, 0) / tick_hz
+	@warning_ignore("integer_division")
+	return "%d:%02d" % [seconds / 60, seconds % 60]
+
+## The order log after a snapshot, the same rule as updateOrderLog in src/client/ui/order-log.js: an order of the
+## player with no entry yet becomes a queued entry, and a queued entry whose order left the queue is done, or
+## cancelled when its id is in `cancelled`. Entries are {id, barracksId, tick, label, state}, oldest first.
+static func update_order_log(log: Array, orders: Array, owner: int, tick: int, cancelled: Array, hero_names: Array = [], item_names: Array = []) -> Array:
+	var live := {}
+	var mine: Array = []
+	for order in orders:
+		if int(order.get("owner", -1)) == owner:
+			mine.append(order)
+			live[int(order.id)] = true
+	var cancelled_ids := {}
+	for id in cancelled:
+		cancelled_ids[int(id)] = true # an id read from JSON is a float, which Array.has would not match to an int
+	var next: Array = []
+	var known := {}
+	for entry in log:
+		var copy: Dictionary = entry.duplicate()
+		if String(copy.state) == "queued" and not live.has(int(copy.id)):
+			copy["state"] = "cancelled" if cancelled_ids.has(int(copy.id)) else "done"
+		next.append(copy)
+		known[int(copy.id)] = true
+	for order in mine:
+		if not known.has(int(order.id)):
+			next.append({"id": int(order.id), "barracksId": int(order.get("barracksId", 0)), "tick": tick, "label": order_label(order, hero_names, item_names), "state": "queued"})
+	if next.size() > LOG_MAX:
+		next = next.slice(next.size() - LOG_MAX)
+	return next
+
+## The rows the orders window shows, newest first: {id, barracksId, time, text, state, canCancel}. A queued entry
+## shows its live timer and can be cancelled; a finished one shows "done" or "cancelled".
+static func log_rows(log: Array, orders: Array, tick_hz: int) -> Array:
+	var by_id := {}
+	for order in orders:
+		by_id[int(order.id)] = order
+	var rows: Array = []
+	for index in range(log.size() - 1, -1, -1):
+		var entry: Dictionary = log[index]
+		var queued := String(entry.state) == "queued"
+		var wait := String(entry.state)
+		if queued and by_id.has(int(entry.id)):
+			wait = order_wait(by_id[int(entry.id)], tick_hz)
+		rows.append({"id": int(entry.id), "barracksId": int(entry.barracksId), "time": clock_text(int(entry.tick), tick_hz), "text": "%s %s" % [entry.label, wait], "state": String(entry.state), "canCancel": queued})
+	return rows
 
 ## The four abilities in slot order: type in data/abilities.json, letter, and how it is aimed.
 const ABILITY_SLOTS := [

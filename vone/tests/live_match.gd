@@ -163,17 +163,33 @@ func _run() -> void:
 	# One group through the panel buttons: 2 ranged creeps.
 	_main._set_order_count(2)
 	_main._set_order_type("ranged")
+	# The orders window is outside the barracks panel and starts collapsed.
+	_check("the orders window is not part of the barracks panel", not _main._panel.is_ancestor_of(_main._orders_window) and _main._orders_window.visible, true)
+	_check("the orders window starts collapsed", not _main._orders_scroll.visible and _main._orders_toggle.text == "Orders (0) ▸", true)
+	await process_frame
+	var panel_height: float = _main._panel.size.y
+	var order_button_top: float = _main._order_box.get_child(2).global_position.y
 	_main._order_box.get_child(2).pressed.emit()
-	_check("a sent order shows in the queue at once, as a dim row", _main._queue_box.get_child_count() == 1 and _main._queue_box.get_child(0).get_child(0).text == "Group of 2 RR ...", true)
-	_check("the queue lists the order", await _until(func(): return _main._queue_box.get_child_count() == 1 and _main._queue_labels.has(0) and _main._queue_labels[0].text.begins_with("Group of 2 RR")), true)
-	_check("the queue sits under the actions, above the order controls", _main._panel.get_children().find(_main._queue_box) == _main._panel.get_children().find(_main._panel_row) + 1 and _main._panel.get_children().find(_main._queue_box) < _main._panel.get_children().find(_main._order_box), true)
+	_check("a sent order shows in the log at once, as a dim row", _main._orders_list.get_child_count() == 1 and _main._orders_list.get_child(0).get_child(1).text == "Group of 2 RR ...", true)
+	_check("the log lists the order", await _until(func(): return _main._orders_list.get_child_count() == 1 and _main._pending.is_empty() and _main._orders_list.get_child(0).get_child(1).text.begins_with("Group of 2 RR")), true)
+	await process_frame
+	_check("a new order moves nothing in the barracks panel", is_equal_approx(_main._panel.size.y, panel_height) and is_equal_approx(_main._order_box.get_child(2).global_position.y, order_button_top), true)
 	# A group of 5 and three of 1 go in at once; the panel cancels the last.
 	for mix in [["melee", "ranged", "area", "melee", "ranged"], ["melee"], ["melee"], ["melee"]]:
 		await _main._backend.send_command({"t": "orderCreeps", "barracksId": barracks_id, "mix": mix})
-	_check("the queue holds five orders", await _until(func(): return _main._queue_box.get_child_count() == 5), true)
+	_check("the log holds all five orders", await _until(func(): return _main._orders_list.get_child_count() == 5), true)
+	_check("the newest order is on top", _main._orders_list.get_child(0).get_child(1).text.begins_with("Group of 1 M"), true)
+	# Opening the window shows three rows at most and scrolls the rest.
+	_main._orders_toggle.pressed.emit()
+	await process_frame
+	await process_frame
+	_check("the window opens and shows three rows at most", _main._orders_scroll.visible and _main._orders_scroll.size.y <= 3.0 * 30.0 + 1.0 and _main._orders_toggle.text.ends_with("▾"), true)
 	var lux_before: int = int(_main._viewer_core_lux_milli())
-	_main._queue_box.get_child(4).get_child(1).pressed.emit()
-	_check("cancelling by order id refunds the last order", await _until(func(): return _main._viewer_core_lux_milli() >= lux_before + 5000 and _main._queue_box.get_child_count() == 4), true)
+	_main._orders_list.get_child(0).get_child(2).pressed.emit() # cancel the newest order
+	_check("cancelling by order id refunds the last order", await _until(func(): return _main._viewer_core_lux_milli() >= lux_before + 5000 and _main._orders_list.get_child(0).get_child(1).text.ends_with("cancelled")), true)
+	_check("a cancelled order stays in the log", _main._orders_list.get_child_count() == 5 and not _main._orders_list.get_child(0).get_child(2).visible, true)
+	_main._orders_toggle.pressed.emit()
+	_check("the window collapses again", not _main._orders_scroll.visible and _main._orders_toggle.text.ends_with("▸"), true)
 
 	_check("four groups spawn with the lane route", await _until(func(): return _main._current_snapshot.get("groups", []).size() == 4), true)
 	var groups: Array = _main._current_snapshot.groups
@@ -224,7 +240,7 @@ func _run() -> void:
 	_check("the barracks panel offers the whole roster", _main._hero_box.get_child_count() == 3 and _main._hero_box.get_child(2).get_child_count() == 5, true)
 	_check("no hero, no hero bar", _main._hero_bar.visible, false)
 	_main._hero_box.get_child(2).get_child(1).pressed.emit() # Prism, with the default allocation
-	_check("the queue lists the hero pick", await _until(func(): return _main._queue_box.get_child_count() == 1 and _main._queue_labels.has(0) and _main._queue_labels[0].text.begins_with("Hero Prism")), true)
+	_check("the log lists the hero pick", await _until(func(): return _main._orders_list.get_child_count() == 1 and _main._orders_list.get_child(0).get_child(1).text.begins_with("Hero Prism")), true)
 	_check("the hero stands next to its barracks", await _until(func(): return _find(GameLogic.KIND_HERO, 0).size() == 1), true)
 	var hero: Dictionary = _find(GameLogic.KIND_HERO, 0)[0]
 	_check("the hero is Prism with its allocated HP", int(hero.heroType) == 2 and int(hero.hp) >= 290000, true)
@@ -318,7 +334,7 @@ func _run() -> void:
 	_main._shop_box.get_child(1).get_child(0).pressed.emit() # Energy Boost
 	var held: bool = await _until(func(): return _main._current_snapshot.orders.filter(func(o): return int(o.type) == GameLogic.ITEM_ORDER and int(o.held) == 1).size() == 2)
 	_check("both items wait in the barracks without a hero", held, true)
-	_check("the queue says an item is held", _main._queue_labels.values().any(func(label): return label.text == "Item Haste HELD"), true)
+	_check("the log says an item is held", _main._orders_labels.values().any(func(label): return label.text == "Item Haste HELD"), true)
 	_check("no hero, no item bar", _main._item_bar.visible, false)
 	_main._set_hero_alloc("25%")
 	_main._hero_box.get_child(2).get_child(1).pressed.emit() # Prism, with 25% of the Core

@@ -13,6 +13,8 @@
 import { KIND, MILLI, UNITS_PER_TILE, buildZoneOf } from '../../sim/index.js';
 import { ATTACK_NAMES, entityText } from '../entity-text.js';
 import { holdAimPhase, holdAimRelease } from '../input/gestures.js';
+import { HERO_ORDER, orderLabel, orderWait, secondsText } from './order-log.js';
+import { createOrderWindow } from './order-window.js';
 
 /** The palette, in display order. `key` is the building name in data/buildings.json. */
 export const PALETTE = /** @type {const} */ ([
@@ -59,22 +61,7 @@ export function mixFor(count, type) {
   return Array.from({ length: count }, (_, i) => (type === 'mixed' ? cycle[i % cycle.length] : type));
 }
 
-/** Initial of an attack code, as the queue text shows it: M, R or A. */
-const ATTACK_INITIAL = /** @type {Record<number, string>} */ ({ 1: 'M', 2: 'R', 3: 'A' });
-
-/** Order type codes of a hero pick and an item in `Order.type` (`ORDER_TYPE` in src/sim/creeps.js). */
-const HERO_ORDER = 2;
-const ITEM_ORDER = 3;
-
-/**
- * Seconds as the UI writes them, rounded up to a tenth, with integer math only: 99 ticks at 20 Hz is "5.0s".
- * @param {number} ticks
- * @param {number} tickHz
- */
-export function secondsText(ticks, tickHz) {
-  const tenths = Math.floor((Math.max(0, ticks) * 10 + tickHz - 1) / tickHz);
-  return `${Math.floor(tenths / 10)}.${tenths % 10}s`;
-}
+export { secondsText };
 
 /**
  * The lines of a barracks queue, in queue order. A held group shows HELD; others show seconds left.
@@ -91,11 +78,7 @@ export function queueLines(orders, barracksId, tickHz, heroNames = [], itemNames
   return orders.filter((o) => o.barracksId === barracksId).map((o, index) => ({
     index,
     orderId: o.id,
-    text: o.type === HERO_ORDER
-      ? `Hero ${heroNames[o.mix[0]] ?? '?'} ${o.mix[1]} lux ${secondsText(o.ticksLeft, tickHz)}`
-      : o.type === ITEM_ORDER
-        ? `Item ${itemNames[o.mix[0]] ?? '?'} ${o.held ? 'HELD' : secondsText(o.ticksLeft, tickHz)}`
-        : `Group of ${o.mix.length} ${o.mix.map((c) => ATTACK_INITIAL[c] ?? '?').join('')} ${o.held ? 'HELD' : `${(Math.max(0, o.ticksLeft) / tickHz).toFixed(1)}s`}`,
+    text: `${orderLabel(o, heroNames, itemNames)} ${orderWait(o, tickHz)}`,
   }));
 }
 
@@ -485,6 +468,8 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   let selectedGroup = null;
   /** @type {'path' | 'merge' | null} */
   let mode = null;
+  /** The orders window, for a player (a spectator has none). @type {ReturnType<typeof createOrderWindow> | null} */
+  let orderWindow = null;
   /** The tile chosen for the building in the palette; the Place button sends it (GDD 11.5). @type {{ tileX: number, tileZ: number } | null} */
   let ghost = null;
   /** Where a held ability would land, in tiles, while the finger drags from its button. @type {{ x: number, z: number } | null} */
@@ -630,7 +615,10 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
       if (!ack.accepted) {
         drop(mark);
         say(ack.reason ?? 'The server refused the command.');
-      } else if (mark) mark.expires = performance.now() + PENDING_MS;
+      } else {
+        if (mark) mark.expires = performance.now() + PENDING_MS;
+        if (command.t === 'cancelQueue') orderWindow?.noteCancelled(/** @type {{ orderId: number }} */ (command).orderId);
+      }
     } catch (err) {
       drop(mark);
       say(`Command failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -657,6 +645,7 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     for (const b of attackRow.children) b.classList.toggle('active', /** @type {HTMLElement} */ (b).dataset.attack === attack);
     renderPanel();
     renderHeroBar();
+    orderWindow?.update();
   }
 
   /** The viewer's living hero, if any. */
@@ -807,17 +796,12 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   const orderRow = el('div', 'panel-row order-row');
   const heroRow = el('div', 'panel-row hero-row');
   const shopRow = el('div', 'panel-row shop-row');
-  const queueList = el('div', 'queue');
-  // The queue sits right under the actions (Recycle) and above the order controls. The panel hugs the
-  // bottom of the screen, so a new queue row grows it upward and the buttons below stay where they are.
-  panel.append(panelTitle, panelRow, queueList, orderRow, heroRow, shopRow);
+  // The queue is not here: the orders window keeps it, so a new order never moves a button of this panel.
+  panel.append(panelTitle, panelRow, orderRow, heroRow, shopRow);
   let panelKey = '';
   let orderKey = '';
   let heroKey = '';
   let shopKey = '';
-  let queueKey = '';
-  /** @type {Map<number, HTMLElement>} */
-  const queueStatus = new Map();
   /** Orders sent and not yet in a snapshot; `expires` is Infinity until the server has answered. */
   let pending = /** @type {{ id: number, barracksId: number, text: string, base: number, expires: number }[]} */ ([]);
   let pendingSeq = 0;
@@ -860,7 +844,7 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     const e = selected === null ? undefined : view.entities().find((x) => x.id === selected);
     if (!e) {
       selected = null;
-      panelKey = orderKey = heroKey = shopKey = queueKey = '';
+      panelKey = orderKey = heroKey = shopKey = '';
       shopRow.replaceChildren();
       panel.hidden = true;
       return;
@@ -891,9 +875,8 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     panel.hidden = false;
     orderRow.replaceChildren();
     heroRow.replaceChildren();
-    queueList.replaceChildren();
     shopRow.replaceChildren();
-    orderKey = heroKey = shopKey = queueKey = '';
+    orderKey = heroKey = shopKey = '';
     const check = ghostCheck();
     const label = PALETTE.find((p) => p.key === building)?.label ?? String(building);
     const title = `${label} at ${ghost?.tileX}, ${ghost?.tileZ}${'message' in check ? `: ${check.message}` : ''}`;
@@ -924,9 +907,8 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     panel.hidden = false;
     orderRow.replaceChildren();
     heroRow.replaceChildren();
-    queueList.replaceChildren();
     shopRow.replaceChildren();
-    orderKey = heroKey = shopKey = queueKey = '';
+    orderKey = heroKey = shopKey = '';
     panelTitle.textContent = pathTitle(pathPoints.length);
     const key = `path|${pathPoints.length}|${lastPath.length}`;
     if (key === panelKey) return;
@@ -953,9 +935,8 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     panel.hidden = false;
     orderRow.replaceChildren();
     heroRow.replaceChildren();
-    queueList.replaceChildren();
     shopRow.replaceChildren();
-    orderKey = heroKey = shopKey = queueKey = '';
+    orderKey = heroKey = shopKey = '';
     const size = groupSize(view.entities(), group.id);
     panelTitle.textContent = mode === 'merge'
       ? `Group of ${size}: tap another of your groups to merge.`
@@ -1004,9 +985,8 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     else {
       orderRow.replaceChildren();
       heroRow.replaceChildren();
-      queueList.replaceChildren();
-      shopRow.replaceChildren();
-    orderKey = heroKey = shopKey = queueKey = '';
+        shopRow.replaceChildren();
+    orderKey = heroKey = shopKey = '';
     }
   }
 
@@ -1049,43 +1029,6 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     orderButton?.classList.toggle('poor', poor);
     renderHeroPicks(e, lux);
     renderShop(e, lux);
-    renderQueue(e);
-  }
-
-  /**
-   * The queue of a barracks, above the order controls so a new row never moves them. Orders just sent
-   * show at once as dim rows and give way to the real rows when the next snapshot has them.
-   * @param {import('../../sim/state.js').Entity} e
-   */
-  function renderQueue(e) {
-    const lines = queueLines(view.orders(), e.id, tickHz, heroNames, itemNames);
-    const waiting = pending.filter((p) => p.barracksId === e.id);
-    const lineKey = `${e.id}|${view.orders().filter((o) => o.barracksId === e.id).map((o) => `${o.id}:${o.held}`).join(',')}|${waiting.map((p) => p.id).join(',')}`;
-    if (lineKey !== queueKey) {
-      queueKey = lineKey;
-      queueStatus.clear();
-      queueList.replaceChildren(
-        ...lines.map((line) => {
-          const row = el('div', 'queue-row');
-          const text = el('span', 'queue-text', line.text);
-          queueStatus.set(line.index, text);
-          row.append(text, button('✕', () => issue({ t: 'cancelQueue', barracksId: e.id, orderId: line.orderId }), 'action cancel'));
-          return row;
-        }),
-        ...waiting.map((p) => {
-          const row = el('div', 'queue-row pending');
-          const cancel = /** @type {HTMLButtonElement} */ (button('✕', () => {}, 'action cancel'));
-          cancel.disabled = true;
-          row.append(el('span', 'queue-text', p.text), cancel);
-          return row;
-        }),
-      );
-    } else {
-      for (const line of lines) {
-        const node = queueStatus.get(line.index);
-        if (node && node.textContent !== line.text) node.textContent = line.text;
-      }
-    }
   }
 
   /**
@@ -1179,6 +1122,19 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     if (e && e.kind === KIND.BARRACKS && e.waypoints.length > 0) paths.push({ points: tiles([[e.x, e.z], ...e.waypoints]), color: 0xffd76a });
     if (mode === 'path') paths.push({ points: tiles(pathPoints), color: 0xffffff });
     return paths;
+  }
+
+  if (!spectator) {
+    orderWindow = createOrderWindow({
+      parent: root.parentElement ?? root,
+      view,
+      viewerTeam,
+      tickHz,
+      heroNames,
+      itemNames,
+      pending: () => pending,
+      cancel: (order) => void issue({ t: 'cancelQueue', barracksId: order.barracksId, orderId: order.id }),
+    });
   }
 
   const api = {

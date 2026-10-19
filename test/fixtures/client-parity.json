@@ -4123,7 +4123,7 @@
     {
       "name": "waiting, snapshot has not the order",
       "base": 0,
-      "expires": 1000000000000.0,
+      "expires": 1000000000000,
       "realCount": 0,
       "now": 100,
       "expect": true
@@ -4131,7 +4131,7 @@
     {
       "name": "snapshot has the order",
       "base": 0,
-      "expires": 1000000000000.0,
+      "expires": 1000000000000,
       "realCount": 1,
       "now": 100,
       "expect": false
@@ -4139,7 +4139,7 @@
     {
       "name": "second row of two stays while one order is real",
       "base": 1,
-      "expires": 1000000000000.0,
+      "expires": 1000000000000,
       "realCount": 1,
       "now": 100,
       "expect": true
@@ -4155,7 +4155,7 @@
     {
       "name": "an order that left the queue",
       "base": 2,
-      "expires": 1000000000000.0,
+      "expires": 1000000000000,
       "realCount": 1,
       "now": 100,
       "expect": true
@@ -4552,6 +4552,1804 @@
       "botVsBot": true,
       "mine": true,
       "expect": "none"
+    }
+  ],
+  "orderLog": [
+    {
+      "name": "a new order becomes a queued entry",
+      "owner": 0,
+      "steps": [
+        {
+          "tick": 40,
+          "orders": [
+            {
+              "id": 5,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            }
+          ]
+        }
+      ],
+      "expect": [
+        {
+          "id": 5,
+          "barracksId": 3,
+          "tick": 40,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        }
+      ]
+    },
+    {
+      "name": "an order that leaves the queue is done",
+      "owner": 0,
+      "steps": [
+        {
+          "tick": 40,
+          "orders": [
+            {
+              "id": 5,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            }
+          ]
+        },
+        {
+          "tick": 120,
+          "orders": []
+        }
+      ],
+      "expect": [
+        {
+          "id": 5,
+          "barracksId": 3,
+          "tick": 40,
+          "label": "Group of 3 RRM",
+          "state": "done"
+        }
+      ]
+    },
+    {
+      "name": "a cancelled order is marked cancelled, not done",
+      "owner": 0,
+      "steps": [
+        {
+          "tick": 40,
+          "orders": [
+            {
+              "id": 5,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 6,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            }
+          ]
+        },
+        {
+          "tick": 60,
+          "orders": [
+            {
+              "id": 5,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            }
+          ],
+          "cancelled": [
+            6
+          ]
+        }
+      ],
+      "expect": [
+        {
+          "id": 5,
+          "barracksId": 3,
+          "tick": 40,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 6,
+          "barracksId": 3,
+          "tick": 40,
+          "label": "Group of 1 M",
+          "state": "cancelled"
+        }
+      ]
+    },
+    {
+      "name": "the other player's orders are not logged",
+      "owner": 0,
+      "steps": [
+        {
+          "tick": 40,
+          "orders": [
+            {
+              "id": 5,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 6,
+              "barracksId": 3,
+              "owner": 1,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            }
+          ]
+        }
+      ],
+      "expect": [
+        {
+          "id": 5,
+          "barracksId": 3,
+          "tick": 40,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        }
+      ]
+    },
+    {
+      "name": "hero picks and items are logged with their names",
+      "owner": 0,
+      "steps": [
+        {
+          "tick": 100,
+          "orders": [
+            {
+              "id": 7,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 2,
+              "mix": [
+                1,
+                40
+              ],
+              "ticksLeft": 100,
+              "held": 0
+            },
+            {
+              "id": 8,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 3,
+              "mix": [
+                0
+              ],
+              "ticksLeft": 20,
+              "held": 0
+            }
+          ]
+        }
+      ],
+      "expect": [
+        {
+          "id": 7,
+          "barracksId": 3,
+          "tick": 100,
+          "label": "Hero Halo 40 lux",
+          "state": "queued"
+        },
+        {
+          "id": 8,
+          "barracksId": 3,
+          "tick": 100,
+          "label": "Item Haste",
+          "state": "queued"
+        }
+      ]
+    },
+    {
+      "name": "an entry keeps its place when a later order arrives",
+      "owner": 0,
+      "steps": [
+        {
+          "tick": 40,
+          "orders": [
+            {
+              "id": 5,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            }
+          ]
+        },
+        {
+          "tick": 80,
+          "orders": [
+            {
+              "id": 5,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 9,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            }
+          ]
+        }
+      ],
+      "expect": [
+        {
+          "id": 5,
+          "barracksId": 3,
+          "tick": 40,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 9,
+          "barracksId": 3,
+          "tick": 80,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        }
+      ]
+    },
+    {
+      "name": "the log keeps the newest 60 entries",
+      "owner": 0,
+      "steps": [
+        {
+          "tick": 20,
+          "orders": [
+            {
+              "id": 100,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 101,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 102,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 103,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 104,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 105,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 106,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 107,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 108,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 109,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 110,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 111,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 112,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 113,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 114,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 115,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 116,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 117,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 118,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 119,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 120,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 121,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 122,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 123,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 124,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 125,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 126,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 127,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 128,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 129,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 130,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 131,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 132,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 133,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 134,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 135,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 136,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 137,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 138,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 139,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 140,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 141,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 142,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 143,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 144,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 145,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 146,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 147,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 148,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 149,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 150,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 151,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 152,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 153,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 154,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 155,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 156,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 157,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 158,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 159,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 160,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 161,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            },
+            {
+              "id": 162,
+              "barracksId": 3,
+              "owner": 0,
+              "type": 1,
+              "mix": [
+                2,
+                2,
+                1
+              ],
+              "ticksLeft": 40,
+              "held": 0
+            }
+          ]
+        }
+      ],
+      "expect": [
+        {
+          "id": 103,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 104,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 105,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 106,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 107,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 108,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 109,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 110,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 111,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 112,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 113,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 114,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 115,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 116,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 117,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 118,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 119,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 120,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 121,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 122,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 123,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 124,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 125,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 126,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 127,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 128,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 129,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 130,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 131,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 132,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 133,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 134,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 135,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 136,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 137,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 138,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 139,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 140,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 141,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 142,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 143,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 144,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 145,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 146,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 147,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 148,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 149,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 150,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 151,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 152,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 153,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 154,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 155,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 156,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 157,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 158,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 159,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 160,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 161,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        },
+        {
+          "id": 162,
+          "barracksId": 3,
+          "tick": 20,
+          "label": "Group of 3 RRM",
+          "state": "queued"
+        }
+      ]
+    }
+  ],
+  "orderLogNames": {
+    "heroNames": [
+      "Prism",
+      "Halo"
+    ],
+    "itemNames": [
+      "Haste"
+    ]
+  },
+  "logRows": [
+    {
+      "name": "newest first, live timers on queued entries, a state on finished ones",
+      "tickHz": 20,
+      "log": [
+        {
+          "id": 5,
+          "barracksId": 3,
+          "tick": 40,
+          "label": "Group of 3 RRM",
+          "state": "done"
+        },
+        {
+          "id": 6,
+          "barracksId": 3,
+          "tick": 40,
+          "label": "Group of 1 M",
+          "state": "queued"
+        },
+        {
+          "id": 7,
+          "barracksId": 3,
+          "tick": 40,
+          "label": "Hero Halo 40 lux",
+          "state": "queued"
+        }
+      ],
+      "orders": [
+        {
+          "id": 6,
+          "barracksId": 3,
+          "owner": 0,
+          "type": 1,
+          "mix": [
+            1
+          ],
+          "ticksLeft": 40,
+          "held": 1
+        },
+        {
+          "id": 7,
+          "barracksId": 3,
+          "owner": 0,
+          "type": 2,
+          "mix": [
+            1,
+            40
+          ],
+          "ticksLeft": 60,
+          "held": 0
+        }
+      ],
+      "expect": [
+        {
+          "id": 7,
+          "barracksId": 3,
+          "time": "0:02",
+          "text": "Hero Halo 40 lux 3.0s",
+          "state": "queued",
+          "canCancel": true
+        },
+        {
+          "id": 6,
+          "barracksId": 3,
+          "time": "0:02",
+          "text": "Group of 1 M HELD",
+          "state": "queued",
+          "canCancel": true
+        },
+        {
+          "id": 5,
+          "barracksId": 3,
+          "time": "0:02",
+          "text": "Group of 3 RRM done",
+          "state": "done",
+          "canCancel": false
+        }
+      ]
+    }
+  ],
+  "clockText": [
+    {
+      "tick": 0,
+      "tickHz": 20,
+      "expect": "0:00"
+    },
+    {
+      "tick": 19,
+      "tickHz": 20,
+      "expect": "0:00"
+    },
+    {
+      "tick": 20,
+      "tickHz": 20,
+      "expect": "0:01"
+    },
+    {
+      "tick": 1199,
+      "tickHz": 20,
+      "expect": "0:59"
+    },
+    {
+      "tick": 1200,
+      "tickHz": 20,
+      "expect": "1:00"
+    },
+    {
+      "tick": 3573,
+      "tickHz": 20,
+      "expect": "2:58"
+    },
+    {
+      "tick": 72000,
+      "tickHz": 20,
+      "expect": "60:00"
+    }
+  ],
+  "orderText": [
+    {
+      "order": {
+        "id": 5,
+        "barracksId": 3,
+        "owner": 0,
+        "type": 1,
+        "mix": [
+          2,
+          2,
+          1
+        ],
+        "ticksLeft": 40,
+        "held": 0
+      },
+      "expect": {
+        "label": "Group of 3 RRM",
+        "wait": "2.0s"
+      }
+    },
+    {
+      "order": {
+        "id": 5,
+        "barracksId": 3,
+        "owner": 0,
+        "type": 1,
+        "mix": [
+          2,
+          2,
+          1
+        ],
+        "ticksLeft": 40,
+        "held": 1
+      },
+      "expect": {
+        "label": "Group of 3 RRM",
+        "wait": "HELD"
+      }
+    },
+    {
+      "order": {
+        "id": 7,
+        "barracksId": 3,
+        "owner": 0,
+        "type": 2,
+        "mix": [
+          1,
+          40
+        ],
+        "ticksLeft": 99,
+        "held": 0
+      },
+      "expect": {
+        "label": "Hero Halo 40 lux",
+        "wait": "5.0s"
+      }
+    },
+    {
+      "order": {
+        "id": 8,
+        "barracksId": 3,
+        "owner": 0,
+        "type": 3,
+        "mix": [
+          0
+        ],
+        "ticksLeft": 25,
+        "held": 1
+      },
+      "expect": {
+        "label": "Item Haste",
+        "wait": "HELD"
+      }
+    },
+    {
+      "order": {
+        "id": 8,
+        "barracksId": 3,
+        "owner": 0,
+        "type": 3,
+        "mix": [
+          0
+        ],
+        "ticksLeft": 25,
+        "held": 0
+      },
+      "expect": {
+        "label": "Item Haste",
+        "wait": "1.3s"
+      }
+    },
+    {
+      "order": {
+        "id": 9,
+        "barracksId": 3,
+        "owner": 0,
+        "type": 3,
+        "mix": [
+          9
+        ],
+        "ticksLeft": 0,
+        "held": 0
+      },
+      "expect": {
+        "label": "Item ?",
+        "wait": "0.0s"
+      }
     }
   ]
 }

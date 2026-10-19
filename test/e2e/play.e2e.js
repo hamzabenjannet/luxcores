@@ -181,7 +181,7 @@ test('a human buys items at a barracks, receives them with the hero and uses the
     await page.click('.shop-item[data-shop-item="0"]');
     await until(page, () => /** @type {any} */ (window).__luxTest.orders().filter((/** @type {any} */ o) => o.type === 3).length === 2);
     await until(page, () => /** @type {any} */ (window).__luxTest.orders().filter((/** @type {any} */ o) => o.type === 3 && o.held === 1).length === 2, undefined, 15_000);
-    await until(page, () => [...document.querySelectorAll('.queue-text')].some((n) => n.textContent === 'Item Haste HELD'));
+    await until(page, () => [...document.querySelectorAll('#orders .log-text')].some((n) => n.textContent === 'Item Haste HELD'));
     assert.equal(await page.locator('.hero-bar').isHidden(), true, 'no hero, no item bar');
 
     // A small hero with the 25% allocation, then the items arrive with it.
@@ -236,7 +236,7 @@ test('a human picks a hero at a barracks, shields it and aims its area ability, 
     // Prism with the default allocation (50% of the Core).
     await page.click('.hero-pick[data-hero="1"]');
     await until(page, () => /** @type {any} */ (window).__luxTest.orders().some((/** @type {any} */ o) => o.type === 2 && o.owner === 0));
-    await until(page, () => /^Hero Prism \d+ lux/.test(document.querySelector('.queue-text')?.textContent ?? ''));
+    await until(page, () => /^Hero Prism \d+ lux/.test(document.querySelector('#orders .log-text')?.textContent ?? ''));
     await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 10 && e.owner === 0), undefined, 30_000);
     assert.equal((await hero()).heroType, 2);
     await page.waitForSelector('.hero-bar:not([hidden])');
@@ -623,8 +623,11 @@ test('a human orders creeps, then splits, merges and sends a group, through the 
     await page.waitForSelector('.order-row .order');
     await page.waitForSelector('.hero-row [data-hero]');
 
-    // The queue sits between the actions and the order controls, so a new row never pushes the buttons.
-    assert.equal(await page.evaluate(() => document.querySelector('.panel-row + .queue + .order-row') !== null), true, 'the queue is above the order controls');
+    // The queue is not in the panel: it lives in the orders window, which starts collapsed and floats outside the panel.
+    assert.equal(await page.locator('.panel .queue, .panel .log-row').count(), 0, 'the barracks panel holds no queue');
+    assert.equal(await page.evaluate(() => document.getElementById('orders')?.classList.contains('collapsed')), true, 'the orders window starts collapsed');
+    assert.equal(await page.isVisible('#orders .orders-list'), false, 'and shows only its title bar');
+    assert.equal(await page.evaluate(() => !document.querySelector('.panel')?.contains(document.getElementById('orders'))), true);
     // Lux changes every tick, and a button replaced between press and release loses the click: the same nodes must stay.
     await page.evaluate(() => {
       Object.assign(window, { __kept: [document.querySelector('.order-row .order'), document.querySelector('.hero-row [data-hero]'), document.querySelector('.hero-row [data-alloc]'), document.querySelector('.shop-row [data-shop-item]')] });
@@ -638,17 +641,37 @@ test('a human orders creeps, then splits, merges and sends a group, through the 
     // One group through the panel: 2 ranged creeps, 10 lux. The queue lists it.
     await page.click('.order-row [data-count="2"]');
     await page.click('.order-row [data-order-type="ranged"]');
+    const panelBefore = await page.evaluate(() => {
+      const panel = /** @type {HTMLElement} */ (document.querySelector('.panel')).getBoundingClientRect();
+      const order = /** @type {HTMLElement} */ (document.querySelector('.order-row .order')).getBoundingClientRect();
+      return { panelTop: Math.round(panel.top), panelHeight: Math.round(panel.height), orderTop: Math.round(order.top) };
+    });
     await page.click('.order-row .order');
-    await page.waitForSelector('.queue-row');
+    await page.waitForSelector('.log-row', { state: 'attached' }); // the window is collapsed, so its rows are in the page but not visible
+    assert.match(await page.textContent('.orders-toggle') ?? '', /^Orders \(1\) ▸$/, 'the title counts the order and shows it is collapsed');
+    // A new order moves nothing in the barracks panel: its height and its buttons stay where they were.
+    assert.deepEqual(await page.evaluate(() => {
+      const panel = /** @type {HTMLElement} */ (document.querySelector('.panel')).getBoundingClientRect();
+      const order = /** @type {HTMLElement} */ (document.querySelector('.order-row .order')).getBoundingClientRect();
+      return { panelTop: Math.round(panel.top), panelHeight: Math.round(panel.height), orderTop: Math.round(order.top) };
+    }), panelBefore, 'ordering does not move the panel');
     // Queue a group of 5 and three of 1 through the hook, in one go. The last one starts about 10 s later, so the panel can cancel it.
     const barracksId = await hook('t.entities().find((e) => e.kind === 6 && e.team === 0).id');
     // One round trip for all four, because a slow page makes each call to it take a second and the queue drains meanwhile.
     await hook(`Promise.all([t.send({ t: 'orderCreeps', barracksId: ${barracksId}, mix: ['melee', 'ranged', 'area', 'melee', 'ranged'] }), ...[1, 2, 3].map(() => t.send({ t: 'orderCreeps', barracksId: ${barracksId}, mix: ['melee'] }))])`);
     // The first order (2 s) may already have left the queue by now, and a slow page sees fewer rows.
-    await page.waitForFunction(() => document.querySelectorAll('.queue-row').length >= 3 && !document.querySelector('.queue-row.pending')); // a dim row has no working Cancel
+    await page.waitForFunction(() => document.querySelectorAll('.log-row').length >= 3 && !document.querySelector('.log-row.pending')); // a dim row has no working Cancel
+    // Open the window: it shows three rows at most and scrolls, the newest order first.
+    await page.click('.orders-toggle');
+    assert.equal(await page.isVisible('#orders .orders-list'), true);
+    assert.ok((await page.locator('#orders .orders-list').boundingBox())?.height <= 91, 'at most three rows tall');
+    assert.equal(await page.locator('#orders .log-row').count() > 3, true, 'more rows than fit: the list scrolls');
+    assert.match(await page.textContent('#orders .log-row:first-child .log-text') ?? '', /^Group of 1 M /, 'the newest order is on top');
     const luxOf = async () => Number(((await page.textContent('#hud-core')) ?? '').replace(/\D/g, ''));
     const before = await luxOf();
-    await page.click('.queue-row:last-child .cancel');
+    await page.click('#orders .log-row:first-child .cancel');
+    await page.waitForSelector('#orders .log-row.cancelled');
+    assert.match(await page.textContent('#orders .log-row.cancelled .log-text') ?? '', /^Group of 1 M cancelled$/, 'a cancelled order stays in the log');
     await page.waitForFunction((was) => Number((document.getElementById('hud-core')?.textContent ?? '').replace(/\D/g, '')) >= was + 5, before);
 
     // Every remaining order becomes its own group: 2, 5, 1 and 1 creeps.

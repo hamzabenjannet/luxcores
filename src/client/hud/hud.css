@@ -179,11 +179,16 @@ button:disabled { opacity: 0.4; }
 .segments { display: flex; gap: 6px; }
 .segments .segment { flex: 1; }
 .action.active { border-color: var(--blue); background: #1b2c52; }
-.queue { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
-.queue-row.pending { color: var(--dim); }
-.queue:empty { display: none; }
-.queue-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
-.queue-row .cancel { padding: 4px 10px; }
+/* The orders window: a floating log under the Leave button, collapsed by default, three rows high, outside the barracks panel */
+.orders { position: absolute; top: 76px; right: 8px; z-index: 4; width: min(270px, 62vw); pointer-events: auto; background: rgba(13, 18, 32, 0.92); border: 1px solid #2a3550; border-radius: 8px; }
+.orders-toggle { width: 100%; padding: 6px 10px; font-size: 13px; text-align: left; background: transparent; border: 0; }
+.orders.collapsed .orders-list { display: none; }
+.orders-list { max-height: calc(3 * 30px); overflow-y: auto; touch-action: pan-y; border-top: 1px solid #2a3550; font-variant-numeric: tabular-nums; }
+.log-row { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 6px; font-size: 12px; }
+.log-time { color: var(--dim); flex: none; }
+.log-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.log-row.done, .log-row.cancelled, .log-row.pending { color: var(--dim); }
+.log-row .cancel { flex: none; padding: 2px 8px; font-size: 12px; }
 
 /* Hero bar and the hero part of the barracks panel (GDD 7.5, 11.4) */
 .hero-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; background: rgba(13, 18, 32, 0.92); border: 1px solid #2a3550; border-radius: 8px; padding: 6px 10px; }

@@ -53,6 +53,17 @@ func _init() -> void:
 		_check("entropy text %s" % JSON.stringify(c.tenths), GameLogic.entropy_text(int(c.tenths)), String(c.expect))
 	for c in fixture.leaveCall:
 		_check("leave call %s" % JSON.stringify(c), GameLogic.leave_call(String(c.status), String(c.role), bool(c.isHost)), String(c.expect))
+	for c in fixture.orderLog:
+		var log: Array = []
+		for step in c.steps:
+			log = GameLogic.update_order_log(log, step.orders, int(c.owner), int(step.tick), step.get("cancelled", []), fixture.orderLogNames.heroNames, fixture.orderLogNames.itemNames)
+		_check("order log: %s" % String(c.name), _normalize(log), _normalize(c.expect))
+	for c in fixture.logRows:
+		_check("log rows: %s" % String(c.name), _normalize(GameLogic.log_rows(c.log, c.orders, int(c.tickHz))), _normalize(c.expect))
+	for c in fixture.clockText:
+		_check("clock text %s" % JSON.stringify(c), GameLogic.clock_text(int(c.tick), int(c.tickHz)), String(c.expect))
+	for c in fixture.orderText:
+		_check("order text %s" % JSON.stringify(c.order), {"label": GameLogic.order_label(c.order, fixture.orderLogNames.heroNames, fixture.orderLogNames.itemNames), "wait": GameLogic.order_wait(c.order, 20)}, _normalize(c.expect))
 	for c in fixture.joinCall:
 		_check("join call %s" % JSON.stringify(c), GameLogic.join_call(bool(c.botVsBot), bool(c.mine)), String(c.expect))
 	for c in fixture.leaveNeedsConfirm:

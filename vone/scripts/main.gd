@@ -15,6 +15,10 @@ const UI_MARGIN := 10
 ## Widths of the start card and of the top and bottom panels. Narrower windows get the window width less the margins.
 const HOME_WIDTH := 560.0
 const SHEET_WIDTH := 600.0
+## The orders window: its width, and the height of a row (it shows three rows before it scrolls).
+const ORDERS_WIDTH := 270.0
+const ORDER_ROW_HEIGHT := 30.0
+const ORDERS_VISIBLE_ROWS := 3
 
 var _backend: Node
 var _home: VBoxContainer
@@ -36,6 +40,15 @@ var _bottom_sheet: PanelContainer
 var _bottom_box: VBoxContainer
 var _summary_card: PanelContainer
 var _leave_button: Button
+## The orders window (a floating log of every order made, collapsed by default) and what it needs.
+var _orders_window: PanelContainer
+var _orders_toggle: Button
+var _orders_scroll: ScrollContainer
+var _orders_list: VBoxContainer
+var _order_log: Array = []
+var _cancelled_ids: Array = []
+var _orders_key := ""
+var _orders_labels := {}
 var _rejoin_button: Button
 ## When the Leave button was armed for a forfeit, in msec, or 0.
 var _leave_armed_until := 0
@@ -52,7 +65,6 @@ var _panel_title: Label
 var _panel_row: HBoxContainer
 var _panel_key := ""
 var _order_box: VBoxContainer
-var _queue_box: VBoxContainer
 var _order_key := ""
 var _hero_box: VBoxContainer
 var _hero_key := ""
@@ -78,8 +90,6 @@ var _ignore_press_until := 0
 var _ability := -1
 ## Label of the chosen hero allocation, one of GameLogic.hero_lux_choices.
 var _hero_alloc := "50%"
-var _queue_key := ""
-var _queue_labels := {}
 ## Orders sent and not yet in a snapshot, as dim queue rows: {id, barracks_id, text, base, expires_ms}.
 ## expires_ms is INF until the server has answered.
 var _pending: Array = []
@@ -143,6 +153,8 @@ func _build_interface() -> void:
 	for side in ["left", "top", "right", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, UI_MARGIN)
 	add_child(margin)
+
+	_build_orders_window()
 
 	var pages := VBoxContainer.new()
 	pages.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -361,11 +373,7 @@ func _build_interface() -> void:
 	_panel_row = HBoxContainer.new()
 	_panel_row.add_theme_constant_override("separation", 10)
 	_panel.add_child(_panel_row)
-	# The queue sits right under the actions and above the order controls. The panel hugs the bottom of the
-	# screen, so a new queue row grows it upward and the buttons below stay where they are.
-	_queue_box = VBoxContainer.new()
-	_queue_box.add_theme_constant_override("separation", 4)
-	_panel.add_child(_queue_box)
+	# The queue is not here: the orders window keeps it, so a new order never moves a button of this panel.
 	_order_box = VBoxContainer.new()
 	_order_box.add_theme_constant_override("separation", 6)
 	_panel.add_child(_order_box)
@@ -685,6 +693,7 @@ func _refresh_panel() -> void:
 		return
 	_arena.set_paths(_paths_to_draw())
 	_refresh_hero_bar()
+	_update_orders_window()
 	if _building.is_empty():
 		_ghost = {}
 	if _ghost.is_empty():
@@ -721,7 +730,6 @@ func _refresh_panel() -> void:
 		_hero_key = ""
 		_shop_key = ""
 		_clear_box(_shop_box)
-		_queue_key = ""
 		return
 	_show_building_panel(selected)
 
@@ -738,12 +746,10 @@ func _show_ghost_panel() -> void:
 	_panel.visible = true
 	_clear_box(_order_box)
 	_clear_box(_hero_box)
-	_clear_box(_queue_box)
 	_clear_box(_shop_box)
 	_order_key = ""
 	_hero_key = ""
 	_shop_key = ""
-	_queue_key = ""
 	var check := _ghost_check()
 	var title := "%s at %d, %d" % [_building.capitalize(), int(_ghost.tileX), int(_ghost.tileZ)]
 	if check.has("message"):
@@ -812,12 +818,10 @@ func _show_path_bar() -> void:
 	_panel.visible = true
 	_clear_box(_order_box)
 	_clear_box(_hero_box)
-	_clear_box(_queue_box)
 	_order_key = ""
 	_hero_key = ""
 	_shop_key = ""
 	_clear_box(_shop_box)
-	_queue_key = ""
 	_panel_title.text = "Path: %d/%d waypoints. Tap the map to add one." % [_path_points.size(), int(_data.balance.creep.maxWaypoints)]
 	var key := "path|%d|%d" % [_path_points.size(), _last_path.size()]
 	if key == _panel_key:
@@ -862,12 +866,10 @@ func _show_group_panel(group: Dictionary) -> void:
 	_panel.visible = true
 	_clear_box(_order_box)
 	_clear_box(_hero_box)
-	_clear_box(_queue_box)
 	_order_key = ""
 	_hero_key = ""
 	_shop_key = ""
 	_clear_box(_shop_box)
-	_queue_key = ""
 	var member_count := GameLogic.group_size(_current_snapshot.get("entities", []), int(group.id))
 	_panel_title.text = "Group of %d: tap another of your groups to merge." % member_count if _mode == "merge" else "Group of %d, %s" % [member_count, "custom path" if int(group.get("custom", 0)) == 1 else "lane route"]
 	var actions := GameLogic.group_actions(member_count, int(group.get("custom", 0)) == 1)
@@ -934,12 +936,10 @@ func _show_building_panel(selected: Dictionary) -> void:
 	else:
 		_clear_box(_order_box)
 		_clear_box(_hero_box)
-		_clear_box(_queue_box)
 		_order_key = ""
 		_hero_key = ""
 		_shop_key = ""
 		_clear_box(_shop_box)
-		_queue_key = ""
 
 ## Creep order controls and the queue of a barracks.
 func _show_barracks_controls(barracks: Dictionary, lux: int, min_left: int) -> void:
@@ -985,53 +985,6 @@ func _show_barracks_controls(barracks: Dictionary, lux: int, min_left: int) -> v
 		_order_button.modulate = Color(1, 1, 1, 0.5) if poor else Color.WHITE
 	_show_hero_picks(barracks, lux, min_left)
 	_show_shop(barracks, lux, min_left)
-	_show_queue(barracks)
-
-## The queue of a barracks, above the order controls. Orders just sent show at once as dim rows and give
-## way to the real rows when the next snapshot has them.
-func _show_queue(barracks: Dictionary) -> void:
-	var lines := GameLogic.queue_lines(_current_snapshot.get("orders", []), int(barracks.id), _tick_hz, _hero_names(), _item_names())
-	var waiting: Array = _pending.filter(func(entry: Dictionary) -> bool: return int(entry.barracks_id) == int(barracks.id))
-	var queue_key := str(barracks.id)
-	for order in _current_snapshot.get("orders", []):
-		if int(order.barracksId) == int(barracks.id):
-			queue_key += "|%d:%d" % [int(order.id), int(order.held)]
-	queue_key += "|p"
-	for entry in waiting:
-		queue_key += ",%d" % int(entry.id)
-	if queue_key != _queue_key:
-		_queue_key = queue_key
-		_queue_labels.clear()
-		_clear_box(_queue_box)
-		for line in lines:
-			var row := HBoxContainer.new()
-			var label := Label.new()
-			label.text = String(line.text)
-			label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			row.add_child(label)
-			var cancel := _make_button("✕", Color("#52313b"))
-			cancel.custom_minimum_size = Vector2(56, 40)
-			cancel.pressed.connect(_run_panel_action.bind({"t": "cancelQueue", "barracksId": int(barracks.id), "orderId": int(line.orderId)}))
-			row.add_child(cancel)
-			_queue_box.add_child(row)
-			_queue_labels[int(line.index)] = label
-		for entry in waiting:
-			var pending_row := HBoxContainer.new()
-			pending_row.modulate = Color(1, 1, 1, 0.55)
-			var pending_label := Label.new()
-			pending_label.text = String(entry.text)
-			pending_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			pending_row.add_child(pending_label)
-			var pending_cancel := _make_button("✕", Color("#52313b"))
-			pending_cancel.custom_minimum_size = Vector2(56, 40)
-			pending_cancel.disabled = true
-			pending_row.add_child(pending_cancel)
-			_queue_box.add_child(pending_row)
-	else:
-		for line in lines:
-			var node: Label = _queue_labels.get(int(line.index))
-			if node != null and node.text != String(line.text):
-				node.text = String(line.text)
 
 ## Item names by item id, from data/items.json.
 func _item_names() -> Array:
@@ -1441,6 +1394,8 @@ func _run_panel_action(command: Dictionary) -> void:
 	if acknowledgement.get("accepted", false):
 		if not mark.is_empty():
 			mark["expires_ms"] = float(Time.get_ticks_msec()) + GameLogic.PENDING_MS
+		if String(command.get("t", "")) == "cancelQueue":
+			_cancelled_ids.append(int(command.orderId)) # the log shows it as cancelled, not as done
 		_set_status("Order sent. The server will validate it.")
 	elif not mark.is_empty():
 		_pending = _pending.filter(func(entry: Dictionary) -> bool: return int(entry.id) != int(mark.id))
@@ -1556,6 +1511,116 @@ func _update_world_label() -> void:
 
 ## The LEAVE button. In a running match for two humans the first press only arms the button, because leaving
 ## forfeits the match; the second press within three seconds leaves. Everything else leaves at once.
+## The orders window: a small floating window at the top right, collapsed by default, that logs every order the player
+## made and shows the timer of the ones still in a queue. It sits outside the barracks panel, so a new order never
+## pushes that panel's buttons around, and it shows three rows before it scrolls.
+func _build_orders_window() -> void:
+	_orders_window = PanelContainer.new()
+	_orders_window.visible = false
+	_orders_window.add_theme_stylebox_override("panel", _overlay_style(0.9))
+	_orders_window.anchor_left = 1.0
+	_orders_window.anchor_right = 1.0
+	_orders_window.offset_left = -(ORDERS_WIDTH + UI_MARGIN)
+	_orders_window.offset_right = -UI_MARGIN
+	_orders_window.offset_top = UI_MARGIN
+	_orders_window.grow_vertical = Control.GROW_DIRECTION_END
+	add_child(_orders_window)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	_orders_window.add_child(box)
+	_orders_toggle = Button.new()
+	_orders_toggle.flat = true
+	_orders_toggle.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_orders_toggle.focus_mode = Control.FOCUS_NONE
+	_orders_toggle.add_theme_font_size_override("font_size", 16)
+	_orders_toggle.pressed.connect(func() -> void:
+		_orders_scroll.visible = not _orders_scroll.visible
+		_update_orders_toggle()
+		_fit_overlays())
+	box.add_child(_orders_toggle)
+	_orders_scroll = ScrollContainer.new()
+	_orders_scroll.visible = false # collapsed by default
+	_orders_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_orders_scroll.custom_minimum_size = Vector2(ORDERS_WIDTH - 20.0, ORDER_ROW_HEIGHT * ORDERS_VISIBLE_ROWS)
+	box.add_child(_orders_scroll)
+	_orders_list = VBoxContainer.new()
+	_orders_list.add_theme_constant_override("separation", 0)
+	_orders_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_orders_scroll.add_child(_orders_list)
+	_update_orders_toggle()
+
+func _update_orders_toggle() -> void:
+	var queued := 0
+	for entry in _order_log:
+		if String(entry.state) == "queued":
+			queued += 1
+	queued += _pending.size()
+	var text := "Orders (%d) %s" % [queued, "▾" if _orders_scroll.visible else "▸"]
+	if _orders_toggle.text != text:
+		_orders_toggle.text = text
+
+## Logs the player's orders from the latest snapshot and redraws the window: the rows are rebuilt only when
+## they change, and the timers update in place.
+func _update_orders_window() -> void:
+	if _orders_window == null or _role == "spectator":
+		return
+	var orders: Array = _current_snapshot.get("orders", [])
+	_order_log = GameLogic.update_order_log(_order_log, orders, _viewer_team, int(_current_snapshot.get("tick", 0)), _cancelled_ids, _hero_names(), _item_names())
+	_cancelled_ids = []
+	var rows := GameLogic.log_rows(_order_log, orders, _tick_hz)
+	var key := ""
+	for entry in _pending:
+		key += "p%d," % int(entry.id)
+	key += "|"
+	for row in rows:
+		key += "%d:%s," % [int(row.id), String(row.state)]
+	if key != _orders_key:
+		_orders_key = key
+		_orders_labels.clear()
+		_clear_box(_orders_list)
+		for entry in _pending:
+			var pending_row := _order_row("...", String(entry.text), false)
+			pending_row.modulate = Color(1, 1, 1, 0.55)
+			_orders_list.add_child(pending_row)
+		for row in rows:
+			var order_row := _order_row(String(row.time), String(row.text), bool(row.canCancel))
+			if String(row.state) != "queued":
+				order_row.modulate = Color(1, 1, 1, 0.6)
+			if bool(row.canCancel):
+				order_row.get_child(2).pressed.connect(_run_panel_action.bind({"t": "cancelQueue", "barracksId": int(row.barracksId), "orderId": int(row.id)}))
+			_orders_labels[int(row.id)] = order_row.get_child(1)
+			_orders_list.add_child(order_row)
+	else:
+		for row in rows:
+			var label: Label = _orders_labels.get(int(row.id))
+			if label != null and label.text != String(row.text):
+				label.text = String(row.text)
+	_update_orders_toggle()
+
+## One row of the window: the match time, the order, and a cancel button for a queued order.
+func _order_row(time_text: String, text: String, can_cancel: bool) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.custom_minimum_size.y = ORDER_ROW_HEIGHT
+	row.add_theme_constant_override("separation", 6)
+	var time_label := Label.new()
+	time_label.text = time_text
+	time_label.add_theme_font_size_override("font_size", 14)
+	time_label.add_theme_color_override("font_color", Color("#8a93a6"))
+	row.add_child(time_label)
+	var label := Label.new()
+	label.text = text
+	label.clip_text = true
+	label.add_theme_font_size_override("font_size", 14)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(label)
+	var cancel := _make_button("✕", Color("#52313b"))
+	cancel.custom_minimum_size = Vector2(36, 24)
+	cancel.size_flags_horizontal = Control.SIZE_SHRINK_END
+	cancel.disabled = not can_cancel
+	cancel.visible = can_cancel
+	row.add_child(cancel)
+	return row
+
 func _on_leave_pressed() -> void:
 	var status := str(_current_match.get("status", "lobby"))
 	var humans := 0
@@ -1592,6 +1657,10 @@ func _leave_match() -> void:
 	_path_points = []
 	_building = ""
 	_ghost = {}
+	_order_log = []
+	_cancelled_ids = []
+	_orders_key = ""
+	_pending = []
 	_build_description.visible = false
 	_tower_attack_row.visible = false
 	_arena.clear_ghost()
@@ -1618,6 +1687,7 @@ func _show_page(in_game: bool) -> void:
 	_home.visible = not in_game
 	_game.visible = in_game
 	_arena.visible = in_game # the zoom buttons belong to the game, not to the start screen
+	_orders_window.visible = in_game and _role != "spectator"
 	var target: Node = _top_box if in_game else _home
 	if _status_label.get_parent() != target:
 		_status_label.reparent(target)
@@ -1642,6 +1712,9 @@ func _fit_overlays() -> void:
 	var room := get_viewport_rect().size - Vector2(UI_MARGIN * 2, UI_MARGIN * 2)
 	_home_card.custom_minimum_size = Vector2(minf(HOME_WIDTH, room.x), minf(_home.get_combined_minimum_size().y + 24.0, room.y))
 	_top_panel.custom_minimum_size.x = minf(SHEET_WIDTH, room.x)
+	# The orders window sits at the top right; a window too narrow for it beside the top panel gets it below.
+	var beside := room.x >= SHEET_WIDTH + 2.0 * (ORDERS_WIDTH + UI_MARGIN)
+	_orders_window.offset_top = UI_MARGIN if beside else _top_panel.get_combined_minimum_size().y + UI_MARGIN * 2.0
 	_bottom_sheet.custom_minimum_size.x = minf(SHEET_WIDTH, room.x)
 
 func _copy_match_id() -> void:

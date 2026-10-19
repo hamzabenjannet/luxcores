@@ -8,6 +8,7 @@ import { abilityStates, actionsFor, canAfford, endsBuildMode, groupActions, hero
 import { HOLD_AIM_PX, clampZoom, holdAimPhase, holdAimRelease, pinchZoom } from '../src/client/input/gestures.js';
 import { leaveCall, leaveNeedsConfirm } from '../src/client/ui/leave.js';
 import { joinCall } from '../src/client/ui/rejoin.js';
+import { LOG_MAX, clockText, logRows, orderLabel, orderWait, updateOrderLog } from '../src/client/ui/order-log.js';
 import { matchSummary } from '../src/client/ui/summary.js';
 import { ROOT, loadData } from './helpers/load-data.js';
 
@@ -112,6 +113,30 @@ test('leave cases: which call a Leave needs, and when it asks first', () => {
   for (const c of fixture.leaveCall) assert.equal(leaveCall(c), c.expect, JSON.stringify(c));
   for (const c of fixture.leaveNeedsConfirm) assert.equal(leaveNeedsConfirm(c), c.expect, JSON.stringify(c));
   for (const c of fixture.joinCall) assert.equal(joinCall(c), c.expect, JSON.stringify(c));
+});
+
+test('order log cases: what the orders window logs and shows', () => {
+  const { heroNames, itemNames } = fixture.orderLogNames;
+  for (const c of fixture.orderLog) {
+    let log = [];
+    for (const step of c.steps) log = updateOrderLog(log, step.orders, c.owner, step.tick, step.cancelled ?? [], heroNames, itemNames);
+    assert.deepEqual(log, c.expect, c.name);
+  }
+  for (const c of fixture.logRows) assert.deepEqual(logRows(c.log, c.orders, c.tickHz), c.expect, c.name);
+  for (const c of fixture.clockText) assert.equal(clockText(c.tick, c.tickHz), c.expect, JSON.stringify(c));
+  for (const c of fixture.orderText) assert.deepEqual({ label: orderLabel(c.order, heroNames, itemNames), wait: orderWait(c.order, 20) }, c.expect, JSON.stringify(c.order));
+  assert.equal(LOG_MAX, 60);
+});
+
+test('updating the log changes neither the old log nor the orders', () => {
+  const orders = [{ id: 5, barracksId: 3, owner: 0, type: 1, mix: [2, 2, 1], ticksLeft: 40, held: 0 }];
+  const frozenOrders = JSON.stringify(orders);
+  const first = updateOrderLog([], orders, 0, 40, []);
+  const frozenLog = JSON.stringify(first);
+  const second = updateOrderLog(first, [], 0, 60, []);
+  assert.equal(JSON.stringify(first), frozenLog);
+  assert.equal(JSON.stringify(orders), frozenOrders);
+  assert.equal(second[0].state, 'done');
 });
 
 test('placement cases', () => {

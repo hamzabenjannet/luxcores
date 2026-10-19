@@ -2,11 +2,20 @@
 
 Working title. A strategy game mixing hero control (Dota 2), creep waypoint paths (Age of Empires) and base building with tower defense (Generals Zero Hour, Clash Royale). Everything in the world is made of light energy, measured in **lux**. Destroyed things dissolve into light; there is no blood or gore.
 
-Status: draft v0.9.15. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
+Status: draft v0.9.16. Numbers marked *(default)* live in `data/balance.json` and will be tuned through MVP playtests.
 
 ---
 
 ## 0. Changelog
+
+### v0.9.15 → v0.9.16
+
+Hamza asked on 2026-10-19 for the order queue in its own window, and for the bots to act on the same ticks while staying balanced.
+
+| Area | Change |
+|---|---|
+| Orders window | The queue leaves the barracks panel. A small floating window, collapsed by default, logs every order the player made (creep groups, hero picks, item purchases), shows the timer of the ones still queued with a cancel button, and is three rows high before it scrolls (section 11.4) |
+| Bot | Both bots decide on the same ticks (the 7 tick offset is gone), and a bot picks between equally scored tiles in the order that mirrors the other team's, so the two sides are mirror images. A 900-seed soak gave 357 wins for team 0 and 368 for team 1 (section 12.1) |
 
 ### v0.9.14 → v0.9.15
 
@@ -48,7 +57,7 @@ Hamza asked on 2026-10-19 that a match against a bot run until someone wins, and
 | Area | Change |
 |---|---|
 | Tick limit | The host picks the limit when the match is created: 0 for unlimited, or a number of ticks from 1 to 1000000. The start menus offer Unlimited (the default) and Capped. A match with no choice keeps the server limit (`MATCH_MAX_TICKS`, else `match.stalemateTicks`), so tests and tools are unchanged (section 2) |
-| Queue panel | The barracks panel shows the queue directly under the actions, above the order controls, and shows a new order at once (section 11.4) |
+| Queue panel | The barracks panel showed the queue under its actions; since v0.9.16 the orders window holds it (section 11.4) |
 
 ### v0.9.10 → v0.9.11
 
@@ -649,7 +658,9 @@ A hero told to attack a target walks until the target is in reach, hits it, and 
  ---------------------------------------
 ```
 
-The barracks panel stacks the title, the actions (Recycle), the queue, then the order, hero and item controls. The panel hugs the bottom of the screen, so the queue sits above the controls and a new row grows the panel upward without moving a button the player is tapping. An order shows in the queue as a dim row the moment the player taps, and the real row replaces it when the next snapshot arrives. A control that shows an amount of lux updates its text in place, so a press is never lost to a rebuilt button.
+The barracks panel stacks the title, the actions (Recycle), then the order, hero and item controls. It holds no queue, so a new order never changes its height or moves a button the player is tapping.
+
+The **orders window** floats at the top right, collapsed by default (a title bar, "Orders (2) ▸"). Open, it lists every order the player made at any barracks, newest first, three rows at a time with a scroll for the rest: the match time, the order ("Group of 3 RRM", "Hero Prism 40 lux", "Item Haste") and its state. A queued order shows its timer (or HELD) and a cancel button; a finished one shows done, and a cancelled one shows cancelled. An order shows as a dim row the moment the player taps, and the real row replaces it when the next snapshot arrives. The log keeps the newest 60 orders. A control that shows an amount of lux updates its text in place, so a press is never lost to a rebuilt button.
 
 ### 11.5 Build ghost
 
@@ -673,7 +684,7 @@ The server also ends a running match that nobody has been connected to for 2 min
 
 1. Picks heroes in roster order, allocating 50% of Core lux, spawning at its newest barracks.
 2. Hero walks the nearest lane toward the enemy Core and attacks whatever is in range. No abilities, no items.
-3. Every 1 s, spends settled lux in rotation: collector, barracks, tower, creep group of 5. Towers go on the build-zone columns of the bot's own side, so team 1 mirrors the columns of team 0 (the map is point-mirrored).
+3. Every 1 s, spends settled lux in rotation: collector, barracks, tower, creep group of 5. Towers go on the build-zone columns of the bot's own side, so team 1 mirrors the columns of team 0 (the map is point-mirrored), and a tie between equally scored tiles goes to the tile that mirrors the other team's pick (team 1 scans the zone in the reverse order). Both bots decide on the same ticks.
 4. Creep groups use the default lane path.
 
 ### 12.2 Hot seat
