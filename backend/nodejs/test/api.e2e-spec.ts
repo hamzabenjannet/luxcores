@@ -424,6 +424,10 @@ describe('REST API', () => {
       const determinism = await fetch(`${t.url}/determinism.html`);
       expect(determinism.status).toBe(200);
       expect(await determinism.text()).toContain('src/client/determinism.js');
+      const manifest = await fetch(`${t.url}/src/client/manifest.webmanifest`);
+      expect(manifest.status).toBe(200);
+      expect(manifest.headers.get('content-type')).toContain('application/manifest+json');
+      expect(((await manifest.json()) as { orientation: string }).orientation).toBe('portrait');
 
       expect((await fetch(`${t.url}/src/sim/index.js`)).status).toBe(200);
       const data = await fetch(`${t.url}/data/mapgen.json`);

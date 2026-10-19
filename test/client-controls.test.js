@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { KIND, createState } from '../src/sim/index.js';
-import { ABILITY_SLOTS, ATTACK_TYPES, PALETTE, abilityStates, actionsFor, canAfford, heroLuxChoices, heroPickState, immediateCast, pendingLine, pickEntity, resolveTap, secondsText } from '../src/client/ui/controls.js';
+import { ABILITY_SLOTS, ATTACK_TYPES, PALETTE, abilityStates, actionsFor, canAfford, heroLuxChoices, heroPickState, immediateCast, pendingLine, pickEntity, placement, resolveTap, secondsText } from '../src/client/ui/controls.js';
 import { loadData } from './helpers/load-data.js';
 
 const { raw, config } = loadData();
@@ -36,28 +36,40 @@ test('affordability keeps the minimum the Core must hold after a spend', () => {
   assert.equal(canAfford(20_999, 20, 1), false);
 });
 
-test('a tap with a building picked builds on that tile, and a tower carries the chosen attack type', () => {
-  const t = freeTile();
-  assert.deepEqual(tap({ ground: at(t), building: 'solar' }), { command: { t: 'build', building: 'solar', tileX: t.tileX, tileZ: t.tileZ } });
-  assert.deepEqual(tap({ ground: at(t), building: 'tower', attack: 'area' }), { command: { t: 'build', building: 'tower', tileX: t.tileX, tileZ: t.tileZ, attack: 'area' } });
+/** @param {Partial<Parameters<typeof placement>[0]>} over */
+const place = (over) => placement({
+  tileX: 0, tileZ: 0, entities: state.entities, viewerTeam: 0, building: 'solar', attack: 'ranged',
+  coreLuxMilli: 100_000, data, vents: state.map.vents, ...over,
 });
 
-test('a build tap refuses outside the zone, on a taken tile, off a vent and without lux, with a reason', () => {
+test('a tap with a building picked sets the ghost on that tile and sends nothing', () => {
   const t = freeTile();
-  assert.deepEqual(tap({ ground: { x: 48.5, z: 56.5 }, building: 'solar' }), { message: 'Build inside your own zone.' });
+  assert.deepEqual(tap({ ground: at(t), building: 'solar' }), { ghost: { tileX: t.tileX, tileZ: t.tileZ } });
+  assert.deepEqual(tap({ ground: { x: 48.5, z: 56.5 }, building: 'solar' }), { ghost: { tileX: 48, tileZ: 56 }, message: 'Build inside your own zone.' }, 'a red ghost carries its reason');
+});
+
+test('Place builds on the ghost tile, and a tower carries the chosen attack type', () => {
+  const t = freeTile();
+  assert.deepEqual(place({ ...t, building: 'solar' }), { command: { t: 'build', building: 'solar', tileX: t.tileX, tileZ: t.tileZ } });
+  assert.deepEqual(place({ ...t, building: 'tower', attack: 'area' }), { command: { t: 'build', building: 'tower', tileX: t.tileX, tileZ: t.tileZ, attack: 'area' } });
+});
+
+test('a placement refuses outside the zone, on a taken tile, off a vent and without lux, with a reason', () => {
+  const t = freeTile();
+  assert.deepEqual(place({ tileX: 48, tileZ: 56 }), { message: 'Build inside your own zone.' });
   const core = state.entities.find((e) => e.kind === KIND.CORE && e.team === 0);
-  assert.deepEqual(tap({ ground: { x: core.x / 1000, z: core.z / 1000 }, building: 'solar' }), { message: 'That tile is taken.' });
-  assert.deepEqual(tap({ ground: at(t), building: 'geothermal' }), { message: 'Geothermal needs a vent tile.' });
-  assert.ok('command' in tap({ ground: { x: vent.tileX + 0.5, z: vent.tileZ + 0.5 }, building: 'geothermal' }), 'a vent accepts geothermal');
-  assert.match(/** @type {any} */ (tap({ ground: at(t), building: 'nuclear', coreLuxMilli: 80_000 })).message, /^Not enough lux/);
+  assert.deepEqual(place({ tileX: Math.floor(core.x / 1000), tileZ: Math.floor(core.z / 1000) }), { message: 'That tile is taken.' });
+  assert.deepEqual(place({ ...t, building: 'geothermal' }), { message: 'Geothermal needs a vent tile.' });
+  assert.ok('command' in place({ tileX: vent.tileX, tileZ: vent.tileZ, building: 'geothermal' }), 'a vent accepts geothermal');
+  assert.match(/** @type {any} */ (place({ ...t, building: 'nuclear', coreLuxMilli: 80_000 })).message, /^Not enough lux/);
 });
 
 test('team 1 builds in the mirrored zone and cannot reach the zone of team 0', () => {
   const t = freeTile();
   const mirrored = { tileX: 95 - t.tileX, tileZ: 111 - t.tileZ }; // the map is point-mirrored, so this tile is free too
-  assert.deepEqual(tap({ ground: at(mirrored), building: 'solar', viewerTeam: 1 }), { command: { t: 'build', building: 'solar', ...mirrored } });
-  assert.deepEqual(tap({ ground: at(mirrored), building: 'solar', viewerTeam: 0 }), { message: 'Build inside your own zone.' });
-  assert.deepEqual(tap({ ground: at(t), building: 'solar', viewerTeam: 1 }), { message: 'Build inside your own zone.' });
+  assert.deepEqual(place({ ...mirrored, viewerTeam: 1 }), { command: { t: 'build', building: 'solar', ...mirrored } });
+  assert.deepEqual(place({ ...mirrored, viewerTeam: 0 }), { message: 'Build inside your own zone.' });
+  assert.deepEqual(place({ ...t, viewerTeam: 1 }), { message: 'Build inside your own zone.' });
 });
 
 test('a tap on an own building selects it, and a tap on empty ground clears the selection', () => {

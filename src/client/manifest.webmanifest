@@ -1,0 +1,10 @@
+{
+  "name": "Luxcores",
+  "short_name": "Luxcores",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#05060a",
+  "theme_color": "#05060a"
+}

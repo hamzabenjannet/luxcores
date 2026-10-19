@@ -35,6 +35,7 @@ import { showLobby } from './ui/lobby.js';
 import { showMenu } from './ui/menu.js';
 import { entropyFromText, isDay, tickCapFromText } from './entity-text.js';
 import { matchSummary } from './ui/summary.js';
+import { lockPortrait } from './orientation.js';
 
 const query = new URLSearchParams(location.search);
 const $ = (/** @type {string} */ id) => /** @type {HTMLElement} */ (document.getElementById(id));
@@ -144,6 +145,7 @@ const otherLabel = spectator ? 'Red' : 'Enemy';
 $('hud-core').style.color = viewerTeam === 0 ? 'var(--blue)' : 'var(--red)';
 $('hud-enemy').style.color = viewerTeam === 0 ? 'var(--red)' : 'var(--blue)';
 
+lockPortrait();
 const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('view'));
 const scene = createScene(canvas, raw.mapgen, view, raw.balance.hpFactor, viewerTeam, data.heroes.roster.map((/** @type {{ name: string }} */ r) => r.name), data.items.list.map((/** @type {{ name: string }} */ i) => i.name));
 const controls = createControls({
@@ -155,13 +157,14 @@ const controls = createControls({
   data,
   send: (cmd) => session.sendCommand(cmd),
   camera: { isFollowing: scene.isFollowing, setFollow: scene.setFollow },
+  groundAt: scene.groundAt,
 });
 // Units are drawn two ticks behind the newest snapshot and blended between the two around that moment.
 const interpolator = createInterpolator({ tickMs: 1000 / TICK_HZ });
 interpolator.push(view.tick(), view.entities(), performance.now());
 session.onSnapshot((s) => interpolator.push(s.tick, s.entities, performance.now()));
-Object.assign(luxTest, { drawn: scene.stats, following: scene.isFollowing, pan: scene.pan, interpolated: () => interpolator.at(performance.now()), screenOf: scene.screenOf, selectGroup: controls.selectGroup, tap: (x, z) => controls.tap({ x, z }) });
-attachPointer(canvas, { groundAt: scene.groundAt, pan: scene.pan, onTap: (ground) => controls.tap(ground) });
+Object.assign(luxTest, { drawn: scene.stats, following: scene.isFollowing, pan: scene.pan, zoom: scene.getZoom, setZoom: scene.setZoom, ghost: controls.ghost, interpolated: () => interpolator.at(performance.now()), screenOf: scene.screenOf, selectGroup: controls.selectGroup, tap: (x, z) => controls.tap({ x, z }) });
+attachPointer(canvas, { groundAt: scene.groundAt, pan: scene.pan, onTap: (ground) => controls.tap(ground), getZoom: scene.getZoom, setZoom: scene.setZoom });
 
 const banner = $('banner');
 const summaryCard = $('summary');
@@ -195,6 +198,8 @@ startLoop((timeSec) => {
   scene.render(timeSec, interpolator.at(performance.now()));
   controls.update();
   scene.setPaths(controls.overlay());
+  scene.setGhost(controls.ghost());
+  scene.setAim(controls.aim());
   const secs = Math.floor(view.tick() / TICK_HZ);
   $('hud-clock').textContent = `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
   $('hud-phase').textContent = isDay(view.tick(), data.balance.dayNight) ? '☀' : '☾';

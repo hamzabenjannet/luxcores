@@ -12,6 +12,7 @@
 
 import { KIND, MILLI, UNITS_PER_TILE, buildZoneOf } from '../../sim/index.js';
 import { ATTACK_NAMES, entityText } from '../entity-text.js';
+import { holdAimPhase, holdAimRelease } from '../input/gestures.js';
 
 /** The palette, in display order. `key` is the building name in data/buildings.json. */
 export const PALETTE = /** @type {const} */ ([
@@ -327,11 +328,38 @@ export function pickEntity(entities, ground) {
 }
 
 /**
+ * Whether a building can go on a tile now, as the command to send or the reason it cannot. The sim result
+ * is final; this answers at once what it would refuse for sure (build zone, taken tile, vent, lux).
+ * @param {{
+ *   tileX: number, tileZ: number,
+ *   entities: readonly import('../../sim/state.js').Entity[],
+ *   viewerTeam: number,
+ *   building: string,
+ *   attack: string,
+ *   coreLuxMilli: number,
+ *   data: { buildings: any, balance: any, mapgen: any },
+ *   vents: readonly { team: number, tileX: number, tileZ: number }[],
+ * }} ctx
+ * @returns {{ command: import('../../sim/commands.js').Command } | { message: string }}
+ */
+export function placement(ctx) {
+  const { tileX, tileZ, entities, viewerTeam, building, attack, data } = ctx;
+  const zone = buildZoneOf({ mapgen: data.mapgen }, viewerTeam);
+  if (tileZ < zone.z0 || tileZ > zone.z1 || tileX < 0 || tileX >= data.mapgen.width) return { message: 'Build inside your own zone.' };
+  const taken = entities.some((e) => e.kind <= KIND.BLOCKER && Math.floor(e.x / UNITS_PER_TILE) === tileX && Math.floor(e.z / UNITS_PER_TILE) === tileZ);
+  if (taken) return { message: 'That tile is taken.' };
+  const info = data.buildings[building];
+  if (info.requiresVent && !ctx.vents.some((v) => v.team === viewerTeam && v.tileX === tileX && v.tileZ === tileZ)) return { message: 'Geothermal needs a vent tile.' };
+  if (!canAfford(ctx.coreLuxMilli, info.costLux, data.balance.core.minLeftAfterSpendLux)) return { message: `Not enough lux: ${building} costs ${info.costLux}.` };
+  return { command: building === 'tower' ? { t: 'build', building, tileX, tileZ, attack } : { t: 'build', building, tileX, tileZ } };
+}
+
+/**
  * What a tap does, as a command to send or a message to show. Pure: no DOM, no network.
  * A tap on the open map (a hero order, not a selection) carries `deselect`: the caller clears the selected
  * building and group, so the panel closes.
  *
- * @typedef {{ command: import('../../sim/commands.js').Command, deselect?: true } | { message: string } | { select: number | null } | { selectGroup: number } | { addWaypoint: number[] }} TapResult
+ * @typedef {{ command: import('../../sim/commands.js').Command, deselect?: true } | { message: string } | { select: number | null } | { selectGroup: number } | { addWaypoint: number[] } | { ghost: { tileX: number, tileZ: number }, message?: string }} TapResult
  *
  * @param {{
  *   ground: { x: number, z: number },
@@ -382,14 +410,9 @@ export function resolveTap(ctx) {
   }
 
   if (building) {
-    const zone = buildZoneOf({ mapgen: data.mapgen }, viewerTeam);
-    if (tileZ < zone.z0 || tileZ > zone.z1 || tileX < 0 || tileX >= data.mapgen.width) return { message: 'Build inside your own zone.' };
-    const taken = entities.some((e) => e.kind <= KIND.BLOCKER && Math.floor(e.x / UNITS_PER_TILE) === tileX && Math.floor(e.z / UNITS_PER_TILE) === tileZ);
-    if (taken) return { message: 'That tile is taken.' };
-    const info = data.buildings[building];
-    if (info.requiresVent && !ctx.vents.some((v) => v.team === viewerTeam && v.tileX === tileX && v.tileZ === tileZ)) return { message: 'Geothermal needs a vent tile.' };
-    if (!canAfford(ctx.coreLuxMilli, info.costLux, data.balance.core.minLeftAfterSpendLux)) return { message: `Not enough lux: ${building} costs ${info.costLux}.` };
-    return { command: building === 'tower' ? { t: 'build', building, tileX, tileZ, attack } : { t: 'build', building, tileX, tileZ } };
+    // A tap in build mode only sets the ghost; the Place button sends the command (GDD 11.5). The message says why the ghost is red.
+    const check = placement({ tileX, tileZ, entities, viewerTeam, building, attack, coreLuxMilli: ctx.coreLuxMilli, data, vents: ctx.vents });
+    return 'message' in check ? { ghost: { tileX, tileZ }, message: check.message } : { ghost: { tileX, tileZ } };
   }
 
   if (ctx.mode === 'path') {
@@ -449,9 +472,10 @@ export function actionsFor(e, towerData) {
  *   data: { buildings: any, balance: any, mapgen: any, heroes: any, abilities: any, items: any },
  *   send: (cmd: import('../../sim/commands.js').Command) => Promise<{ accepted: boolean, reason?: string }>,
  *   camera?: { isFollowing: () => boolean, setFollow: (on: boolean) => void },
+ *   groundAt?: (clientX: number, clientY: number) => { x: number, z: number } | null,  // ground point in tiles under a screen point, for hold-to-aim
  * }} opts
  */
-export function createControls({ root, view, viewerTeam, spectator, tickHz, data, send, camera }) {
+export function createControls({ root, view, viewerTeam, spectator, tickHz, data, send, camera, groundAt }) {
   /** @type {string | null} */
   let building = null;
   let attack = 'ranged';
@@ -461,6 +485,10 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   let selectedGroup = null;
   /** @type {'path' | 'merge' | null} */
   let mode = null;
+  /** The tile chosen for the building in the palette; the Place button sends it (GDD 11.5). @type {{ tileX: number, tileZ: number } | null} */
+  let ghost = null;
+  /** Where a held ability would land, in tiles, while the finger drags from its button. @type {{ x: number, z: number } | null} */
+  let aimPoint = null;
   /** @type {{ type: 'group' | 'barracks', id: number } | null} */
   let pathTarget = null;
   /** @type {number[][]} */
@@ -493,7 +521,12 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     palette.hidden = true;
     panel.hidden = true;
   }
-  const heroName = el('div', 'hero-name');
+  // A tap on the hero's name recenters the camera and resumes follow (GDD 11.1, the hero portrait).
+  const heroName = el('button', 'hero-name');
+  heroName.addEventListener('click', () => {
+    camera?.setFollow(true);
+    render();
+  });
   const abilityRow = el('div', 'ability-row');
   const itemRow = el('div', 'ability-row item-row');
   // The camera follows the hero while this is on. Dragging the map turns it off.
@@ -504,12 +537,22 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   });
   followButton.hidden = !camera;
   heroBar.append(heroName, followButton, abilityRow, itemRow);
+  /** A drag from an ability button ends with a click on it that must not count. */
+  let suppressClick = false;
   /** @type {HTMLButtonElement[]} */
   const abilityButtons = ABILITY_SLOTS.map(({ slot, type, letter }) => {
     const b = /** @type {HTMLButtonElement} */ (el('button', 'ability', letter));
     b.dataset.slot = String(slot);
     b.title = type;
-    b.addEventListener('click', () => castFromBar(slot));
+    // A click aims in two taps (the button, then the map). A press that drags off the button aims in one move.
+    b.addEventListener('click', () => {
+      if (suppressClick) {
+        suppressClick = false;
+        return;
+      }
+      castFromBar(slot);
+    });
+    if (aimed(slot)) holdToAim(b, slot);
     abilityRow.append(b);
     return b;
   });
@@ -532,6 +575,7 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     b.append(el('span', 'tool-name', item.label), el('span', 'tool-cost', String(data.buildings[item.key].costLux)));
     b.addEventListener('click', () => {
       building = building === item.key ? null : item.key;
+      ghost = null;
       ability = null;
       itemAim = null;
       selected = null;
@@ -601,6 +645,7 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   }
 
   function render() {
+    if (!building) ghost = null;
     const now = performance.now();
     pending = pending.filter((p) => pendingKept(p.base, p.expires, view.orders().filter((o) => o.barracksId === p.barracksId).length, now));
     const lux = view.team(viewerTeam).coreLux;
@@ -673,6 +718,63 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
       say(st.aim === 'ally' ? 'Tap your hero or a building.' : 'Tap an enemy hero or creep.');
     }
     render();
+  }
+
+  /** Whether an ability needs a target or a point, which is when a drag from its button can aim it. @param {number} slot */
+  function aimed(slot) {
+    return ABILITY_SLOTS[slot].aim !== 'none';
+  }
+
+  /**
+   * Hold-to-aim: press the button of an aimed ability, drag onto the map and lift to cast there. Lifting
+   * back over the button cancels. A press that stays on the button is a plain click (`holdAimRelease`).
+   * @param {HTMLButtonElement} b @param {number} slot
+   */
+  function holdToAim(b, slot) {
+    /** @type {{ id: number, x: number, y: number, aiming: boolean } | null} */
+    let hold = null;
+    b.addEventListener('pointerdown', (e) => {
+      if (hold || !groundAt || !myHero()) return;
+      hold = { id: e.pointerId, x: e.clientX, y: e.clientY, aiming: false };
+      b.setPointerCapture(e.pointerId);
+    });
+    b.addEventListener('pointermove', (e) => {
+      if (!hold || e.pointerId !== hold.id) return;
+      if (!hold.aiming) {
+        if (holdAimPhase(Math.hypot(e.clientX - hold.x, e.clientY - hold.y)) !== 'aiming') return;
+        const hero = myHero();
+        const st = hero && abilityStates(hero, data.abilities, view.team(viewerTeam).coreLux, minLeft, tickHz)[slot];
+        if (!st || !st.ready) {
+          hold = null; // not ready: the release is a plain click, which says why
+          return;
+        }
+        hold.aiming = true;
+        ability = slot;
+        itemAim = null;
+        building = null;
+        selected = null;
+        selectedGroup = null;
+        mode = null;
+      }
+      aimPoint = overButton(b, e) ? null : (groundAt?.(e.clientX, e.clientY) ?? null);
+      render();
+    });
+    const end = (/** @type {PointerEvent} */ e, cancelled) => {
+      if (!hold || e.pointerId !== hold.id) return;
+      const { aiming } = hold;
+      hold = null;
+      aimPoint = null;
+      if (!aiming) return;
+      suppressClick = true; // the browser still sends a click to the button after the drag
+      const what = cancelled ? 'cancel' : holdAimRelease(true, overButton(b, e));
+      const ground = what === 'cast' ? groundAt?.(e.clientX, e.clientY) : null;
+      if (what === 'cast' && ground) api.tap(ground);
+      // A refused cast (no enemy under the finger) ends the aim too: the drag was the whole gesture.
+      if (ability === slot) ability = null;
+      render();
+    };
+    b.addEventListener('pointerup', (e) => end(e, false));
+    b.addEventListener('pointercancel', (e) => end(e, true));
   }
 
   /** @param {number} slot */
@@ -748,6 +850,7 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   /** Updates texts every call and rebuilds buttons only when their set changes, so a click never lands on a replaced button. */
   function renderPanel() {
     if (mode === 'path') return renderPathBar();
+    if (building && ghost) return renderGhostPanel();
     const group = selectedGroup === null ? undefined : view.groups().find((g) => g.id === selectedGroup);
     if (selectedGroup !== null && !group) {
       selectedGroup = null;
@@ -763,6 +866,53 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
       return;
     }
     renderBuildingPanel(e);
+  }
+
+  /** The placement check for the ghost tile with the lux of now. */
+  function ghostCheck() {
+    return placement({
+      tileX: ghost?.tileX ?? 0,
+      tileZ: ghost?.tileZ ?? 0,
+      entities: view.entities(),
+      viewerTeam,
+      building: building ?? '',
+      attack,
+      coreLuxMilli: view.team(viewerTeam).coreLux,
+      data,
+      vents: view.map().vents,
+    });
+  }
+
+  /** @type {HTMLButtonElement | undefined} */
+  let placeButton;
+
+  /** The Place and Cancel buttons for the ghost, and why the ghost is red when it is. */
+  function renderGhostPanel() {
+    panel.hidden = false;
+    orderRow.replaceChildren();
+    heroRow.replaceChildren();
+    queueList.replaceChildren();
+    shopRow.replaceChildren();
+    orderKey = heroKey = shopKey = queueKey = '';
+    const check = ghostCheck();
+    const label = PALETTE.find((p) => p.key === building)?.label ?? String(building);
+    const title = `${label} at ${ghost?.tileX}, ${ghost?.tileZ}${'message' in check ? `: ${check.message}` : ''}`;
+    if (panelTitle.textContent !== title) panelTitle.textContent = title;
+    const key = `ghost|${building}`;
+    if (key !== panelKey || !placeButton) {
+      panelKey = key;
+      placeButton = button('Place', () => {
+        const now = ghostCheck();
+        if ('message' in now) return say(now.message);
+        building = null; // a placed building ends build mode at once, so a second tap cannot place a second one
+        ghost = null;
+        render();
+        issue(now.command);
+      }, 'action place');
+      placeButton.append(el('span', 'tool-cost', String(data.buildings[building ?? ''].costLux)));
+      panelRow.replaceChildren(placeButton, button('Cancel', () => { ghost = null; render(); }, 'action cancel-ghost'));
+    }
+    placeButton.classList.toggle('poor', 'message' in check);
   }
 
   /** @param {number} sizeNow */
@@ -1031,7 +1181,7 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     return paths;
   }
 
-  return {
+  const api = {
     /** Called for every tap on the ground canvas. @param {{ x: number, z: number }} ground */
     async tap(ground) {
       if (spectator) return;
@@ -1064,6 +1214,9 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
         }
         await issue(result.command);
         if (mode === 'merge') mode = null;
+      } else if ('ghost' in result) {
+        ghost = result.ghost;
+        if (result.message) say(result.message);
       } else if ('message' in result) say(result.message);
       else if ('addWaypoint' in result) pathPoints.push(result.addWaypoint);
       else if ('selectGroup' in result) {
@@ -1087,7 +1240,21 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     update: render,
     overlay,
     say,
+    /** The build ghost to draw: its tile and whether the building could go there now, or null. */
+    ghost() {
+      if (!building || !ghost) return null;
+      return { tileX: ghost.tileX, tileZ: ghost.tileZ, valid: !('message' in ghostCheck()) };
+    },
+    /** Where a held ability would land, in tiles, or null when no aim drag is going. */
+    aim: () => aimPoint,
   };
+  return api;
+}
+
+/** Whether a pointer event lies over an element. @param {HTMLElement} node @param {PointerEvent} e */
+function overButton(node, e) {
+  const r = node.getBoundingClientRect();
+  return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
 }
 
 /**

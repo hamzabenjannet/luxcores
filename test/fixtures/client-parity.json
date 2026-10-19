@@ -351,9 +351,7 @@
         "coreLuxMilli": 100000
       },
       "expect": {
-        "command": {
-          "t": "build",
-          "building": "solar",
+        "ghost": {
           "tileX": 20,
           "tileZ": 100
         }
@@ -372,12 +370,9 @@
         "coreLuxMilli": 100000
       },
       "expect": {
-        "command": {
-          "t": "build",
-          "building": "tower",
+        "ghost": {
           "tileX": 20,
-          "tileZ": 100,
-          "attack": "area"
+          "tileZ": 100
         }
       }
     },
@@ -393,6 +388,10 @@
         "coreLuxMilli": 100000
       },
       "expect": {
+        "ghost": {
+          "tileX": 48,
+          "tileZ": 56
+        },
         "message": "Build inside your own zone."
       }
     },
@@ -418,6 +417,10 @@
         ]
       },
       "expect": {
+        "ghost": {
+          "tileX": 20,
+          "tileZ": 100
+        },
         "message": "That tile is taken."
       }
     },
@@ -433,6 +436,10 @@
         "coreLuxMilli": 100000
       },
       "expect": {
+        "ghost": {
+          "tileX": 20,
+          "tileZ": 100
+        },
         "message": "Geothermal needs a vent tile."
       }
     },
@@ -455,9 +462,7 @@
         ]
       },
       "expect": {
-        "command": {
-          "t": "build",
-          "building": "geothermal",
+        "ghost": {
           "tileX": 30,
           "tileZ": 100
         }
@@ -475,6 +480,10 @@
         "coreLuxMilli": 80000
       },
       "expect": {
+        "ghost": {
+          "tileX": 20,
+          "tileZ": 100
+        },
         "message": "Not enough lux: nuclear costs 80."
       }
     },
@@ -490,9 +499,7 @@
         "coreLuxMilli": 100000
       },
       "expect": {
-        "command": {
-          "t": "build",
-          "building": "solar",
+        "ghost": {
           "tileX": 75,
           "tileZ": 11
         }
@@ -510,6 +517,10 @@
         "coreLuxMilli": 100000
       },
       "expect": {
+        "ghost": {
+          "tileX": 20,
+          "tileZ": 100
+        },
         "message": "Build inside your own zone."
       }
     },
@@ -4148,6 +4159,271 @@
       "realCount": 1,
       "now": 100,
       "expect": true
+    }
+  ],
+  "placement": [
+    {
+      "name": "build a solar plant on a free tile",
+      "ctx": {
+        "ground": [
+          20.5,
+          100.5
+        ],
+        "building": "solar",
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000
+      },
+      "expect": {
+        "command": {
+          "t": "build",
+          "building": "solar",
+          "tileX": 20,
+          "tileZ": 100
+        }
+      }
+    },
+    {
+      "name": "a tower carries the chosen attack type",
+      "ctx": {
+        "ground": [
+          20.5,
+          100.5
+        ],
+        "building": "tower",
+        "attack": "area",
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000
+      },
+      "expect": {
+        "command": {
+          "t": "build",
+          "building": "tower",
+          "tileX": 20,
+          "tileZ": 100,
+          "attack": "area"
+        }
+      }
+    },
+    {
+      "name": "the DMZ is out of reach",
+      "ctx": {
+        "ground": [
+          48.5,
+          56.5
+        ],
+        "building": "solar",
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000
+      },
+      "expect": {
+        "message": "Build inside your own zone."
+      }
+    },
+    {
+      "name": "a taken tile",
+      "ctx": {
+        "ground": [
+          20.5,
+          100.5
+        ],
+        "building": "solar",
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000,
+        "entities": [
+          {
+            "id": 40,
+            "kind": 2,
+            "team": 0,
+            "owner": 0,
+            "x": 20500,
+            "z": 100500
+          }
+        ]
+      },
+      "expect": {
+        "message": "That tile is taken."
+      }
+    },
+    {
+      "name": "geothermal off a vent",
+      "ctx": {
+        "ground": [
+          20.5,
+          100.5
+        ],
+        "building": "geothermal",
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000
+      },
+      "expect": {
+        "message": "Geothermal needs a vent tile."
+      }
+    },
+    {
+      "name": "geothermal on a vent",
+      "ctx": {
+        "ground": [
+          30.5,
+          100.5
+        ],
+        "building": "geothermal",
+        "viewerTeam": 0,
+        "coreLuxMilli": 100000,
+        "vents": [
+          {
+            "team": 0,
+            "tileX": 30,
+            "tileZ": 100
+          }
+        ]
+      },
+      "expect": {
+        "command": {
+          "t": "build",
+          "building": "geothermal",
+          "tileX": 30,
+          "tileZ": 100
+        }
+      }
+    },
+    {
+      "name": "not enough lux",
+      "ctx": {
+        "ground": [
+          20.5,
+          100.5
+        ],
+        "building": "nuclear",
+        "viewerTeam": 0,
+        "coreLuxMilli": 80000
+      },
+      "expect": {
+        "message": "Not enough lux: nuclear costs 80."
+      }
+    },
+    {
+      "name": "team 1 builds in the mirrored zone",
+      "ctx": {
+        "ground": [
+          75.5,
+          11.5
+        ],
+        "building": "solar",
+        "viewerTeam": 1,
+        "coreLuxMilli": 100000
+      },
+      "expect": {
+        "command": {
+          "t": "build",
+          "building": "solar",
+          "tileX": 75,
+          "tileZ": 11
+        }
+      }
+    },
+    {
+      "name": "team 1 cannot build in the zone of team 0",
+      "ctx": {
+        "ground": [
+          20.5,
+          100.5
+        ],
+        "building": "solar",
+        "viewerTeam": 1,
+        "coreLuxMilli": 100000
+      },
+      "expect": {
+        "message": "Build inside your own zone."
+      }
+    }
+  ],
+  "zoom": [
+    {
+      "name": "within limits",
+      "zoom": 1,
+      "expect": 1
+    },
+    {
+      "name": "too far out",
+      "zoom": 0.1,
+      "expect": 0.6
+    },
+    {
+      "name": "too far in",
+      "zoom": 9,
+      "expect": 2.2
+    }
+  ],
+  "pinchZoom": [
+    {
+      "startZoom": 1,
+      "startDistance": 100,
+      "distance": 150,
+      "expect": 1.5
+    },
+    {
+      "startZoom": 1,
+      "startDistance": 100,
+      "distance": 50,
+      "expect": 0.6
+    },
+    {
+      "startZoom": 2,
+      "startDistance": 100,
+      "distance": 200,
+      "expect": 2.2
+    },
+    {
+      "startZoom": 1.5,
+      "startDistance": 0,
+      "distance": 80,
+      "expect": 1.5
+    },
+    {
+      "startZoom": 1,
+      "startDistance": 200,
+      "distance": 200,
+      "expect": 1
+    }
+  ],
+  "holdAimPhase": [
+    {
+      "movedPx": 0,
+      "expect": "pending"
+    },
+    {
+      "movedPx": 13,
+      "expect": "pending"
+    },
+    {
+      "movedPx": 14,
+      "expect": "aiming"
+    },
+    {
+      "movedPx": 120,
+      "expect": "aiming"
+    }
+  ],
+  "holdAimRelease": [
+    {
+      "aiming": false,
+      "overButton": true,
+      "expect": "click"
+    },
+    {
+      "aiming": false,
+      "overButton": false,
+      "expect": "click"
+    },
+    {
+      "aiming": true,
+      "overButton": false,
+      "expect": "cast"
+    },
+    {
+      "aiming": true,
+      "overButton": true,
+      "expect": "cancel"
     }
   ]
 }

@@ -21,10 +21,21 @@ const KIND = { SOLAR: 2, TOWER: 7 };
 const until = (/** @type {import('playwright-core').Page} */ page, /** @type {() => any} */ fn, /** @type {any} */ arg, ms = 30_000) =>
   page.waitForFunction(fn, arg, { timeout: ms, polling: 200 });
 
+/** Calls a function that the page exposes on `__luxTest`. */
+const call = (/** @type {import('playwright-core').Page} */ page, /** @type {string} */ field) =>
+  page.evaluate((f) => /** @type {any} */ (window).__luxTest[f](), field);
+
 /** Taps the middle of a tile. */
 async function tapTile(/** @type {import('playwright-core').Page} */ page, /** @type {{ tileX: number, tileZ: number }} */ tile) {
   const at = await page.evaluate((t) => /** @type {any} */ (window).__luxTest.screenOf(t.tileX + 0.5, t.tileZ + 0.5), tile);
   await page.touchscreen.tap(at.x, at.y);
+}
+
+/** Taps a tile in build mode, then confirms the ghost with Place (GDD 11.5). */
+async function placeAt(/** @type {import('playwright-core').Page} */ page, /** @type {{ tileX: number, tileZ: number }} */ tile) {
+  await tapTile(page, tile);
+  await page.waitForSelector('.panel:not([hidden]) .place:not(.poor)');
+  await page.click('.panel .place');
 }
 
 test('a human builds, upgrades and recycles through the controls, against a bot', { timeout: 180_000, skip }, async () => {
@@ -36,7 +47,7 @@ test('a human builds, upgrades and recycles through the controls, against a bot'
     // The palette: pick Solar, tap a free tile in the build zone.
     const solarTile = freeSpot(SEED, 0);
     await page.click('button[data-building="solar"]');
-    await tapTile(page, solarTile);
+    await placeAt(page, solarTile);
     await until(page, (k) => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === k && e.team === 0), KIND.SOLAR);
     assert.equal(await page.locator('button[data-building].active').count(), 0, 'a placement frees the palette');
 
@@ -45,12 +56,18 @@ test('a human builds, upgrades and recycles through the controls, against a bot'
     await page.touchscreen.tap(...(/** @type {[number, number]} */ (Object.values(await page.evaluate(() => /** @type {any} */ (window).__luxTest.screenOf(48.5, 56.5))))));
     await until(page, () => document.querySelector('.toast.show')?.textContent === 'Build inside your own zone.');
     assert.equal(await page.locator('button[data-building="solar"].active').count(), 1, 'a refused tap keeps the building picked');
+    assert.equal((await call(page, 'ghost')).valid, false, 'the ghost on the DMZ is red');
+    assert.equal(await page.locator('.panel .place.poor').count(), 1, 'Place is dimmed while the ghost is red');
+    assert.match(await page.textContent('.panel-title') ?? '', /^Solar at 48, 56: Build inside your own zone\.$/);
+    await page.click('.panel .action:has-text("Cancel")');
+    assert.equal(await call(page, 'ghost'), null, 'Cancel removes the ghost');
+    assert.equal(await page.locator('button[data-building="solar"].active').count(), 1, 'Cancel keeps the building picked');
 
     // A tower with the Area attack. The segment control shows only while Tower is picked.
     const towerTile = freeSpot(SEED, 3);
     await page.click('button[data-building="tower"]');
     await page.click('button[data-attack="area"]');
-    await tapTile(page, towerTile);
+    await placeAt(page, towerTile);
     await until(page, (k) => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === k && e.team === 0 && e.attack === 3), KIND.TOWER);
 
     // The bot builds too, and the lux counts follow the rules: both sides paid.
@@ -152,7 +169,7 @@ test('a human buys items at a barracks, receives them with the hero and uses the
 
     const barracksTile = freeSpot(SEED, 0);
     await page.click('button[data-building="barracks"]');
-    await tapTile(page, barracksTile);
+    await placeAt(page, barracksTile);
     await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 6 && e.team === 0));
     await tapTile(page, barracksTile);
     await page.waitForSelector('.panel:not([hidden]) .shop-item[data-shop-item="2"]');
@@ -208,7 +225,7 @@ test('a human picks a hero at a barracks, shields it and aims its area ability, 
     // A barracks, then its panel: the hero row shows the roster and the lux to allocate.
     const barracksTile = freeSpot(SEED, 0);
     await page.click('button[data-building="barracks"]');
-    await tapTile(page, barracksTile);
+    await placeAt(page, barracksTile);
     await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 6 && e.team === 0));
     assert.equal(await page.locator('button[data-building].active').count(), 0, 'the barracks placement freed the palette');
     await tapTile(page, barracksTile);
@@ -290,6 +307,54 @@ test('a human picks a hero at a barracks, shields it and aims its area ability, 
     const h = await hero();
     await tapTile(page, { tileX: Math.floor(h.x / 1000), tileZ: Math.floor(h.z / 1000) - 3 }); // up the screen, clear of the panel and the hero bar
     await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 10 && e.owner === 0 && e.cd2 > 0));
+
+    // Hold-to-aim: press the button, drag onto the map, lift. Sliding back over the button cancels.
+    const openPoint = async () => page.evaluate((w) => {
+      const from = /** @type {any} */ (window).__luxTest.screenOf(w.x / 1000, w.z / 1000);
+      let best = null;
+      for (let y = 8; y < innerHeight - 8; y += 8) {
+        for (let x = 8; x < innerWidth - 8; x += 8) {
+          if (document.elementFromPoint(x, y)?.tagName !== 'CANVAS') continue;
+          const far = Math.hypot(x - from.x, y - from.y);
+          if (best === null || far < best.far) best = { x, y, far };
+        }
+      }
+      return best;
+    }, await hero());
+    const drag = async (/** @type {string} */ selector, /** @type {{ x: number, y: number } | null} */ to) => {
+      const box = await page.locator(selector).boundingBox();
+      const from = { x: (box?.x ?? 0) + (box?.width ?? 0) / 2, y: (box?.y ?? 0) + (box?.height ?? 0) / 2 };
+      await page.mouse.move(from.x, from.y);
+      await page.mouse.down();
+      const end = to ?? { x: from.x + 40, y: from.y - 120 };
+      for (let step = 1; step <= 6; step++) await page.mouse.move(from.x + ((end.x - from.x) * step) / 6, from.y + ((end.y - from.y) * step) / 6);
+      return { from, release: async (/** @type {{ x: number, y: number }} */ at) => { await page.mouse.move(at.x, at.y); await page.mouse.up(); } };
+    };
+    await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 10 && e.owner === 0 && e.cd2 === 0), undefined, 30_000);
+    const aimAt = await openPoint();
+    assert.ok(aimAt, 'some point of the map is not covered by the controls');
+    // Aiming shows the ring and highlights the button; lifting back over the button casts nothing.
+    const held = await drag('.ability[data-slot="2"]', aimAt);
+    await until(page, () => document.querySelector('.ability[data-slot="2"]')?.classList.contains('active') === true);
+    await held.release(held.from);
+    await until(page, () => document.querySelector('.ability[data-slot="2"]')?.classList.contains('active') === false);
+    assert.equal((await hero()).cd2, 0, 'lifting back over the button cancels the cast');
+    // Lifting over the map casts at that point.
+    const cast = await drag('.ability[data-slot="2"]', aimAt);
+    await cast.release(aimAt);
+    await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 10 && e.owner === 0 && e.cd2 > 0));
+    // Ranged over empty ground has no target: the toast says so and the aim ends.
+    const empty = await drag('.ability[data-slot="1"]', aimAt);
+    await empty.release(aimAt);
+    await until(page, () => document.querySelector('.toast.show')?.textContent === 'Tap an enemy to hit.');
+    await until(page, () => document.querySelector('.ability[data-slot="1"]')?.classList.contains('active') === false);
+    // The click that follows a drag must not start a tap-tap aim of its own.
+    assert.equal(await page.locator('.ability.active').count(), 0);
+
+    // The hero's name recenters the camera and resumes follow.
+    assert.equal(await page.evaluate(() => /** @type {any} */ (window).__luxTest.following()), false);
+    await page.click('.hero-name');
+    assert.equal(await page.evaluate(() => /** @type {any} */ (window).__luxTest.following()), true, 'a tap on the hero name resumes follow');
     mkdirSync(SHOTS, { recursive: true });
     await page.screenshot({ path: join(SHOTS, 'play-hero.png') });
     assert.deepEqual(errors, [], 'the page must log no console or page errors');
@@ -376,6 +441,64 @@ test('the menu and lobby work by hand: a bot match, then a match for two humans'
   }, { MATCH_MAX_TICKS: '1200' });
 });
 
+test('touch controls: a build ghost to confirm, pinch zoom, hold-to-aim and the upright prompt', { timeout: 180_000, skip }, async () => {
+  await withBackend(async ({ errors, newContext, open }) => {
+    const page = await open(await newContext(), `name=Halo&match=new&vsBot=1&autostart=1&seed=${SEED}`);
+    await until(page, () => /** @type {any} */ (window).__luxTest.entities().length > 0);
+
+    // The ghost: a tap shows it green on a free tile, a second tap moves it, Place sends the build.
+    const first = freeSpot(SEED, 0);
+    const second = freeSpot(SEED, 4);
+    await page.click('button[data-building="solar"]');
+    await tapTile(page, first);
+    assert.deepEqual(await call(page, 'ghost'), { tileX: first.tileX, tileZ: first.tileZ, valid: true });
+    assert.equal(await page.locator('button[data-building="solar"].active').count(), 1);
+    await tapTile(page, second);
+    assert.deepEqual(await call(page, 'ghost'), { tileX: second.tileX, tileZ: second.tileZ, valid: true }, 'a second tap moves the ghost');
+    assert.equal(await page.evaluate(() => /** @type {any} */ (window).__luxTest.entities().filter((/** @type {any} */ e) => e.kind === 2 && e.team === 0).length), 0, 'a tap alone builds nothing');
+    await page.click('.panel .place');
+    await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 2 && e.team === 0));
+    assert.equal(await call(page, 'ghost'), null, 'Place removes the ghost');
+    assert.equal(await page.locator('button[data-building].active').count(), 0, 'Place frees the palette');
+    const built = await page.evaluate(() => /** @type {any} */ (window).__luxTest.entities().find((/** @type {any} */ e) => e.kind === 2 && e.team === 0));
+    assert.deepEqual([Math.floor(built.x / 1000), Math.floor(built.z / 1000)], [second.tileX, second.tileZ], 'the building stands on the tile of the last tap');
+
+    // Pinch zoom: two fingers move apart, the view zooms in and stays within its limits.
+    const box = await page.locator('#view').boundingBox();
+    const cx = (box?.x ?? 0) + (box?.width ?? 0) / 2;
+    const cy = (box?.y ?? 0) + (box?.height ?? 0) / 3;
+    assert.equal(await call(page, 'zoom'), 1);
+    const pinch = async (/** @type {number} */ from, /** @type {number} */ to) => {
+      const touch = (/** @type {string} */ type, /** @type {number} */ id, /** @type {number} */ x) => page.evaluate(([type, id, x, y]) => {
+        const canvas = /** @type {HTMLElement} */ (document.getElementById('view'));
+        canvas.dispatchEvent(new PointerEvent(/** @type {string} */ (type), { pointerId: /** @type {number} */ (id), pointerType: 'touch', clientX: /** @type {number} */ (x), clientY: /** @type {number} */ (y), bubbles: true, isPrimary: id === 1 }));
+      }, [type, id, x, cy]);
+      await touch('pointerdown', 1, cx - from / 2);
+      await touch('pointerdown', 2, cx + from / 2);
+      for (let step = 1; step <= 5; step++) {
+        const gap = from + ((to - from) * step) / 5;
+        await touch('pointermove', 1, cx - gap / 2);
+        await touch('pointermove', 2, cx + gap / 2);
+      }
+      await touch('pointerup', 1, cx - to / 2);
+      await touch('pointerup', 2, cx + to / 2);
+    };
+    await pinch(100, 150);
+    assert.ok(Math.abs((await call(page, 'zoom')) - 1.5) < 0.01, 'fingers 1.5 times farther apart zoom to 1.5');
+    await pinch(100, 400);
+    assert.equal(await call(page, 'zoom'), 2.2, 'the zoom stops at its upper limit');
+    await pinch(400, 20);
+    assert.equal(await call(page, 'zoom'), 0.6, 'and at its lower limit');
+    await page.evaluate(() => /** @type {any} */ (window).__luxTest.setZoom(1));
+
+    // The upright prompt is in the page and hidden for a portrait screen.
+    assert.equal(await page.isHidden('#rotate'), true);
+    assert.equal(await page.evaluate(() => document.querySelector('link[rel="manifest"]')?.getAttribute('href')), '/src/client/manifest.webmanifest');
+
+    assert.deepEqual(errors, [], 'the page must log no console or page errors');
+  }, { MATCH_MAX_TICKS: '2400' });
+});
+
 test('a human orders creeps, then splits, merges and sends a group, through the controls', { timeout: 240_000, skip }, async () => {
   // Two humans, so no bot defends and the creeps live long enough for a slow browser to finish the steps.
   await withBackend(async ({ errors, newContext, open }) => {
@@ -390,7 +513,7 @@ test('a human orders creeps, then splits, merges and sends a group, through the 
     // A barracks through the palette, then select it: the panel offers orders.
     const barracksTile = freeSpot(SEED, 0);
     await page.click('button[data-building="barracks"]');
-    await tapTile(page, barracksTile);
+    await placeAt(page, barracksTile);
     await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 6 && e.team === 0));
     assert.equal(await page.locator('button[data-building].active').count(), 0, 'the barracks placement freed the palette');
     await tapTile(page, barracksTile);

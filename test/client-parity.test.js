@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { KIND, SPEC_VERSION } from '../src/sim/index.js';
 import { creepGroupLabels, entityText, entropyFromText, entropyText, isDay, tickCapFromText, tickCapText } from '../src/client/entity-text.js';
-import { abilityStates, actionsFor, canAfford, endsBuildMode, groupActions, heroLuxChoices, heroPickState, immediateCast, immediateUse, itemStates, mixFor, pendingKept, pendingLine, queueLines, resolveTap, secondsText, shopStates } from '../src/client/ui/controls.js';
+import { abilityStates, actionsFor, canAfford, endsBuildMode, groupActions, heroLuxChoices, heroPickState, immediateCast, immediateUse, itemStates, mixFor, pendingKept, pendingLine, placement, queueLines, resolveTap, secondsText, shopStates } from '../src/client/ui/controls.js';
+import { HOLD_AIM_PX, clampZoom, holdAimPhase, holdAimRelease, pinchZoom } from '../src/client/input/gestures.js';
 import { matchSummary } from '../src/client/ui/summary.js';
 import { ROOT, loadData } from './helpers/load-data.js';
 
@@ -103,6 +104,31 @@ test('item cases', () => {
   for (const c of fixture.itemStates) assert.deepEqual(itemStates(fixture.items, c.counts, c.funnelLux), c.expect, c.name);
   for (const c of fixture.immediateUse) assert.deepEqual(immediateUse(c.id, fixture.items), c.expect, JSON.stringify(c));
   for (const c of fixture.shopStates) assert.deepEqual(shopStates(fixture.items, c.coreLuxMilli, c.minLeftLux), c.expect, c.name);
+});
+
+test('placement cases', () => {
+  for (const c of fixture.placement) {
+    const actual = placement({
+      tileX: Math.floor(c.ctx.ground[0]),
+      tileZ: Math.floor(c.ctx.ground[1]),
+      entities: (c.ctx.entities ?? []).map((/** @type {any} */ e) => ({ hp: 1, maxHp: 1, ...e })),
+      viewerTeam: c.ctx.viewerTeam,
+      building: c.ctx.building,
+      attack: c.ctx.attack ?? 'ranged',
+      coreLuxMilli: c.ctx.coreLuxMilli ?? 100_000,
+      data,
+      vents: c.ctx.vents ?? [],
+    });
+    assert.deepEqual(actual, c.expect, c.name);
+  }
+});
+
+test('gesture cases: zoom limits, pinch and the hold-to-aim press', () => {
+  for (const c of fixture.zoom) assert.equal(clampZoom(c.zoom), c.expect, c.name);
+  for (const c of fixture.pinchZoom) assert.equal(pinchZoom(c.startZoom, c.startDistance, c.distance), c.expect, JSON.stringify(c));
+  for (const c of fixture.holdAimPhase) assert.equal(holdAimPhase(c.movedPx), c.expect, JSON.stringify(c));
+  for (const c of fixture.holdAimRelease) assert.equal(holdAimRelease(c.aiming, c.overButton), c.expect, JSON.stringify(c));
+  assert.equal(HOLD_AIM_PX, 14);
 });
 
 test('group panel action cases', () => {

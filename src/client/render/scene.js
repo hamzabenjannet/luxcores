@@ -17,6 +17,7 @@ import { createLabels } from './labels.js';
 import { pixelRatioFor } from './pixel-ratio.js';
 import { createEntityMeshes } from './entity-meshes.js';
 import { createOverlay } from './overlay.js';
+import { clampZoom } from '../input/gestures.js';
 
 export const TEAM_COLORS = [0x3d8bff, 0xff4d4d]; // team 0 blue (player), team 1 red
 
@@ -105,6 +106,7 @@ export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0, hero
   // Team 0's base is at the bottom, team 1's at the top; the camera stays north-up for both.
   const target = new THREE.Vector3(corePos[viewerTeam][0], 0, viewerTeam === 0 ? 80 : 32);
   const OFFSET = new THREE.Vector3(0, 60, 42); // looking north, tilted
+  let zoom = 1;
 
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
@@ -122,7 +124,14 @@ export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0, hero
     renderer.setSize(w, h, false);
     composer.setSize(w, h);
     bloom.resolution.set(w / 2, h / 2); // half-res bloom for mobile
-    const halfW = VIEW_TILES_WIDE / 2;
+    frameCamera();
+  }
+
+  /** Sizes the view from the canvas shape and the zoom: zoom 1 shows 32 tiles across. */
+  function frameCamera() {
+    const w = canvas.clientWidth || 1;
+    const h = canvas.clientHeight || 1;
+    const halfW = VIEW_TILES_WIDE / 2 / zoom;
     const halfH = halfW * (h / w);
     camera.left = -halfW; camera.right = halfW;
     camera.top = halfH; camera.bottom = -halfH;
@@ -200,7 +209,14 @@ export function createScene(canvas, mapgen, view, hpFactor, viewerTeam = 0, hero
   }
 
   return {
-    render, pan, groundAt, screenOf, setPaths: overlay.update, camera, renderer,
+    render, pan, groundAt, screenOf, setPaths: overlay.update, setGhost: overlay.setGhost, setAim: overlay.setAim, camera, renderer,
+    /** The zoom factor; 1 shows 32 tiles across. */
+    getZoom: () => zoom,
+    /** Sets the zoom within the limits of `clampZoom`. @param {number} value */
+    setZoom(value) {
+      zoom = clampZoom(value);
+      frameCamera();
+    },
     /** Whether the camera follows the viewer's hero. Dragging the map turns it off. @param {boolean} on */
     setFollow(on) { following = on; },
     isFollowing: () => following,
