@@ -3,6 +3,7 @@ extends Node3D
 
 const GameLogic = preload("res://scripts/game_logic.gd")
 const MainScript = preload("res://scripts/main.gd")
+const CREEP_MELEE_MODEL = preload("res://assets/CreepMeleeModelAsset.glb")
 
 const TEAM_BLUE := Color("#3d8bff")
 const TEAM_RED := Color("#ff4d4d")
@@ -12,7 +13,7 @@ const ATTACK_COLORS := {
 	3: Color("#b26bff"),
 }
 const TEMPLATE_NAMES := [
-	"Solar", "CreepRanged", "CreepArea", "CreepMelee", "LumenCore",
+	"Solar", "CreepRanged", "CreepArea", "CreepMeleeModelAsset", "LumenCore",
 	"Wind", "Geothermal", "Nuclear", "TowerArea", "TowerMelee",
 	"TowerRanged", "Barracks",
 ]
@@ -81,7 +82,7 @@ func _ready() -> void:
 	(_aim_ring.mesh as CylinderMesh).height = 0.05
 	get_viewport().size_changed.connect(_on_viewport_resized)
 	for template_name in TEMPLATE_NAMES:
-		var template := get_node_or_null(NodePath(template_name)) as MeshInstance3D
+		var template := get_node_or_null(NodePath(template_name)) as Node3D
 		if template != null:
 			_templates[template_name] = template
 			template.visible = false
@@ -415,16 +416,21 @@ func _make_entity(entity: Dictionary) -> Node3D:
 	anchor.position = Vector3(x, 0.12, z)
 	var template_name := _template_for(entity)
 	var template := _templates.get(template_name) as MeshInstance3D
-	var model := MeshInstance3D.new()
-	if template != null and template.mesh != null:
-		model.mesh = template.mesh
-		model.transform = Transform3D(template.transform.basis.scaled(Vector3.ONE * 3.5), Vector3.ZERO)
+	if template_name == "CreepMeleeModelAsset":
+		var melee_model := CREEP_MELEE_MODEL.instantiate() as Node3D
+		melee_model.scale = Vector3.ONE * 0.5
+		_tint_melee_model(melee_model, tint)
+		anchor.add_child(melee_model)
 	else:
-		model.mesh = _fallback_mesh(kind)
-		model.scale = Vector3.ONE * (1.6 if kind == GameLogic.KIND_CORE else 0.7)
-	var model_material := _flat_material(tint)
-	model.material_override = model_material
-	anchor.add_child(model)
+		var model := MeshInstance3D.new()
+		if template != null and template.mesh != null:
+			model.mesh = template.mesh
+			model.transform = Transform3D(template.transform.basis.scaled(Vector3.ONE * 3.5), Vector3.ZERO)
+		else:
+			model.mesh = _fallback_mesh(kind)
+			model.scale = Vector3.ONE * (1.6 if kind == GameLogic.KIND_CORE else 0.7)
+		model.material_override = _flat_material(tint)
+		anchor.add_child(model)
 	if kind == GameLogic.KIND_TOWER:
 		_add_tower_marker(anchor, entity)
 	if id == _selected_entity_id:
@@ -471,9 +477,23 @@ func _template_for(entity: Dictionary) -> String:
 				3:
 					return "CreepArea"
 				_:
-					return "CreepMelee"
+					return "CreepMeleeModelAsset"
 		_:
 			return ""
+
+func _tint_melee_model(model: Node3D, tint: Color) -> void:
+	for node in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh_instance := node as MeshInstance3D
+		if mesh_instance.mesh == null:
+			continue
+		for surface in mesh_instance.mesh.get_surface_count():
+			var source_material := mesh_instance.get_active_material(surface) as StandardMaterial3D
+			if source_material == null:
+				mesh_instance.set_surface_override_material(surface, _flat_material(tint))
+				continue
+			var team_material := source_material.duplicate() as StandardMaterial3D
+			team_material.albedo_color *= tint
+			mesh_instance.set_surface_override_material(surface, team_material)
 
 func _fallback_mesh(kind: int) -> Mesh:
 	if kind == GameLogic.KIND_HERO:

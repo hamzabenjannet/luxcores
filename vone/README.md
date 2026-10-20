@@ -45,7 +45,7 @@ Run these from the repo root. Each needs Godot 4.6 (`GODOT_BIN`, `godot` on the 
 # Pure game logic against the shared fixtures: 141 checks, no server needed.
 Godot --headless --path vone --script res://tests/run_tests.gd
 
-# Main 3D scene, entity rendering and camera controls, no server needed.
+# Main 3D scene, detailed melee creep rendering and camera controls, no server needed.
 Godot --headless --path vone --script res://tests/main3d_scene.gd
 
 # The real main scene against a running backend: 90 checks.

@@ -64,6 +64,15 @@ func _run() -> void:
 		game_page.visible = true
 	await process_frame
 	_check("all entity kinds render", int(scene.call("get_rendered_entity_count")), entities.size())
+	var melee_entity := scene.get_node_or_null("Entities/Entity_9") as Node3D
+	var melee_model := melee_entity.find_child("target_character", true, false) if melee_entity != null else null
+	_check("melee creeps use the imported detailed model", melee_model is Node3D, true)
+	if melee_model is Node3D:
+		var melee_meshes := melee_model.find_children("*", "MeshInstance3D", true, false)
+		_check("melee model contains its imported mesh", not melee_meshes.is_empty(), true)
+		if not melee_meshes.is_empty():
+			var surface_material := (melee_meshes[0] as MeshInstance3D).get_active_material(0) as StandardMaterial3D
+			_check("team tint keeps the imported texture", surface_material != null and surface_material.albedo_texture != null, true)
 	if touch_overlay != null:
 		var taps: Array[Vector2] = []
 		touch_overlay.tapped.connect(func(ground: Vector2) -> void: taps.append(ground))
