@@ -475,7 +475,7 @@ func _free_tile(n: int) -> Vector2i:
 	var taken := {}
 	for e in _entities():
 		if int(e.kind) <= GameLogic.KIND_BLOCKER:
-			taken["%d,%d" % [int(e.x) / 1000, int(e.z) / 1000]] = true
+			taken["%d,%d" % [int(e.x / 1000.0), int(e.z / 1000.0)]] = true
 	for vent in _main._current_map.vents:
 		taken["%d,%d" % [int(vent.tileX), int(vent.tileZ)]] = true
 	var open_tiles: Array = []

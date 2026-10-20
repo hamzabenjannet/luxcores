@@ -1,6 +1,6 @@
 # Handover
 
-Status as of 2026-10-19, after M9 (touch controls and the 1 000-seed bot soak) and the playtest fixes. M10 is next. Read `CLAUDE.md` first for the working rules.
+Status as of 2026-10-20, after M9 (touch controls and the 1 000-seed bot soak), the playtest fixes and the latest client controls. M10 phone testing remains next. Read `CLAUDE.md` first for the working rules.
 
 ## Where things stand
 
@@ -211,6 +211,12 @@ Open for the owners:
 - **No CI.** The repo has no CI configuration, so "soak in CI" is a command to run, not a pipeline. Adding a workflow is an infrastructure choice for Hamza.
 - **Hot seat (GDD 12.2).** Deferred. The design stays in the GDD: a server match type that gives both teams to the host, commands that carry a side and a Side button.
 
+## Client Controls (2026-10-20)
+
+- **Godot camera.** The arrow keys adjust the camera view: Left and Right rotate it, while Up and Down change its elevation. Rotating the camera turns off hero follow. `vone/tests/main3d_scene.gd` checks each direction.
+- **Barracks (web and Godot).** Dropdowns choose the creep group size, creep type and hero. A separate Pick Hero button confirms the choice. Recycle, Set Default Path and Order Creeps share one row. The existing command payloads remain unchanged.
+- **Validation.** `npm test` passed 257 tests. `npm run headless -- 1 1000` completed with hash `389877c6`. The Godot parity tests passed 251 checks, the live match tests passed 135 checks, and the main 3D scene test passed 18 checks. The E2E run passed both Godot tests and skipped 19 tests because the Playwright server was unavailable. Browser E2E coverage for the updated barracks controls remains to be run.
+
 ## Next Milestone: M10 (Cross-Browser Determinism and the Performance Pass)
 
 From `docs/TECH_ARCHITECTURE.md` section 14. Done when Node, Chrome on Android and Safari on iOS print identical hashes, and the performance numbers of the reference device are recorded here. Hamza's answers of 2026-10-19: the reference device is a Galaxy Wide class phone or a similar wide device, and the web client already plays comfortably on a Galaxy Tab Active3 (a wide tablet), so no tuning is due before the first numbers. The portrait lock is optional: the prompt in landscape now has a Play anyway button. The Godot UI adapts to wide screens later, when its interface gets its next pass.
@@ -298,8 +304,7 @@ A nuclear plant earns 5 lux/s. It earns 600 lux in the 120 s before it melts dow
 ## Known Gaps
 
 - The backend sends full snapshots with every entity and uses guest sign-in only. A running match lives in the memory of one process, and the match log lets another start rebuild it. `backend/nodejs/README.md` lists these limits with the planned fixes.
-- The web controls are the M8 minimum: tap to build, select and order, with no build ghost, path mode, quick slots or pinch zoom. Buildings and units draw as placeholder boxes. A tap on the map takes effect at once, so a stray tap builds.
-- The camera stays north-up for team 1, so its base appears at the top.
+- Buildings and units still draw as placeholder boxes. The web camera stays north-up for team 1, so its base appears at the top. Godot supports camera orbit and elevation controls.
 - Projectiles live one tick and snapshots arrive every second tick, so clients draw an aim line from `targetId` to show each shot. Interpolation came in M7. Delta snapshots stay deferred (Hamza).
 - The client compares the sim spec version with the server but not the data hash, because `crypto.subtle` needs a secure context and a LAN address is not one.
 
