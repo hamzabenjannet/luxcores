@@ -13,6 +13,7 @@
 import { KIND, MILLI, UNITS_PER_TILE, buildZoneOf } from '../../sim/index.js';
 import { ATTACK_NAMES, entityText } from '../entity-text.js';
 import { holdAimPhase, holdAimRelease } from '../input/gestures.js';
+import { actionForKey, defaultKeyBindings, keyLabel, normalizeKeyBindings, KEY_BINDINGS_STORAGE_KEY } from '../input/key-bindings.js';
 import { HERO_ORDER, orderLabel, orderWait, secondsText } from './order-log.js';
 import { createOrderWindow } from './order-window.js';
 
@@ -494,13 +495,19 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   const heroNames = roster.map((r) => r.name);
   const itemList = /** @type {{ id: number, name: string, costLux: number, target: string, effect: { kind: string } }[]} */ (data.items.list);
   const itemNames = itemList.map((i) => i.name);
+  let keyBindings = defaultKeyBindings();
 
   root.replaceChildren();
   const toast = el('div', 'toast');
+  keyBindings = loadKeyBindings(say);
   const panel = el('div', 'panel');
   const heroBar = el('div', 'hero-bar');
   const palette = el('div', 'palette');
-  root.append(toast, panel, heroBar, palette);
+  const keySettingsButton = /** @type {HTMLButtonElement} */ (el('button', 'key-settings-toggle', 'Keys'));
+  keySettingsButton.type = 'button';
+  keySettingsButton.title = 'Configure ability and item keys';
+  keySettingsButton.hidden = spectator;
+  root.append(keySettingsButton, toast, panel, heroBar, palette);
   heroBar.hidden = true;
   if (spectator) {
     palette.hidden = true;
@@ -551,6 +558,120 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     itemRow.append(b);
     return b;
   });
+
+  const keySettings = /** @type {HTMLDialogElement} */ (el('dialog', 'key-settings'));
+  const keySettingsContent = el('div', 'key-settings-content');
+  keySettingsContent.append(el('h2', '', 'Keyboard Controls'));
+  keySettingsContent.append(el('p', '', 'Select a slot, then press an unused letter or number. Changes are saved on this device.'));
+  const keyBindingButtons = { abilities: /** @type {HTMLButtonElement[]} */ ([]), items: /** @type {HTMLButtonElement[]} */ ([]) };
+  let keyCapture = /** @type {{ kind: 'abilities' | 'items', slot: number } | null */ (null);
+
+  /**
+   * @param {'abilities' | 'items'} kind
+   * @param {number} slot
+   * @param {string} label
+   */
+  function addKeyBindingRow(kind, slot, label) {
+    const row = el('div', 'key-binding-row');
+    row.append(el('span', '', label));
+    const bindingButton = /** @type {HTMLButtonElement} */ (el('button', 'key-binding', keyLabel(keyBindings[kind][slot])));
+    bindingButton.type = 'button';
+    bindingButton.addEventListener('click', () => {
+      keyCapture = { kind, slot };
+      bindingButton.textContent = 'Press a key';
+    });
+    keyBindingButtons[kind][slot] = bindingButton;
+    row.append(bindingButton);
+    keySettingsContent.append(row);
+  }
+
+  keySettingsContent.append(el('h3', '', 'Abilities'));
+  for (const { slot, type } of ABILITY_SLOTS) addKeyBindingRow('abilities', slot, type);
+  keySettingsContent.append(el('h3', '', 'Inventory Slots'));
+  itemList.forEach((item, slot) => addKeyBindingRow('items', slot, `${slot + 1}. ${item.name}`));
+
+  const keySettingsMessage = el('p', 'key-settings-message', '');
+  const keySettingsActions = el('div', 'key-settings-actions');
+  const resetKeysButton = /** @type {HTMLButtonElement} */ (el('button', '', 'Reset defaults'));
+  resetKeysButton.type = 'button';
+  resetKeysButton.addEventListener('click', () => {
+    keyBindings = defaultKeyBindings();
+    keyCapture = null;
+    keySettingsMessage.textContent = '';
+    saveKeyBindings(keyBindings, say);
+    refreshKeyBindingLabels();
+  });
+  const closeKeySettingsButton = /** @type {HTMLButtonElement} */ (el('button', '', 'Close'));
+  closeKeySettingsButton.type = 'button';
+  closeKeySettingsButton.addEventListener('click', () => {
+    keyCapture = null;
+    refreshKeyBindingLabels();
+    keySettings.close();
+  });
+  keySettingsActions.append(resetKeysButton, closeKeySettingsButton);
+  keySettingsContent.append(keySettingsMessage, keySettingsActions);
+  keySettings.append(keySettingsContent);
+  root.append(keySettings);
+  keySettingsButton.addEventListener('click', () => {
+    keySettingsMessage.textContent = '';
+    keySettings.showModal();
+  });
+
+  function refreshKeyBindingLabels() {
+    ABILITY_SLOTS.forEach(({ slot, type }) => {
+      keyBindingButtons.abilities[slot].textContent = keyLabel(keyBindings.abilities[slot]);
+      abilityButtons[slot].title = `${type} (${keyLabel(keyBindings.abilities[slot])})`;
+    });
+    itemList.forEach((item, slot) => {
+      keyBindingButtons.items[slot].textContent = keyLabel(keyBindings.items[slot]);
+      itemButtons[slot].title = `${item.name} (${keyLabel(keyBindings.items[slot])})`;
+    });
+  }
+
+  refreshKeyBindingLabels();
+
+  /** @param {KeyboardEvent} event */
+  function handleKeyDown(event) {
+    if (keyCapture) {
+      if (event.code === 'Escape') {
+        keyCapture = null;
+        refreshKeyBindingLabels();
+        keySettingsMessage.textContent = 'Key assignment cancelled.';
+        event.preventDefault();
+        return;
+      }
+      if (event.altKey || event.ctrlKey || event.metaKey || !/^(Key[A-Z]|Digit[0-9])$/.test(event.code)) {
+        keySettingsMessage.textContent = 'Choose a letter or number without a modifier.';
+        event.preventDefault();
+        return;
+      }
+      const occupied = keyBindings.abilities.some((key, slot) => key === event.code && (keyCapture?.kind !== 'abilities' || keyCapture.slot !== slot))
+        || keyBindings.items.some((key, slot) => key === event.code && (keyCapture?.kind !== 'items' || keyCapture.slot !== slot));
+      if (occupied) {
+        keySettingsMessage.textContent = 'That key is already assigned to another slot.';
+        event.preventDefault();
+        return;
+      }
+      keyBindings[keyCapture.kind][keyCapture.slot] = event.code;
+      keyCapture = null;
+      keySettingsMessage.textContent = '';
+      saveKeyBindings(keyBindings, say);
+      refreshKeyBindingLabels();
+      event.preventDefault();
+      return;
+    }
+    if (event.defaultPrevented || event.repeat || event.altKey || event.ctrlKey || event.metaKey || keySettings.open || isTextEntry(event.target)) return;
+    if (spectator || !myHero()) return;
+    const action = actionForKey(keyBindings, event.code);
+    if (!action) return;
+    event.preventDefault();
+    if (action.kind === 'ability') castFromBar(action.slot);
+    else {
+      const item = itemList[action.slot];
+      if (item) useFromBar(item.id);
+    }
+  }
+  window.addEventListener('keydown', handleKeyDown);
 
   /** @type {Map<string, HTMLButtonElement>} */
   const buttons = new Map();
@@ -1272,4 +1393,43 @@ function el(tag, className, text) {
   node.className = className;
   if (text !== undefined) node.textContent = text;
   return node;
+}
+
+/** @param {(message: string) => void} say */
+function loadKeyBindings(say) {
+  let saved;
+  try {
+    saved = window.localStorage.getItem(KEY_BINDINGS_STORAGE_KEY);
+  } catch {
+    say('Could not read saved key assignments; using defaults.');
+    return defaultKeyBindings();
+  }
+  if (saved === null) return defaultKeyBindings();
+  let parsed;
+  try {
+    parsed = JSON.parse(saved);
+  } catch {
+    say('Saved key assignments are invalid; using defaults.');
+    return defaultKeyBindings();
+  }
+  const bindings = normalizeKeyBindings(parsed);
+  if (JSON.stringify(bindings) !== JSON.stringify(parsed)) say('Saved key assignments are invalid; using defaults.');
+  return bindings;
+}
+
+/** @param {{ abilities: string[], items: string[] }} bindings @param {(message: string) => void} say */
+function saveKeyBindings(bindings, say) {
+  try {
+    window.localStorage.setItem(KEY_BINDINGS_STORAGE_KEY, JSON.stringify(bindings));
+  } catch {
+    say('Could not save key assignments on this device.');
+  }
+}
+
+/** @param {EventTarget | null} target */
+function isTextEntry(target) {
+  return target instanceof HTMLElement && (
+    target.isContentEditable
+    || target.closest('input, textarea, select, [contenteditable="true"]') !== null
+  );
 }

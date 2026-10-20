@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { KIND, createState } from '../src/sim/index.js';
 import { ABILITY_SLOTS, ATTACK_TYPES, PALETTE, abilityStates, actionsFor, canAfford, heroLuxChoices, heroPickState, immediateCast, pendingLine, pickEntity, placement, resolveTap, secondsText } from '../src/client/ui/controls.js';
+import { actionForKey, DEFAULT_KEY_BINDINGS, defaultKeyBindings, keyLabel, normalizeKeyBindings } from '../src/client/input/key-bindings.js';
 import { loadData } from './helpers/load-data.js';
 
 const { raw, config } = loadData();
@@ -115,6 +116,30 @@ test('the ability bar follows the four slots of the data, M R A S', () => {
   assert.deepEqual(states.map((s) => s.costLux), [5, 5, 5, 10]);
   assert.ok(states.every((s) => s.ready && !s.poor));
   assert.deepEqual(states.map((s) => s.aim), ['none', 'target', 'point', 'none']);
+});
+
+test('the default keyboard slots map QWER to abilities and 1234 to inventory items', () => {
+  const bindings = defaultKeyBindings();
+  assert.deepEqual(bindings, {
+    abilities: ['KeyQ', 'KeyW', 'KeyE', 'KeyR'],
+    items: ['Digit1', 'Digit2', 'Digit3', 'Digit4'],
+  });
+  assert.deepEqual(actionForKey(bindings, 'KeyQ'), { kind: 'ability', slot: 0 });
+  assert.deepEqual(actionForKey(bindings, 'KeyR'), { kind: 'ability', slot: 3 });
+  assert.deepEqual(actionForKey(bindings, 'Digit1'), { kind: 'item', slot: 0 });
+  assert.deepEqual(actionForKey(bindings, 'Digit4'), { kind: 'item', slot: 3 });
+  assert.equal(actionForKey(bindings, 'KeyA'), null);
+  assert.equal(keyLabel('KeyQ'), 'Q');
+  assert.equal(keyLabel('Digit4'), '4');
+  assert.equal(DEFAULT_KEY_BINDINGS.abilities[0], 'KeyQ');
+});
+
+test('saved key slots require eight unique letter or digit codes', () => {
+  const custom = { abilities: ['KeyA', 'KeyS', 'KeyD', 'KeyF'], items: ['Digit5', 'Digit6', 'Digit7', 'Digit8'] };
+  assert.deepEqual(normalizeKeyBindings(custom), custom);
+  assert.deepEqual(normalizeKeyBindings({ ...custom, items: ['Digit5', 'Digit5', 'Digit7', 'Digit8'] }), defaultKeyBindings());
+  assert.deepEqual(normalizeKeyBindings({ ...custom, abilities: ['Escape', ...custom.abilities.slice(1)] }), defaultKeyBindings());
+  assert.deepEqual(normalizeKeyBindings(null), defaultKeyBindings());
 });
 
 test('a cooldown shows seconds rounded up to a tenth, and a spent cooldown shows the cost again', () => {

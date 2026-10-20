@@ -22,14 +22,16 @@ func _run() -> void:
 	_check("menu overlay is present", canvas_layer != null, true)
 	var touch_overlay: Control
 	var game_page: Control
+	var game_interface: Control
 	if canvas_layer != null:
-		var interface := canvas_layer.get_child(0) as Control
-		var home := interface.get("_home") as Control
-		touch_overlay = interface.get("_arena") as Control
-		game_page = interface.get("_game") as Control
+		game_interface = canvas_layer.get_child(0) as Control
+		var home := game_interface.get("_home") as Control
+		touch_overlay = game_interface.get("_arena") as Control
+		game_page = game_interface.get("_game") as Control
 		_check("start menu is visible", home.visible, true)
 		_check("3D touch overlay is active", touch_overlay.get_script() == load("res://scripts/arena_3d.gd"), true)
 		_check("zoom buttons are present", touch_overlay.get("_plus_button") is Button and touch_overlay.get("_minus_button") is Button, true)
+		_check("key settings overlay and button are available", game_interface.get("_key_settings_overlay") is Control and game_interface.get("_key_settings_button") is Button, true)
 
 	var entities: Array = []
 	for kind in range(1, 14):
@@ -168,6 +170,66 @@ func _run() -> void:
 		pinch.factor = 1.2
 		touch_overlay.call("_gui_input", pinch)
 		_check("trackpad pinch zooms without rotating the camera", float(touch_overlay.call("get_zoom")) != initial_zoom and scene_camera.position == position_before_pinch, true)
+
+	if game_interface != null:
+		game_interface.set("_data", {
+			"buildings": {
+				"solar": {"costLux": 1}, "wind": {"costLux": 1}, "geothermal": {"costLux": 1},
+				"nuclear": {"costLux": 1}, "barracks": {"costLux": 1}, "tower": {"costLux": 1},
+			},
+			"balance": {"core": {"minLeftAfterSpendLux": 1}, "hpFactor": {"core": 1, "default": 10}},
+			"abilities": {"templates": {
+				"melee": {"costLux": 5}, "ranged": {"costLux": 5}, "area": {"costLux": 5}, "shield": {"costLux": 10},
+			}},
+			"items": {"list": [
+				{"id": 0, "name": "Energy Boost", "target": "ownHeroOrBuilding", "effect": {"kind": "addLux"}},
+				{"id": 1, "name": "Energy Grab", "target": "self", "effect": {"kind": "funnelMode"}},
+				{"id": 2, "name": "Haste", "target": "self", "effect": {"kind": "attackSpeed"}},
+				{"id": 3, "name": "Sluggish", "target": "enemyUnit", "effect": {"kind": "attackSpeed"}},
+			]},
+			"heroes": {"roster": [{"id": 1, "name": "Test Hero", "primary": "melee"}]},
+		})
+		game_interface.set("_current_snapshot", {
+			"entities": [{"id": 100, "kind": 10, "owner": 0, "team": 0, "hp": 10000, "heroType": 1, "cd0": 0, "cd1": 0, "cd2": 0, "cd3": 0}],
+			"players": [{"id": 0, "items": [1, 0, 0, 0], "funnelLux": 0}],
+			"teams": [{"coreLux": 100000}],
+			"orders": [],
+			"groups": [],
+		})
+		game_interface.set("_role", "player")
+		(game_interface.get("_game") as Control).visible = true
+		var ranged_key := InputEventKey.new()
+		ranged_key.physical_keycode = KEY_W
+		ranged_key.pressed = true
+		game_interface.call("_unhandled_key_input", ranged_key)
+		_check("W hotkey enables ranged aim", int(game_interface.get("_ability")), 1)
+		var item_key := InputEventKey.new()
+		item_key.physical_keycode = KEY_1
+		item_key.pressed = true
+		game_interface.call("_unhandled_key_input", item_key)
+		_check("1 hotkey enables Energy Boost targeting", int(game_interface.get("_item_aim")), 0)
+		var ability_keys: Array = game_interface.get("_ability_keys")
+		var original_melee_key := int(ability_keys[0])
+		var original_ranged_key := int(ability_keys[1])
+		var binding_buttons: Array = game_interface.get("_key_binding_buttons")
+		game_interface.call("_open_key_settings")
+		game_interface.call("_begin_key_capture", "abilities", 1, binding_buttons[1])
+		var remap_key := InputEventKey.new()
+		remap_key.physical_keycode = KEY_A
+		remap_key.pressed = true
+		game_interface.call("_input", remap_key)
+		_check("settings remap the ranged slot", int(ability_keys[1]), KEY_A)
+		game_interface.call("_begin_key_capture", "abilities", 0, binding_buttons[0])
+		game_interface.call("_input", remap_key)
+		_check("settings reject a duplicate key", int(ability_keys[0]), original_melee_key)
+		var cancel_remap := InputEventKey.new()
+		cancel_remap.physical_keycode = KEY_ESCAPE
+		cancel_remap.pressed = true
+		game_interface.call("_input", cancel_remap)
+		ability_keys[1] = original_ranged_key
+		game_interface.call("_save_key_bindings")
+		game_interface.call("_refresh_key_binding_buttons")
+		(game_interface.get("_key_settings_overlay") as Control).visible = false
 
 	print("%d checks, %d failed" % [_checks, _failures])
 	scene.queue_free()

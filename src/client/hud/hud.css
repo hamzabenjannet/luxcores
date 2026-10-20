@@ -213,6 +213,18 @@ button:disabled { opacity: 0.4; }
 .ability.active { border-color: var(--blue); background: #1b2c52; }
 .item-row { flex-basis: 100%; }
 .item { padding: 8px 4px; }
+.key-settings-toggle { position: fixed; top: 40px; right: 76px; z-index: 5; padding: 6px 12px; font-size: 13px; background: rgba(22, 32, 56, 0.9); }
+.key-settings { width: min(420px, calc(100vw - 24px)); max-height: min(90vh, 700px); padding: 0; color: var(--fg); background: #0d1220; border: 1px solid #2a3550; border-radius: 10px; }
+.key-settings::backdrop { background: rgba(5, 6, 10, 0.78); }
+.key-settings-content { display: grid; gap: 8px; padding: 16px; }
+.key-settings-content h2, .key-settings-content h3, .key-settings-content p { margin: 0; }
+.key-settings-content h2 { font-size: 20px; }
+.key-settings-content h3 { margin-top: 6px; color: #aebfd3; }
+.key-settings-content > p { color: var(--dim); }
+.key-binding-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.key-binding { min-width: 76px; padding: 6px 10px; }
+.key-settings-message { min-height: 1.3em; font-size: 12px; color: #ffd76a; }
+.key-settings-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .hero-row, .shop-row { flex-direction: column; margin-top: 8px; }
 .shop-item.poor { opacity: 0.45; }
 .hero-note { color: var(--dim); font-size: 12px; }

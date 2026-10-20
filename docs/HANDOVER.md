@@ -215,7 +215,9 @@ Open for the owners:
 
 - **Godot camera.** The arrow keys adjust the camera view: Left and Right rotate it, while Up and Down change its elevation. Rotating the camera turns off hero follow. `vone/tests/main3d_scene.gd` checks each direction.
 - **Barracks (web and Godot).** Dropdowns choose the creep group size, creep type and hero. A separate Pick Hero button confirms the choice. Recycle, Set Default Path and Order Creeps share one row. The existing command payloads remain unchanged.
-- **Validation.** `npm test` passed 257 tests. `npm run headless -- 1 1000` completed with hash `389877c6`. The Godot parity tests passed 251 checks, the live match tests passed 135 checks, and the main 3D scene test passed 18 checks. The E2E run passed both Godot tests and skipped 19 tests because the Playwright server was unavailable. Browser E2E coverage for the updated barracks controls remains to be run.
+- **Hero keyboard slots (web and Godot).** Q/W/E/R call melee, ranged, area and shield in ability-slot order. Keys 1–4 call inventory slots 1–4, which hold Energy Boost, Energy Grab, Haste and Sluggish. Clicks still use the same actions.
+- **Key settings.** The KEYS button opens a remapping panel in each client. Each of the eight slots accepts a unique letter or digit. The web client saves to local storage; Godot saves to `user://luxcores.cfg`. These settings stay local to each client.
+- **Validation.** `npm test` passed 259 tests. `npm run headless -- 1 1000` produced hash `389877c6`. Godot parity, live-match and main-scene tests passed 251, 135 and 33 checks. The full `npm run test:e2e` run passed 19 of 21 tests. The item shortcut test passed. The hero test passed its remapping and hotkey assertions before a later panel-visibility timeout. The creep-order test timed out while its cancel row changed.
 
 ## Next Milestone: M10 (Cross-Browser Determinism and the Performance Pass)
 

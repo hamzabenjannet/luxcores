@@ -40,6 +40,12 @@ var _bottom_sheet: PanelContainer
 var _bottom_box: VBoxContainer
 var _summary_card: PanelContainer
 var _leave_button: Button
+var _key_settings_button: Button
+var _key_settings_overlay: Control
+var _key_binding_buttons: Array[Button] = []
+var _item_key_labels: Array[Label] = []
+var _key_capture_target := {}
+var _key_settings_message: Label
 ## The orders window (a floating log of every order made, collapsed by default) and what it needs.
 var _orders_window: PanelContainer
 var _orders_toggle: Button
@@ -75,8 +81,10 @@ var _hero_bar: HBoxContainer
 var _hero_name_label: Button
 var _follow_button: Button
 var _ability_buttons: Array = []
+var _ability_keys: Array[int] = [KEY_Q, KEY_W, KEY_E, KEY_R]
 var _item_bar: HBoxContainer
 var _item_buttons: Array = []
+var _item_keys: Array[int] = [KEY_1, KEY_2, KEY_3, KEY_4]
 ## The id of the item (Energy Boost or Sluggish) whose target the next tap chooses, or -1.
 var _item_aim := -1
 ## The tile chosen for the building in the palette, {tileX, tileZ}, or empty. The Place button sends it (GDD 11.5).
@@ -128,6 +136,7 @@ var _data: Dictionary = {}
 var _tick_hz := 20
 
 func _ready() -> void:
+	_load_key_bindings()
 	_backend = BackendClientScript.new()
 	add_child(_backend)
 	_backend.snapshot_received.connect(_on_snapshot)
@@ -307,6 +316,11 @@ func _build_interface() -> void:
 	_world_label.clip_text = true
 	_world_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	labels_row.add_child(_world_label)
+	_key_settings_button = _make_button("KEYS", Color("#34577a"))
+	_key_settings_button.custom_minimum_size = Vector2(76, 40)
+	_key_settings_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_key_settings_button.pressed.connect(_open_key_settings)
+	labels_row.add_child(_key_settings_button)
 	_top_box.add_child(labels_row)
 
 	_build_description = Label.new()
@@ -426,6 +440,7 @@ func _build_interface() -> void:
 
 	get_viewport().size_changed.connect(_fit_overlays)
 	_fit_overlays.call_deferred()
+	_build_key_settings()
 
 func _add_field(parent: VBoxContainer, caption: String, initial_text: String, variable_name: String) -> void:
 	var field_column := VBoxContainer.new()
@@ -459,6 +474,206 @@ func _make_button(caption: String, color: Color) -> Button:
 	hover.bg_color = color.lightened(0.12)
 	button.add_theme_stylebox_override("hover", hover)
 	return button
+
+func _build_key_settings() -> void:
+	_key_settings_overlay = Control.new()
+	_key_settings_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_key_settings_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_key_settings_overlay.visible = false
+	add_child(_key_settings_overlay)
+	var shade := ColorRect.new()
+	shade.color = Color(0.02, 0.03, 0.06, 0.82)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_key_settings_overlay.add_child(shade)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_key_settings_overlay.add_child(center)
+	var card := PanelContainer.new()
+	card.custom_minimum_size = Vector2(380, 0)
+	card.add_theme_stylebox_override("panel", _overlay_style(0.98))
+	center.add_child(card)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(360, minf(620.0, get_viewport_rect().size.y - 32.0))
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	card.add_child(scroll)
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 8)
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(content)
+	var title := Label.new()
+	title.text = "KEYBOARD CONTROLS"
+	title.add_theme_font_size_override("font_size", 22)
+	content.add_child(title)
+	var note := Label.new()
+	note.text = "Select a slot, then press an unused letter or number. Changes stay on this device."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(note)
+	var abilities_title := Label.new()
+	abilities_title.text = "Abilities"
+	abilities_title.add_theme_color_override("font_color", Color("#aebfd3"))
+	content.add_child(abilities_title)
+	for ability in GameLogic.ABILITY_SLOTS:
+		var slot := int(ability.slot)
+		var row := HBoxContainer.new()
+		var label := Label.new()
+		label.text = String(ability.type).capitalize()
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(label)
+		var binding := _make_button(_key_label(_ability_keys[slot]), Color("#24364a"))
+		binding.custom_minimum_size = Vector2(110, 44)
+		binding.pressed.connect(_begin_key_capture.bind("abilities", slot, binding))
+		row.add_child(binding)
+		_key_binding_buttons.append(binding)
+		content.add_child(row)
+	var items_title := Label.new()
+	items_title.text = "Inventory Slots"
+	items_title.add_theme_color_override("font_color", Color("#aebfd3"))
+	content.add_child(items_title)
+	var item_list := _item_list()
+	for slot in range(4):
+		var row := HBoxContainer.new()
+		var label := Label.new()
+		label.text = "Slot %d" % (slot + 1)
+		if slot < item_list.size():
+			label.text += "  " + String(item_list[slot].name)
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(label)
+		_item_key_labels.append(label)
+		var binding := _make_button(_key_label(_item_keys[slot]), Color("#24364a"))
+		binding.custom_minimum_size = Vector2(110, 44)
+		binding.pressed.connect(_begin_key_capture.bind("items", slot, binding))
+		row.add_child(binding)
+		_key_binding_buttons.append(binding)
+		content.add_child(row)
+	_key_settings_message = Label.new()
+	_key_settings_message.text = ""
+	_key_settings_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_key_settings_message.add_theme_color_override("font_color", Color("#ffd76a"))
+	content.add_child(_key_settings_message)
+	var actions := HBoxContainer.new()
+	var reset := _make_button("RESET DEFAULTS", Color("#34577a"))
+	reset.custom_minimum_size = Vector2(0, 44)
+	reset.pressed.connect(_reset_key_bindings)
+	actions.add_child(reset)
+	var close := _make_button("CLOSE", Color("#34577a"))
+	close.custom_minimum_size = Vector2(0, 44)
+	close.pressed.connect(func() -> void:
+		_key_capture_target = {}
+		_key_settings_overlay.visible = false)
+	actions.add_child(close)
+	content.add_child(actions)
+
+func _open_key_settings() -> void:
+	_key_capture_target = {}
+	_key_settings_message.text = ""
+	_key_settings_overlay.visible = true
+	_refresh_key_binding_buttons()
+
+func _begin_key_capture(kind: String, slot: int, button: Button) -> void:
+	_key_capture_target = {"kind": kind, "slot": slot}
+	button.text = "PRESS KEY"
+	_key_settings_message.text = "Press an unused letter or number. Escape cancels."
+
+func _input(event: InputEvent) -> void:
+	if _key_capture_target.is_empty() or not event is InputEventKey or not event.pressed or event.echo:
+		return
+	var key_event := event as InputEventKey
+	var code := int(key_event.physical_keycode)
+	if code == KEY_ESCAPE:
+		_key_capture_target = {}
+		_key_settings_message.text = "Key assignment cancelled."
+		_refresh_key_binding_buttons()
+		get_viewport().set_input_as_handled()
+		return
+	if key_event.ctrl_pressed or key_event.alt_pressed or key_event.meta_pressed or not _is_remappable_key(code):
+		_key_settings_message.text = "Choose a letter or number without a modifier."
+		get_viewport().set_input_as_handled()
+		return
+	if _key_is_assigned(code, String(_key_capture_target.kind), int(_key_capture_target.slot)):
+		_key_settings_message.text = "That key is already assigned to another slot."
+		get_viewport().set_input_as_handled()
+		return
+	var target := _key_capture_target
+	if String(target.kind) == "abilities":
+		_ability_keys[int(target.slot)] = code
+	else:
+		_item_keys[int(target.slot)] = code
+	_key_capture_target = {}
+	_key_settings_message.text = ""
+	_save_key_bindings()
+	_refresh_key_binding_buttons()
+	get_viewport().set_input_as_handled()
+
+func _refresh_key_binding_buttons() -> void:
+	for slot in range(4):
+		_key_binding_buttons[slot].text = _key_label(_ability_keys[slot])
+		_key_binding_buttons[slot + 4].text = _key_label(_item_keys[slot])
+	var items := _item_list()
+	for slot in range(_item_key_labels.size()):
+		_item_key_labels[slot].text = "Slot %d" % (slot + 1)
+		if slot < items.size():
+			_item_key_labels[slot].text += "  " + String(items[slot].name)
+
+func _reset_key_bindings() -> void:
+	_ability_keys = [KEY_Q, KEY_W, KEY_E, KEY_R]
+	_item_keys = [KEY_1, KEY_2, KEY_3, KEY_4]
+	_key_capture_target = {}
+	_key_settings_message.text = ""
+	_save_key_bindings()
+	_refresh_key_binding_buttons()
+
+func _load_key_bindings() -> void:
+	var config := ConfigFile.new()
+	var error := config.load("user://luxcores.cfg")
+	if error != OK:
+		if error != ERR_FILE_NOT_FOUND:
+			push_warning("Could not load local key assignments: %s." % error_string(error))
+		return
+	var abilities: Variant = config.get_value("key_bindings", "abilities", _ability_keys)
+	var items: Variant = config.get_value("key_bindings", "items", _item_keys)
+	if not abilities is Array or not items is Array or abilities.size() != 4 or items.size() != 4:
+		push_warning("Saved key assignments are invalid; using defaults.")
+		return
+	var ability_codes: Array = abilities.duplicate()
+	var item_codes: Array = items.duplicate()
+	var all_codes: Array[int] = []
+	for code in ability_codes + item_codes:
+		if not code is int or not _is_remappable_key(int(code)) or all_codes.has(int(code)):
+			push_warning("Saved key assignments are invalid; using defaults.")
+			return
+		all_codes.append(int(code))
+	_ability_keys.clear()
+	_item_keys.clear()
+	for code in ability_codes:
+		_ability_keys.append(int(code))
+	for code in item_codes:
+		_item_keys.append(int(code))
+
+func _save_key_bindings() -> void:
+	var config := ConfigFile.new()
+	var error := config.load("user://luxcores.cfg")
+	if error != OK and error != ERR_FILE_NOT_FOUND:
+		_set_status("Could not load local settings: %s." % error_string(error))
+		return
+	config.set_value("key_bindings", "abilities", _ability_keys)
+	config.set_value("key_bindings", "items", _item_keys)
+	var save_error := config.save("user://luxcores.cfg")
+	if save_error != OK:
+		_set_status("Could not save key assignments: %s." % error_string(save_error))
+
+func _key_is_assigned(code: int, target_kind: String, target_slot: int) -> bool:
+	for slot in range(4):
+		if _ability_keys[slot] == code and (target_kind != "abilities" or slot != target_slot):
+			return true
+		if _item_keys[slot] == code and (target_kind != "items" or slot != target_slot):
+			return true
+	return false
+
+func _is_remappable_key(code: int) -> bool:
+	return (code >= KEY_A and code <= KEY_Z) or (code >= KEY_0 and code <= KEY_9)
+
+func _key_label(code: int) -> String:
+	return OS.get_keycode_string(code)
 
 func _set_dark_theme() -> void:
 	var dark_theme := Theme.new()
@@ -1224,6 +1439,7 @@ func _refresh_hero_bar() -> void:
 	for state in states:
 		var button: Button = _ability_buttons[int(state.slot)]
 		button.text = String(state.text)
+		button.tooltip_text = "%s (%s)" % [String(state.type).capitalize(), _key_label(_ability_keys[int(state.slot)])]
 		var dim: bool = not bool(state.ready) or bool(state.poor)
 		button.modulate = Color(1, 1, 1, 0.5 if dim else 1.0)
 		button.flat = _ability != int(state.slot)
@@ -1238,6 +1454,34 @@ func _on_ability_pressed(slot: int) -> void:
 	if Time.get_ticks_msec() < _ignore_press_until:
 		return
 	_cast_from_bar(slot)
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if not event is InputEventKey or not event.pressed or event.echo:
+		return
+	if _key_settings_overlay.visible:
+		if event.physical_keycode == KEY_ESCAPE:
+			_key_capture_target = {}
+			_key_settings_overlay.visible = false
+			get_viewport().set_input_as_handled()
+		return
+	if not _game.visible or _role == "spectator" or event.ctrl_pressed or event.alt_pressed or event.meta_pressed:
+		return
+	if _viewer_hero().is_empty():
+		return
+	var focused := get_viewport().gui_get_focus_owner()
+	if focused is LineEdit or focused is TextEdit or focused is SpinBox or focused is OptionButton:
+		return
+	var code := int(event.physical_keycode)
+	var ability_slot := _ability_keys.find(code)
+	if ability_slot >= 0:
+		_cast_from_bar(ability_slot)
+		get_viewport().set_input_as_handled()
+		return
+	var item_slot := _item_keys.find(code)
+	var items := _item_list()
+	if item_slot >= 0 and item_slot < items.size():
+		_use_from_bar(int(items[item_slot].id))
+		get_viewport().set_input_as_handled()
 
 ## Hold-to-aim: press an aimed ability button, drag onto the map and lift to cast there. Lifting back over the
 ## button cancels, and a press that stays on it is a plain click (GameLogic.hold_aim_release).
@@ -1319,6 +1563,7 @@ func _refresh_item_bar() -> void:
 			item_button.custom_minimum_size = Vector2(0, 44)
 			item_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			item_button.name = "Item%d" % int(entry.id)
+			item_button.tooltip_text = "%s (%s)" % [String(entry.name), _key_label(_item_keys[_item_buttons.size()])]
 			item_button.pressed.connect(_use_from_bar.bind(int(entry.id)))
 			_item_bar.add_child(item_button)
 			_item_buttons.append(item_button)
@@ -1327,6 +1572,7 @@ func _refresh_item_bar() -> void:
 	for state in GameLogic.item_states(items, player.get("items", []), int(player.get("funnelLux", 0))):
 		var item_button: Button = _item_buttons[int(state.id)]
 		item_button.text = String(state.text)
+		item_button.tooltip_text = "%s (%s)" % [String(items[int(state.id)].name), _key_label(_item_keys[int(state.id)])]
 		item_button.modulate = Color(1, 1, 1, 1.0 if bool(state.ready) else 0.5)
 		item_button.flat = not (bool(state.active) or _item_aim == int(state.id))
 

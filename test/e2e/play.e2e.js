@@ -185,7 +185,7 @@ test('a human buys items at a barracks, receives them with the hero and uses the
     assert.equal(await page.locator('.hero-bar').isHidden(), true, 'no hero, no item bar');
 
     // A small hero with the 25% allocation, then the items arrive with it.
-    await page.click('[data-alloc="25%"]');
+    await page.locator('.hero-power').selectOption('25%');
     await page.locator('.hero-pick').selectOption('1');
     await page.click('.hero-confirm');
     await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 10 && e.owner === 0), undefined, 30_000);
@@ -199,6 +199,11 @@ test('a human buys items at a barracks, receives them with the hero and uses the
     await page.click('.item[data-item="2"]');
     await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 10 && e.owner === 0 && e.speedMod === 300));
     await until(page, () => document.querySelector('.item[data-item="2"]')?.textContent === 'Haste 0');
+
+    await page.keyboard.press('1');
+    await until(page, () => document.querySelector('.item[data-item="0"]')?.classList.contains('active') === true);
+    await page.keyboard.press('1');
+    await until(page, () => document.querySelector('.item[data-item="0"]')?.classList.contains('active') === false);
 
     // Boost aims: the first tap on the button waits for a target, empty ground refuses, the hero takes it.
     const before = await hero();
@@ -230,7 +235,7 @@ test('a human picks a hero at a barracks, shields it and aims its area ability, 
     await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 6 && e.team === 0));
     assert.equal(await page.locator('button[data-building].active').count(), 0, 'the barracks placement freed the palette');
     await tapTile(page, barracksTile);
-    await page.waitForSelector('.panel:not([hidden]) .hero-pick option[data-hero="1"]');
+    await page.waitForSelector('.panel:not([hidden]) .hero-pick');
     assert.equal(await page.locator('.hero-pick option[data-hero]').count(), 5, 'the whole roster is offered');
     assert.equal(await page.locator('.hero-bar').isHidden(), true, 'no hero yet, no ability bar');
 
@@ -247,6 +252,18 @@ test('a human picks a hero at a barracks, shields it and aims its area ability, 
     // With a hero on the field the roster is greyed out and says why. The barracks stays selected, and a tap
     // on its tile would land under the panel anyway.
     await until(page, () => document.querySelector('.hero-note')?.textContent === 'Hero: Your hero is on the field.');
+
+    await page.click('.key-settings-toggle');
+    await page.waitForSelector('.key-settings[open]');
+    const rangedKeyRow = page.locator('.key-binding-row').filter({ hasText: 'ranged' });
+    await rangedKeyRow.locator('button').click();
+    await page.keyboard.press('a');
+    await until(page, () => localStorage.getItem('luxcores.key-bindings.v1')?.includes('"KeyA"') === true);
+    await page.locator('.key-settings-actions button').last().click();
+    await page.keyboard.press('a');
+    await until(page, () => document.querySelector('.ability[data-slot="1"]')?.classList.contains('active') === true);
+    await page.click('.ability[data-slot="1"]');
+    await until(page, () => document.querySelector('.ability[data-slot="1"]')?.classList.contains('active') === false);
 
     // Follow: the button locks the camera on the hero, and dragging the map unlocks it.
     assert.equal(await page.evaluate(() => /** @type {any} */ (window).__luxTest.following()), false);
