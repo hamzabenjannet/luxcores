@@ -178,6 +178,17 @@ button:disabled { opacity: 0.4; }
 .order-row:empty { display: none; }
 .segments { display: flex; gap: 6px; }
 .segments .segment { flex: 1; }
+.barracks-select { width: 100%; min-width: 0; padding: 8px; color: var(--fg); background: #24364a; border: 1px solid #2a3550; border-radius: 8px; font: inherit; }
+.barracks-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.barracks-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.barracks-actions .action { min-width: 0; justify-content: center; }
+.barracks-recycle { background: #75582b; }
+.barracks-path { background: #2f4c75; }
+.barracks-actions .order { background: #287557; }
+.hero-confirm { justify-content: center; }
+.hero-row .barracks-select { flex: 1 1 0; }
+.hero-controls { display: flex; gap: 6px; }
+.hero-controls > * { flex: 1 1 0; min-width: 0; }
 .action.active { border-color: var(--blue); background: #1b2c52; }
 /* The orders window: a floating log under the Leave button, collapsed by default, three rows high, outside the barracks panel */
 .orders { position: absolute; top: 76px; right: 8px; z-index: 4; width: min(270px, 62vw); pointer-events: auto; background: rgba(13, 18, 32, 0.92); border: 1px solid #2a3550; border-radius: 8px; }

@@ -158,22 +158,37 @@ func _run() -> void:
 	var barracks_id: int = int(_find(GameLogic.KIND_BARRACKS, 0)[0].id)
 	_check("the barracks placement freed the palette", _main._building, "")
 	await _main._on_arena_tapped(Vector2(barracks_tile.x + 0.5, barracks_tile.y + 0.5))
-	_check("the barracks panel shows the order controls", _main._panel.visible and _main._order_box.get_child_count() >= 3, true)
+	_check("the barracks panel shows the order controls", _main._panel.visible and _main._order_box.get_child_count() >= 2, true)
+	var creep_controls := _main._order_box.get_child(0) as HBoxContainer
+	_check("creep count and type share one row", creep_controls.get_child_count() == 2 and creep_controls.get_child(0) is OptionButton and creep_controls.get_child(1) is OptionButton, true)
 
-	# One group through the panel buttons: 2 ranged creeps.
-	_main._set_order_count(2)
-	_main._set_order_type("ranged")
+	# One group through the panel dropdowns: 2 ranged creeps.
+	var count_selector := creep_controls.get_child(0) as OptionButton
+	for index in count_selector.item_count:
+		if int(count_selector.get_item_metadata(index)) == 2:
+			count_selector.select(index)
+			count_selector.item_selected.emit(index)
+			break
+	var type_selector := creep_controls.get_child(1) as OptionButton
+	for index in type_selector.item_count:
+		if String(type_selector.get_item_metadata(index)) == "ranged":
+			type_selector.select(index)
+			type_selector.item_selected.emit(index)
+			break
+	var actions_row := _main._order_box.get_node("BarracksActions") as HBoxContainer
+	_check("recycle, default path and order share one row", actions_row.get_child_count() == 3 and actions_row.get_child(0).name == "BarracksRecycle" and actions_row.get_child(1).name == "SetDefaultPath" and actions_row.get_child(2).name == "OrderCreeps", true)
 	# The orders window is outside the barracks panel and starts collapsed.
 	_check("the orders window is not part of the barracks panel", not _main._panel.is_ancestor_of(_main._orders_window) and _main._orders_window.visible, true)
 	_check("the orders window starts collapsed", not _main._orders_scroll.visible and _main._orders_toggle.text == "Orders (0) ▸", true)
 	await process_frame
 	var panel_height: float = _main._panel.size.y
-	var order_button_top: float = _main._order_box.get_child(2).global_position.y
-	_main._order_box.get_child(2).pressed.emit()
+	var order_button := actions_row.get_node("OrderCreeps") as Button
+	var order_button_top: float = order_button.global_position.y
+	order_button.pressed.emit()
 	_check("a sent order shows in the log at once, as a dim row", _main._orders_list.get_child_count() == 1 and _main._orders_list.get_child(0).get_child(1).text == "Group of 2 RR ...", true)
 	_check("the log lists the order", await _until(func(): return _main._orders_list.get_child_count() == 1 and _main._pending.is_empty() and _main._orders_list.get_child(0).get_child(1).text.begins_with("Group of 2 RR")), true)
 	await process_frame
-	_check("a new order moves nothing in the barracks panel", is_equal_approx(_main._panel.size.y, panel_height) and is_equal_approx(_main._order_box.get_child(2).global_position.y, order_button_top), true)
+	_check("a new order moves nothing in the barracks panel", is_equal_approx(_main._panel.size.y, panel_height) and is_equal_approx(order_button.global_position.y, order_button_top), true)
 	# A group of 5 and three of 1 go in at once; the panel cancels the last.
 	for mix in [["melee", "ranged", "area", "melee", "ranged"], ["melee"], ["melee"], ["melee"]]:
 		await _main._backend.send_command({"t": "orderCreeps", "barracksId": barracks_id, "mix": mix})
@@ -237,9 +252,12 @@ func _run() -> void:
 	_check("the hero barracks appears", await _until(func(): return _find(GameLogic.KIND_BARRACKS, 0).size() == 1), true)
 	_check("the barracks placement freed the palette", _main._building, "")
 	await _main._on_arena_tapped(Vector2(hero_tile.x + 0.5, hero_tile.y + 0.5))
-	_check("the barracks panel offers the whole roster", _main._hero_box.get_child_count() == 3 and _main._hero_box.get_child(2).get_child_count() == 5, true)
+	var hero_controls := _main._hero_box.get_child(1) as HBoxContainer
+	_check("hero pick, roster and power share one row", _main._hero_box.get_child_count() == 2 and hero_controls.get_child_count() == 3 and hero_controls.get_child(0).name == "PickHero" and hero_controls.get_child(1) is OptionButton and hero_controls.get_child(2) is OptionButton, true)
+	_check("the hero dropdown offers the whole roster", (hero_controls.get_child(1) as OptionButton).item_count == 5, true)
+	_check("hero power uses a dropdown", (hero_controls.get_child(2) as OptionButton).name == "HeroPowerSelector", true)
 	_check("no hero, no hero bar", _main._hero_bar.visible, false)
-	_main._hero_box.get_child(2).get_child(1).pressed.emit() # Prism, with the default allocation
+	_pick_hero_in_panel(1) # Prism, with the default allocation
 	_check("the log lists the hero pick", await _until(func(): return _main._orders_list.get_child_count() == 1 and _main._orders_list.get_child(0).get_child(1).text.begins_with("Hero Prism")), true)
 	_check("the hero stands next to its barracks", await _until(func(): return _find(GameLogic.KIND_HERO, 0).size() == 1), true)
 	var hero: Dictionary = _find(GameLogic.KIND_HERO, 0)[0]
@@ -336,8 +354,8 @@ func _run() -> void:
 	_check("both items wait in the barracks without a hero", held, true)
 	_check("the log says an item is held", _main._orders_labels.values().any(func(label): return label.text == "Item Haste HELD"), true)
 	_check("no hero, no item bar", _main._item_bar.visible, false)
-	_main._set_hero_alloc("25%")
-	_main._hero_box.get_child(2).get_child(1).pressed.emit() # Prism, with 25% of the Core
+	_set_hero_power_in_panel("25%")
+	_pick_hero_in_panel(1) # Prism, with 25% of the Core
 	_check("the hero stands on the map", await _until(func(): return _find(GameLogic.KIND_HERO, 0).size() == 1), true)
 	_check("the items arrive with the hero", await _until(func(): return _main._viewer_player().get("items", [0, 0, 0, 0]).map(func(n): return int(n)) == [1, 0, 1, 0]), true)
 	_check("the item bar shows the counts", await _until(func(): return _main._item_bar.visible and _main._item_buttons[2].text == "Haste 1" and _main._item_buttons[0].text == "Boost 1"), true)
@@ -400,6 +418,26 @@ func _entities() -> Array:
 
 func _find(kind: int, team: int) -> Array:
 	return _entities().filter(func(e): return int(e.kind) == kind and int(e.team) == team)
+
+func _pick_hero_in_panel(hero_id: int) -> void:
+	var controls := _main._hero_box.get_child(1) as HBoxContainer
+	var selector := controls.get_child(1) as OptionButton
+	for index in selector.item_count:
+		if int(selector.get_item_metadata(index)) == hero_id:
+			selector.select(index)
+			selector.item_selected.emit(index)
+			break
+	(controls.get_child(0) as Button).pressed.emit()
+
+func _set_hero_power_in_panel(label: String) -> void:
+	var controls := _main._hero_box.get_child(1) as HBoxContainer
+	var selector := controls.get_child(2) as OptionButton
+	for index in selector.item_count:
+		if String(selector.get_item_metadata(index)) == label:
+			selector.select(index)
+			selector.item_selected.emit(index)
+			return
+	_check("hero power option is available", false, true)
 
 ## A free tile (not a vent) in team 0's build zone near the middle, the n-th by distance.
 ## One mouse event on an ability button at a point local to the button: a press, a release, or (motion) a move.

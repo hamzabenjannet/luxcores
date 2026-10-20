@@ -96,10 +96,14 @@ var _pending: Array = []
 var _pending_seq := 0
 var _action_buttons: Array = []
 var _order_button: Button
-## The hero lux choices of the latest refresh, which a hero button reads when it is pressed.
+## The hero lux choices of the latest refresh, which the Pick Hero button reads when pressed.
 var _hero_choices: Array = []
 var _hero_note: Label
-var _hero_alloc_buttons := {}
+var _hero_selector: OptionButton
+var _hero_power_selector: OptionButton
+var _hero_pick_button: Button
+var _hero_selected := -1
+var _hero_enabled := {}
 var _shop_buttons := {}
 var _mode := ""
 var _selected_group := -1
@@ -140,7 +144,10 @@ func _build_interface() -> void:
 	_set_dark_theme()
 	# The arena is the background of the whole window and takes every tap that no control catches. The
 	# controls float over it in translucent panels, so the map keeps all the space, as in the web client.
-	_arena = Arena3DScript.new() if _world_3d != null else ArenaScript.new()
+	if _world_3d != null:
+		_arena = Arena3DScript.new()
+	else:
+		_arena = ArenaScript.new()
 	if _arena is Control and _arena.has_method("set_world_root"):
 		_arena.set_world_root(_world_3d)
 	_arena.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -925,14 +932,15 @@ func _show_building_panel(selected: Dictionary) -> void:
 				"call": _run_panel_action.bind(action.command),
 				"dim": action.has("costLux") and not GameLogic.can_afford(lux, int(action.costLux), min_left),
 			})
-		_fill_row(_panel_row, items)
-		_action_buttons = _panel_row.get_children()
+		var barracks_ready := int(selected.kind) == GameLogic.KIND_BARRACKS and int(selected.get("recycle", 0)) == 0
+		_fill_row(_panel_row, [] if barracks_ready else items)
+		_action_buttons = [] if barracks_ready else _panel_row.get_children()
 	for index in actions.size():
 		if index < _action_buttons.size():
 			var poor: bool = actions[index].has("costLux") and not GameLogic.can_afford(lux, int(actions[index].costLux), min_left)
 			(_action_buttons[index] as Button).modulate = Color(1, 1, 1, 0.5) if poor else Color.WHITE
 	if int(selected.kind) == GameLogic.KIND_BARRACKS and int(selected.get("recycle", 0)) == 0:
-		_show_barracks_controls(selected, lux, min_left)
+		_show_barracks_controls(selected, lux, min_left, actions)
 	else:
 		_clear_box(_order_box)
 		_clear_box(_hero_box)
@@ -942,7 +950,7 @@ func _show_building_panel(selected: Dictionary) -> void:
 		_clear_box(_shop_box)
 
 ## Creep order controls and the queue of a barracks.
-func _show_barracks_controls(barracks: Dictionary, lux: int, min_left: int) -> void:
+func _show_barracks_controls(barracks: Dictionary, lux: int, min_left: int, actions: Array) -> void:
 	var creep: Dictionary = _data.balance.creep
 	var cost := _order_count * int(creep.costLux)
 	var poor := not GameLogic.can_afford(lux, cost, min_left)
@@ -951,30 +959,59 @@ func _show_barracks_controls(barracks: Dictionary, lux: int, min_left: int) -> v
 	if order_key != _order_key:
 		_order_key = order_key
 		_clear_box(_order_box)
-		var counts := HBoxContainer.new()
-		counts.add_theme_constant_override("separation", 6)
+		var choices := HBoxContainer.new()
+		choices.add_theme_constant_override("separation", 6)
+		var counts := OptionButton.new()
+		counts.name = "CreepCount"
+		counts.tooltip_text = "Number of creeps"
 		for n in range(int(creep.groupMin), int(creep.groupMax) + 1):
-			var count_button := _make_button(str(n), Color("#315f95") if n == _order_count else Color("#24364a"))
-			count_button.custom_minimum_size = Vector2(0, 44)
-			count_button.pressed.connect(_set_order_count.bind(n))
-			counts.add_child(count_button)
-		_order_box.add_child(counts)
-		var types := HBoxContainer.new()
-		types.add_theme_constant_override("separation", 6)
+			var index := counts.item_count
+			counts.add_item(str(n))
+			counts.set_item_metadata(index, n)
+			if n == _order_count:
+				counts.select(index)
+		counts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		counts.item_selected.connect(func(index: int) -> void: _set_order_count(int(counts.get_item_metadata(index))))
+		choices.add_child(counts)
+		var types := OptionButton.new()
+		types.name = "CreepType"
+		types.tooltip_text = "Creep type"
 		for type in GameLogic.ORDER_TYPES:
-			var type_button := _make_button(String(type).capitalize(), Color("#315f95") if type == _order_type else Color("#24364a"))
-			type_button.custom_minimum_size = Vector2(0, 44)
-			type_button.pressed.connect(_set_order_type.bind(String(type)))
-			types.add_child(type_button)
-		_order_box.add_child(types)
-		_order_button = _make_button("Order %d creeps  %d lux" % [_order_count, cost], Color("#287557"))
-		_order_button.custom_minimum_size = Vector2(0, 48)
-		_order_button.pressed.connect(_run_panel_action.bind({"t": "orderCreeps", "barracksId": int(barracks.id), "mix": GameLogic.mix_for(_order_count, _order_type)}))
-		_order_box.add_child(_order_button)
+			var index := types.item_count
+			types.add_item(String(type).capitalize())
+			types.set_item_metadata(index, String(type))
+			if String(type) == _order_type:
+				types.select(index)
+		types.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		types.item_selected.connect(func(index: int) -> void: _set_order_type(String(types.get_item_metadata(index))))
+		choices.add_child(types)
+		_order_box.add_child(choices)
+		var actions_row := HBoxContainer.new()
+		actions_row.name = "BarracksActions"
+		actions_row.add_theme_constant_override("separation", 6)
+		for action in actions:
+			if String(action.id) != "recycle":
+				continue
+			var recycle_button := _make_button(String(action.label), Color("#75582b"))
+			recycle_button.name = "BarracksRecycle"
+			recycle_button.custom_minimum_size = Vector2(0, 48)
+			recycle_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			recycle_button.pressed.connect(_run_panel_action.bind(action.command))
+			actions_row.add_child(recycle_button)
+			break
 		var path_button := _make_button("Default Path" if not waypoints.is_empty() else "Set Default Path", Color("#2f4c75"))
+		path_button.name = "SetDefaultPath"
 		path_button.custom_minimum_size = Vector2(0, 48)
+		path_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		path_button.pressed.connect(_start_barracks_path.bind(int(barracks.id)))
-		_order_box.add_child(path_button)
+		actions_row.add_child(path_button)
+		_order_button = _make_button("Order %d creeps  %d lux" % [_order_count, cost], Color("#287557"))
+		_order_button.name = "OrderCreeps"
+		_order_button.custom_minimum_size = Vector2(0, 48)
+		_order_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_order_button.pressed.connect(_run_panel_action.bind({"t": "orderCreeps", "barracksId": int(barracks.id), "mix": GameLogic.mix_for(_order_count, _order_type)}))
+		actions_row.add_child(_order_button)
+		_order_box.add_child(actions_row)
 		if not waypoints.is_empty():
 			var clear_button := _make_button("Clear Path", Color("#52313b"))
 			clear_button.custom_minimum_size = Vector2(0, 48)
@@ -1023,8 +1060,8 @@ func _viewer_player() -> Dictionary:
 			return player
 	return {}
 
-## The hero part of a barracks panel (GDD 7.1): the lux to allocate and the roster, with locked heroes
-## and the death cooldown shown. A tap on a hero picks it at this barracks.
+## The hero part of a barracks panel (GDD 7.1): the lux to allocate and a dropdown roster, with locked
+## heroes and the death cooldown shown.
 func _show_hero_picks(barracks: Dictionary, lux: int, min_left: int) -> void:
 	var queued := false
 	for order in _current_snapshot.get("orders", []):
@@ -1042,53 +1079,82 @@ func _show_hero_picks(barracks: Dictionary, lux: int, min_left: int) -> void:
 	if chosen.is_empty() and not choices.is_empty():
 		chosen = choices[0]
 	_hero_choices = choices
-	# The key holds labels and flags only: the amounts follow the Core's lux every tick, and a button
-	# replaced between press and release loses the click. The texts update in place below.
+	# The key holds labels and flags only: lux amounts follow the Core every tick, so the dropdown stays in place.
 	var key := "%d" % int(barracks.id)
 	for option in pick_state.options:
 		key += "|%d%s%s" % [int(option.id), "L" if option.locked else "", "E" if option.enabled else ""]
 	for choice in choices:
 		key += "|" + String(choice.label)
-	key += "|" + (String(chosen.label) if not chosen.is_empty() else "")
 	if key != _hero_key:
 		_hero_key = key
-		_hero_alloc_buttons.clear()
+		_hero_enabled.clear()
 		_clear_box(_hero_box)
 		_hero_note = Label.new()
 		_hero_note.add_theme_font_size_override("font_size", 15)
 		_hero_note.add_theme_color_override("font_color", Color("#8a93a6"))
 		_hero_box.add_child(_hero_note)
-		var allocation := HBoxContainer.new()
-		allocation.add_theme_constant_override("separation", 6)
-		for choice in choices:
-			var alloc_button := _make_button("", Color("#315f95") if choice == chosen else Color("#24364a"))
-			alloc_button.custom_minimum_size = Vector2(0, 44)
-			alloc_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			alloc_button.pressed.connect(_set_hero_alloc.bind(String(choice.label)))
-			allocation.add_child(alloc_button)
-			_hero_alloc_buttons[String(choice.label)] = alloc_button
-		_hero_box.add_child(allocation)
-		var heroes := HBoxContainer.new()
-		heroes.add_theme_constant_override("separation", 6)
+		var selected_option: Dictionary = {}
 		for option in pick_state.options:
-			var hero_button := _make_button("%s %s" % [option.name, String(option.primary).substr(0, 1).to_upper()], Color("#24364a"))
-			hero_button.custom_minimum_size = Vector2(0, 44)
-			hero_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			hero_button.name = "HeroPick%d" % int(option.id)
-			if not bool(option.enabled):
-				hero_button.modulate = Color(1, 1, 1, 0.5)
-			hero_button.pressed.connect(_pick_hero.bind(int(option.id), int(barracks.id)))
-			heroes.add_child(hero_button)
-		_hero_box.add_child(heroes)
+			_hero_enabled[int(option.id)] = bool(option.enabled)
+			if int(option.id) == _hero_selected and bool(option.enabled):
+				selected_option = option
+			elif selected_option.is_empty() and bool(option.enabled):
+				selected_option = option
+		if selected_option.is_empty() and not pick_state.options.is_empty():
+			selected_option = pick_state.options[0]
+		_hero_selected = int(selected_option.get("id", -1))
+		var hero_controls := HBoxContainer.new()
+		hero_controls.add_theme_constant_override("separation", 6)
+		_hero_pick_button = _make_button("Pick Hero", Color("#315f95"))
+		_hero_pick_button.name = "PickHero"
+		_hero_pick_button.custom_minimum_size = Vector2(0, 44)
+		_hero_pick_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_hero_pick_button.pressed.connect(_pick_selected_hero.bind(int(barracks.id)))
+		hero_controls.add_child(_hero_pick_button)
+		_hero_selector = OptionButton.new()
+		_hero_selector.name = "HeroSelector"
+		for option in pick_state.options:
+			var index := _hero_selector.item_count
+			_hero_selector.add_item("%s %s%s" % [option.name, String(option.primary).substr(0, 1).to_upper(), " (locked)" if bool(option.locked) else ""])
+			_hero_selector.set_item_metadata(index, int(option.id))
+			_hero_selector.set_item_disabled(index, not bool(option.enabled))
+			if int(option.id) == _hero_selected:
+				_hero_selector.select(index)
+		_hero_selector.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_hero_selector.item_selected.connect(_on_hero_selected)
+		hero_controls.add_child(_hero_selector)
+		_hero_power_selector = OptionButton.new()
+		_hero_power_selector.name = "HeroPowerSelector"
+		for choice in choices:
+			var index := _hero_power_selector.item_count
+			_hero_power_selector.add_item("%s %d" % [choice.label, int(choice.lux)])
+			_hero_power_selector.set_item_metadata(index, String(choice.label))
+			if String(choice.label) == String(chosen.get("label", "")):
+				_hero_power_selector.select(index)
+		_hero_power_selector.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_hero_power_selector.item_selected.connect(_on_hero_alloc_selected)
+		hero_controls.add_child(_hero_power_selector)
+		_hero_box.add_child(hero_controls)
 	var note_text := "Hero: %s" % pick_state.note if not String(pick_state.note).is_empty() else "Hero: pick one, with the lux below"
 	if is_instance_valid(_hero_note) and _hero_note.text != note_text:
 		_hero_note.text = note_text
-	for choice in choices:
-		var alloc: Button = _hero_alloc_buttons.get(String(choice.label))
-		if alloc != null:
-			var alloc_text := "%s %d" % [choice.label, int(choice.lux)]
-			if alloc.text != alloc_text:
-				alloc.text = alloc_text
+	for index in choices.size():
+		var choice: Dictionary = choices[index]
+		_hero_power_selector.set_item_text(index, "%s %d" % [choice.label, int(choice.lux)])
+		if String(choice.label) == String(chosen.get("label", "")):
+			_hero_power_selector.select(index)
+	_hero_power_selector.disabled = choices.is_empty()
+	if is_instance_valid(_hero_pick_button):
+		_hero_pick_button.disabled = not bool(_hero_enabled.get(_hero_selected, false)) or choices.is_empty()
+
+func _on_hero_selected(index: int) -> void:
+	_hero_selected = int(_hero_selector.get_item_metadata(index))
+	if is_instance_valid(_hero_pick_button):
+		_hero_pick_button.disabled = not bool(_hero_enabled.get(_hero_selected, false)) or _hero_choices.is_empty()
+
+func _pick_selected_hero(barracks_id: int) -> void:
+	if bool(_hero_enabled.get(_hero_selected, false)):
+		_pick_hero(_hero_selected, barracks_id)
 
 ## The item part of a barracks panel (GDD 8.1): one button per item with its price. A bought item
 ## waits in the queue and reaches the hero's inventory when it is built.
@@ -1125,6 +1191,9 @@ func _show_shop(barracks: Dictionary, lux: int, min_left: int) -> void:
 func _set_hero_alloc(label: String) -> void:
 	_hero_alloc = label
 	_refresh_panel()
+
+func _on_hero_alloc_selected(index: int) -> void:
+	_set_hero_alloc(String(_hero_power_selector.get_item_metadata(index)))
 
 func _pick_hero(hero_id: int, barracks_id: int) -> void:
 	var chosen: Dictionary = {}
@@ -1203,9 +1272,9 @@ func _on_ability_gui_input(event: InputEvent, slot: int, button: Button) -> void
 			return
 		_ignore_press_until = Time.get_ticks_msec() + 200
 		var what := GameLogic.hold_aim_release(true, over_button)
-		var ground: Dictionary = _arena.ground_at_global(global_point)
-		if what == "cast" and not ground.is_empty():
-			_on_arena_tapped(ground.ground)
+		var release_ground: Dictionary = _arena.ground_at_global(global_point)
+		if what == "cast" and not release_ground.is_empty():
+			_on_arena_tapped(release_ground.ground)
 		# A refused cast (no enemy under the finger) ends the aim too: the drag was the whole gesture.
 		if _ability == slot:
 			_ability = -1
@@ -1714,7 +1783,7 @@ func _fit_overlays() -> void:
 	_top_panel.custom_minimum_size.x = minf(SHEET_WIDTH, room.x)
 	# The orders window sits at the top right; a window too narrow for it beside the top panel gets it below.
 	var beside := room.x >= SHEET_WIDTH + 2.0 * (ORDERS_WIDTH + UI_MARGIN)
-	_orders_window.offset_top = UI_MARGIN if beside else _top_panel.get_combined_minimum_size().y + UI_MARGIN * 2.0
+	_orders_window.offset_top = float(UI_MARGIN) if beside else _top_panel.get_combined_minimum_size().y + UI_MARGIN * 2.0
 	_bottom_sheet.custom_minimum_size.x = minf(SHEET_WIDTH, room.x)
 
 func _copy_match_id() -> void:

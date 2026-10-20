@@ -807,12 +807,17 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   let pendingSeq = 0;
   /** @type {HTMLButtonElement | undefined} */
   let orderButton;
-  /** The hero lux choices of the latest render, which a hero button reads when it is pressed. */
+  /** The hero lux choices of the latest render, which the Pick Hero button reads when pressed. */
   let heroChoices = /** @type {{ label: string, lux: number }[]} */ ([]);
+  let heroSelected = -1;
   /** @type {HTMLElement | undefined} */
   let heroNote;
-  /** @type {Map<string, HTMLElement>} */
-  const heroAllocButtons = new Map();
+  /** @type {HTMLSelectElement | undefined} */
+  let heroSelect;
+  /** @type {HTMLSelectElement | undefined} */
+  let heroPowerSelect;
+  /** @type {HTMLButtonElement | undefined} */
+  let heroPickButton;
   /** @type {Map<number, HTMLElement>} */
   const shopButtons = new Map();
 
@@ -974,19 +979,19 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     const key = `${e.id}|${actions.map((a) => a.id).join(',')}`;
     if (key !== panelKey) {
       panelKey = key;
-      panelRow.replaceChildren(...actions.map((action) => {
+      panelRow.replaceChildren(...(e.kind === KIND.BARRACKS && e.recycle === 0 ? [] : actions).map((action) => {
         const b = button(action.label, () => issue(action.command));
         if (action.costLux !== undefined) b.append(el('span', 'tool-cost', String(action.costLux)));
         return b;
       }));
     }
     actions.forEach((action, i) => panelRow.children[i]?.classList.toggle('poor', action.poor));
-    if (e.kind === KIND.BARRACKS && e.recycle === 0) renderBarracks(e, lux);
+    if (e.kind === KIND.BARRACKS && e.recycle === 0) renderBarracks(e, lux, actions);
     else {
       orderRow.replaceChildren();
       heroRow.replaceChildren();
-        shopRow.replaceChildren();
-    orderKey = heroKey = shopKey = '';
+      shopRow.replaceChildren();
+      orderKey = heroKey = shopKey = '';
     }
   }
 
@@ -994,35 +999,58 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
    * Order controls and the queue of a barracks. A control is built once and then updated in place:
    * lux changes every tick, and a button replaced between a press and its release loses the click.
    * @param {import('../../sim/state.js').Entity} e @param {number} lux
+   * @param {ReturnType<typeof actionsFor>} actions
    */
-  function renderBarracks(e, lux) {
+  function renderBarracks(e, lux, actions) {
     const cost = orderCount * data.balance.creep.costLux; // whole lux: the data files are not converted
     const poor = !canAfford(lux, cost, minLeft);
-    const key = `${e.id}|${orderCount}|${orderType}|${e.waypoints.length}`;
+    const key = `${e.id}|${orderCount}|${orderType}|${e.waypoints.length}|${actions.map((a) => a.id).join(',')}`;
     if (key !== orderKey) {
       orderKey = key;
-      const counts = el('div', 'segments');
+      const counts = /** @type {HTMLSelectElement} */ (el('select', 'barracks-select creep-count'));
+      counts.setAttribute('aria-label', 'Creep count');
+      counts.dataset.creepCount = '';
       for (let n = data.balance.creep.groupMin; n <= data.balance.creep.groupMax; n++) {
-        const b = button(String(n), () => { orderCount = n; render(); }, n === orderCount ? 'segment active' : 'segment');
-        b.dataset.count = String(n);
-        counts.append(b);
+        const option = document.createElement('option');
+        option.value = String(n);
+        option.textContent = String(n);
+        counts.append(option);
       }
-      const types = el('div', 'segments');
+      counts.value = String(orderCount);
+      counts.addEventListener('change', () => {
+        orderCount = Number(counts.value);
+        render();
+      });
+      const types = /** @type {HTMLSelectElement} */ (el('select', 'barracks-select creep-type'));
+      types.setAttribute('aria-label', 'Creep type');
+      types.dataset.orderType = '';
       for (const t of ORDER_TYPES) {
-        const b = button(t.charAt(0).toUpperCase() + t.slice(1), () => { orderType = t; render(); }, t === orderType ? 'segment active' : 'segment');
-        b.dataset.orderType = t;
-        types.append(b);
+        const option = document.createElement('option');
+        option.value = t;
+        option.textContent = t.charAt(0).toUpperCase() + t.slice(1);
+        types.append(option);
       }
+      types.value = orderType;
+      types.addEventListener('change', () => {
+        orderType = types.value;
+        render();
+      });
       const mix = mixFor(orderCount, orderType);
       orderButton = button(`Order ${orderCount}`, () => issue({ t: 'orderCreeps', barracksId: e.id, mix }), 'action order');
       orderButton.append(el('span', 'tool-cost', String(cost)));
+      const actionsRow = el('div', 'barracks-actions');
+      const recycle = actions.find((action) => action.id === 'recycle');
+      if (recycle) actionsRow.append(button(recycle.label, () => issue(recycle.command), 'action barracks-recycle'));
       const path = button(e.waypoints.length > 0 ? 'Default Path' : 'Set Default Path', () => {
         mode = 'path';
         pathTarget = { type: 'barracks', id: e.id };
         pathPoints = [];
         render();
-      });
-      const rows = [counts, types, orderButton, path];
+      }, 'action barracks-path');
+      actionsRow.append(path, orderButton);
+      const choicesRow = el('div', 'barracks-options');
+      choicesRow.append(counts, types);
+      const rows = [choicesRow, actionsRow];
       if (e.waypoints.length > 0) rows.push(button('Clear Path', () => issue({ t: 'setBarracksPath', barracksId: e.id, waypoints: [] })));
       orderRow.replaceChildren(...rows);
     }
@@ -1032,8 +1060,8 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   }
 
   /**
-   * The hero part of a barracks panel (GDD 7.1): the lux to allocate and the roster, with locked heroes
-   * and the death cooldown shown. A tap on a hero picks it at this barracks.
+   * The hero part of a barracks panel (GDD 7.1): the lux to allocate and a dropdown roster, with locked heroes
+   * and the death cooldown shown.
    * @param {import('../../sim/state.js').Entity} e @param {number} lux
    */
   function renderHeroPicks(e, lux) {
@@ -1050,37 +1078,60 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
     const key = `${e.id}|${heroChoices.map((c) => c.label).join(',')}|${pickState.options.map((o) => `${o.id}${o.locked ? 'L' : ''}${o.enabled ? 'E' : ''}`).join(',')}`;
     if (key !== heroKey) {
       heroKey = key;
-      heroAllocButtons.clear();
-      const allocation = el('div', 'segments');
-      for (const c of heroChoices) {
-        const b = button('', () => { heroAlloc = c.label; render(); }, 'segment');
-        b.dataset.alloc = c.label;
-        heroAllocButtons.set(c.label, b);
-        allocation.append(b);
-      }
-      const heroes = el('div', 'segments');
-      for (const o of pickState.options) {
-        const b = button(`${o.name} ${o.primary.charAt(0).toUpperCase()}`, () => {
-          const now = heroChoices.find((c) => c.label === heroAlloc) ?? heroChoices[0];
-          if (!now) return say('Not enough lux for a hero.');
-          issue({ t: 'pickHero', heroId: o.id, lux: now.lux, barracksId: e.id });
-        }, o.enabled ? 'segment hero-pick' : 'segment hero-pick poor');
-        b.dataset.hero = String(o.id);
-        if (o.locked) b.title = 'Locked until the other heroes were picked';
-        heroes.append(b);
-      }
+      const controls = el('div', 'hero-controls');
       heroNote = el('div', 'hero-note');
-      heroRow.replaceChildren(heroNote, allocation, heroes);
+      heroPowerSelect = /** @type {HTMLSelectElement} */ (el('select', 'barracks-select hero-power'));
+      heroPowerSelect.setAttribute('aria-label', 'Hero power');
+      heroPowerSelect.dataset.alloc = '';
+      for (const c of heroChoices) {
+        const item = document.createElement('option');
+        item.value = c.label;
+        item.textContent = `${c.label} ${c.lux}`;
+        heroPowerSelect.append(item);
+      }
+      heroPowerSelect.addEventListener('change', () => {
+        heroAlloc = heroPowerSelect?.value ?? heroAlloc;
+        render();
+      });
+      heroSelect = /** @type {HTMLSelectElement} */ (el('select', 'barracks-select hero-pick'));
+      heroSelect.setAttribute('aria-label', 'Hero to select');
+      for (const option of pickState.options) {
+        const item = document.createElement('option');
+        item.value = String(option.id);
+        item.dataset.hero = String(option.id);
+        item.textContent = `${option.name} ${option.primary.charAt(0).toUpperCase()}${option.locked ? ' (locked)' : ''}`;
+        item.disabled = !option.enabled;
+        heroSelect.append(item);
+      }
+      const selectedOption = pickState.options.find((option) => option.id === heroSelected && option.enabled)
+        ?? pickState.options.find((option) => option.enabled)
+        ?? pickState.options[0];
+      heroSelected = selectedOption?.id ?? -1;
+      if (selectedOption) heroSelect.value = String(selectedOption.id);
+      heroSelect.dataset.hero = String(heroSelected);
+      heroSelect.addEventListener('change', () => {
+        heroSelected = Number(heroSelect?.value ?? -1);
+        if (heroSelect) heroSelect.dataset.hero = String(heroSelected);
+      });
+      heroPickButton = button('Pick Hero', () => {
+        const option = pickState.options.find((entry) => entry.id === heroSelected);
+        const now = heroChoices.find((choice) => choice.label === heroAlloc) ?? heroChoices[0];
+        if (!option?.enabled) return;
+        if (!now) return say('Not enough lux for a hero.');
+        issue({ t: 'pickHero', heroId: option.id, lux: now.lux, barracksId: e.id });
+      }, 'action hero-confirm');
+      heroPickButton.disabled = !selectedOption?.enabled || heroChoices.length === 0;
+      controls.append(heroPickButton, heroSelect, heroPowerSelect);
+      heroRow.replaceChildren(heroNote, controls);
     }
     const note = pickState.note ? `Hero: ${pickState.note}` : 'Hero: pick one, with the lux below';
     if (heroNote && heroNote.textContent !== note) heroNote.textContent = note;
-    for (const c of heroChoices) {
-      const b = heroAllocButtons.get(c.label);
-      if (!b) continue;
-      const text = `${c.label} ${c.lux}`;
-      if (b.textContent !== text) b.textContent = text;
-      b.classList.toggle('active', c === chosen);
+    for (const [index, c] of heroChoices.entries()) {
+      const item = heroPowerSelect?.options[index];
+      if (item && item.textContent !== `${c.label} ${c.lux}`) item.textContent = `${c.label} ${c.lux}`;
     }
+    if (chosen && heroPowerSelect) heroPowerSelect.value = chosen.label;
+    if (heroPowerSelect) heroPowerSelect.disabled = heroChoices.length === 0;
   }
 
   /**

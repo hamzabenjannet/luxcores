@@ -186,7 +186,8 @@ test('a human buys items at a barracks, receives them with the hero and uses the
 
     // A small hero with the 25% allocation, then the items arrive with it.
     await page.click('[data-alloc="25%"]');
-    await page.click('.hero-pick[data-hero="1"]');
+    await page.locator('.hero-pick').selectOption('1');
+    await page.click('.hero-confirm');
     await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 10 && e.owner === 0), undefined, 30_000);
     await page.waitForSelector('.hero-bar:not([hidden]) .item[data-item="2"]');
     await until(page, () => document.querySelector('.item[data-item="2"]')?.textContent === 'Haste 1');
@@ -229,12 +230,13 @@ test('a human picks a hero at a barracks, shields it and aims its area ability, 
     await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 6 && e.team === 0));
     assert.equal(await page.locator('button[data-building].active').count(), 0, 'the barracks placement freed the palette');
     await tapTile(page, barracksTile);
-    await page.waitForSelector('.panel:not([hidden]) .hero-pick[data-hero="1"]');
-    assert.equal(await page.locator('.hero-pick').count(), 5, 'the whole roster is offered');
+    await page.waitForSelector('.panel:not([hidden]) .hero-pick option[data-hero="1"]');
+    assert.equal(await page.locator('.hero-pick option[data-hero]').count(), 5, 'the whole roster is offered');
     assert.equal(await page.locator('.hero-bar').isHidden(), true, 'no hero yet, no ability bar');
 
     // Prism with the default allocation (50% of the Core).
-    await page.click('.hero-pick[data-hero="1"]');
+    await page.locator('.hero-pick').selectOption('1');
+    await page.click('.hero-confirm');
     await until(page, () => /** @type {any} */ (window).__luxTest.orders().some((/** @type {any} */ o) => o.type === 2 && o.owner === 0));
     await until(page, () => /^Hero Prism \d+ lux/.test(document.querySelector('#orders .log-text')?.textContent ?? ''));
     await until(page, () => /** @type {any} */ (window).__luxTest.entities().some((/** @type {any} */ e) => e.kind === 10 && e.owner === 0), undefined, 30_000);
@@ -623,6 +625,16 @@ test('a human orders creeps, then splits, merges and sends a group, through the 
     await page.waitForSelector('.order-row .order');
     await page.waitForSelector('.hero-row [data-hero]');
 
+    assert.equal(await page.locator('.barracks-options select').count(), 2, 'creep count and type use dropdowns');
+    assert.equal(await page.locator('.hero-power').count(), 1, 'hero power uses a dropdown');
+    assert.equal(await page.evaluate(() => {
+      const tops = (selector) => [...document.querySelectorAll(selector)].map((node) => Math.round(node.getBoundingClientRect().top));
+      return {
+        order: tops('.barracks-options select'),
+        hero: tops('.hero-controls > *'),
+      };
+    }).then(({ order, hero }) => new Set(order).size === 1 && new Set(hero).size === 1), true, 'creep selectors and hero controls each share one row');
+
     // The queue is not in the panel: it lives in the orders window, which starts collapsed and floats outside the panel.
     assert.equal(await page.locator('.panel .queue, .panel .log-row').count(), 0, 'the barracks panel holds no queue');
     assert.equal(await page.evaluate(() => document.getElementById('orders')?.classList.contains('collapsed')), true, 'the orders window starts collapsed');
@@ -639,13 +651,15 @@ test('a human orders creeps, then splits, merges and sends a group, through the 
     }), true, 'the order, hero and shop buttons are not rebuilt while lux changes');
 
     // One group through the panel: 2 ranged creeps, 10 lux. The queue lists it.
-    await page.click('.order-row [data-count="2"]');
-    await page.click('.order-row [data-order-type="ranged"]');
+    await page.locator('.order-row [data-creep-count]').selectOption('2');
+    await page.locator('.order-row [data-order-type]').selectOption('ranged');
     const panelBefore = await page.evaluate(() => {
       const panel = /** @type {HTMLElement} */ (document.querySelector('.panel')).getBoundingClientRect();
       const order = /** @type {HTMLElement} */ (document.querySelector('.order-row .order')).getBoundingClientRect();
-      return { panelTop: Math.round(panel.top), panelHeight: Math.round(panel.height), orderTop: Math.round(order.top) };
+      const actions = [...document.querySelectorAll('.barracks-actions > button')].map((/** @type {HTMLElement} */ button) => button.getBoundingClientRect());
+      return { panelTop: Math.round(panel.top), panelHeight: Math.round(panel.height), orderTop: Math.round(order.top), actionTops: actions.map((rect) => Math.round(rect.top)) };
     });
+    assert.equal(new Set(panelBefore.actionTops).size, 1, 'Recycle, Set Default Path and Order Creeps share one row');
     await page.click('.order-row .order');
     await page.waitForSelector('.log-row', { state: 'attached' }); // the window is collapsed, so its rows are in the page but not visible
     assert.match(await page.textContent('.orders-toggle') ?? '', /^Orders \(1\) ▸$/, 'the title counts the order and shows it is collapsed');
@@ -653,7 +667,8 @@ test('a human orders creeps, then splits, merges and sends a group, through the 
     assert.deepEqual(await page.evaluate(() => {
       const panel = /** @type {HTMLElement} */ (document.querySelector('.panel')).getBoundingClientRect();
       const order = /** @type {HTMLElement} */ (document.querySelector('.order-row .order')).getBoundingClientRect();
-      return { panelTop: Math.round(panel.top), panelHeight: Math.round(panel.height), orderTop: Math.round(order.top) };
+      const actionTops = [...document.querySelectorAll('.barracks-actions > button')].map((/** @type {HTMLElement} */ button) => Math.round(button.getBoundingClientRect().top));
+      return { panelTop: Math.round(panel.top), panelHeight: Math.round(panel.height), orderTop: Math.round(order.top), actionTops };
     }), panelBefore, 'ordering does not move the panel');
     // Queue a group of 5 and three of 1 through the hook, in one go. The last one starts about 10 s later, so the panel can cancel it.
     const barracksId = await hook('t.entities().find((e) => e.kind === 6 && e.team === 0).id');
