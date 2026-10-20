@@ -20,6 +20,11 @@ const TEMPLATE_NAMES := [
 
 @onready var _terrain: MeshInstance3D = $Terrain
 @onready var _camera: Camera3D = $Camera3D
+@onready var _rtscamera: Camera3D = $RTScamera
+
+const CAMERA_RTS := 0
+const CAMERA_DEBUG := 1
+const RTS_CAMERA_DEFAULT_DISTANCE := 25.0
 
 var _map_root: Node3D
 var _entity_root: Node3D
@@ -48,6 +53,7 @@ var _ghost: MeshInstance3D
 var _fitted_to_world := false
 var _aim_ring: MeshInstance3D
 var _camera_initialized := false
+var _camera_mode := CAMERA_RTS
 ## While true the camera eases toward the viewer's hero. Dragging the map turns it off.
 var _following := false
 var _viewer_team := 0
@@ -63,8 +69,9 @@ const CAMERA_PITCH_MIN := deg_to_rad(15.0)
 const CAMERA_PITCH_MAX := deg_to_rad(75.0)
 
 func _ready() -> void:
-	_camera.current = true
 	_camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	_camera.current = false
+	set_camera_mode(CAMERA_RTS)
 	_map_root = Node3D.new()
 	_map_root.name = "MapOverlays"
 	add_child(_map_root)
@@ -152,7 +159,27 @@ func set_follow(on: bool) -> void:
 func is_following() -> bool:
 	return _following
 
+func set_camera_mode(mode: int) -> void:
+	if mode != CAMERA_RTS and mode != CAMERA_DEBUG:
+		push_error("Unknown camera mode: %d." % mode)
+		return
+	_camera_mode = mode
+	_rtscamera.current = mode == CAMERA_RTS
+	_camera.current = mode == CAMERA_DEBUG
+	_rtscamera.set_process(mode == CAMERA_RTS)
+	_rtscamera.set_process_unhandled_input(mode == CAMERA_RTS)
+	if mode == CAMERA_RTS:
+		_sync_rts_camera_target()
+
+func get_camera_mode() -> int:
+	return _camera_mode
+
 func _process(delta: float) -> void:
+	if _camera_mode == CAMERA_RTS:
+		if _following and _has_follow_point:
+			_camera_target = _camera_target.lerp(_follow_point, 1.0 - exp(-minf(delta, 0.1) * 8.0))
+			_sync_rts_camera_target()
+		return
 	var camera_changed := false
 	if _following and _has_follow_point:
 		# Ease toward the hero, a little faster than it walks; the easing follows the frame time.
@@ -180,38 +207,66 @@ func get_rendered_entity_count() -> int:
 	return _entities_by_id.size()
 
 func get_camera_size() -> float:
-	return _camera.size
+	return float(_rtscamera.get("orbit_distance")) if _camera_mode == CAMERA_RTS else _camera.size
 
 func get_camera_target() -> Vector3:
+	if _camera_mode == CAMERA_RTS:
+		var target: Vector3 = _rtscamera.get("orbit_center")
+		return target
 	return _camera_target
 
 func camera_ray_origin(viewport_position: Vector2) -> Vector3:
-	return _camera.project_ray_origin(viewport_position)
+	return _active_camera().project_ray_origin(viewport_position)
 
 func camera_ray_direction(viewport_position: Vector2) -> Vector3:
-	return _camera.project_ray_normal(viewport_position)
+	return _active_camera().project_ray_normal(viewport_position)
 
 func pan_camera(screen_delta: Vector2) -> void:
 	var viewport_height := maxf(1.0, get_viewport().get_visible_rect().size.y)
-	var units_per_pixel := _camera.size / viewport_height
 	_following = false
-	var shift := (-_camera.global_basis.x * screen_delta.x - _camera.global_basis.y * screen_delta.y) * units_per_pixel
+	var units_per_pixel: float
+	var basis: Basis
+	if _camera_mode == CAMERA_RTS:
+		var distance := float(_rtscamera.get("orbit_distance"))
+		units_per_pixel = 2.0 * distance * tan(deg_to_rad(_rtscamera.fov) * 0.5) / viewport_height
+		basis = _rtscamera.global_basis
+	else:
+		units_per_pixel = _camera.size / viewport_height
+		basis = _camera.global_basis
+	var shift := (-basis.x * screen_delta.x - basis.y * screen_delta.y) * units_per_pixel
 	shift.y = 0.0
 	_camera_target += shift
 	_camera_target.x = clampf(_camera_target.x, -float(_map_width) * 0.5, float(_map_width) * 0.5)
 	_camera_target.z = clampf(_camera_target.z, -float(_map_height) * 0.5, float(_map_height) * 0.5)
-	_position_camera()
+	_position_active_camera()
 
 func rotate_camera(direction: Vector2) -> void:
 	_following = false
+	if _camera_mode == CAMERA_RTS:
+		var yaw := float(_rtscamera.get("_yaw")) - direction.x * CAMERA_ROTATION_STEP
+		var pitch := float(_rtscamera.get("_pitch")) - direction.y * CAMERA_ROTATION_STEP
+		var min_pitch := deg_to_rad(float(_rtscamera.get("pitch_min_deg")))
+		var max_pitch := deg_to_rad(float(_rtscamera.get("pitch_max_deg")))
+		_rtscamera.set("_yaw", wrapf(yaw, -PI, PI))
+		_rtscamera.set("_pitch", clampf(pitch, min_pitch, max_pitch))
+		_rtscamera.call("_update_camera_position")
+		return
 	_camera_yaw_target = wrapf(_camera_yaw_target + direction.x * CAMERA_ROTATION_STEP, -PI, PI)
 	_camera_pitch_target = clampf(_camera_pitch_target - direction.y * CAMERA_ROTATION_STEP, CAMERA_PITCH_MIN, CAMERA_PITCH_MAX)
 
 ## The zoom factor; 1 shows 32 tiles across. The limits are GameLogic.ZOOM_MIN and ZOOM_MAX.
 func get_zoom() -> float:
+	if _camera_mode == CAMERA_RTS:
+		return RTS_CAMERA_DEFAULT_DISTANCE / float(_rtscamera.get("orbit_distance"))
 	return _view_size / _camera.size
 
 func set_zoom(zoom: float) -> void:
+	if _camera_mode == CAMERA_RTS:
+		var distance := RTS_CAMERA_DEFAULT_DISTANCE / GameLogic.clamp_zoom(zoom)
+		distance = clampf(distance, float(_rtscamera.get("camera_zoom_min")), float(_rtscamera.get("camera_zoom_max")))
+		_rtscamera.set("orbit_distance", distance)
+		_rtscamera.call("_update_camera_position")
+		return
 	_camera.size = _view_size / GameLogic.clamp_zoom(zoom)
 
 ## Multiplies the view size by `factor`: below 1 zooms in.
@@ -292,7 +347,7 @@ func _fit_camera() -> void:
 	var viewport_size := get_viewport().get_visible_rect().size
 	var nearer := 8.0 if viewport_size.x > viewport_size.y else 0.0
 	_camera_target = Vector3(core_x - float(_map_width) * 0.5, 0.0, (80.0 + nearer if _viewer_team == 0 else 32.0 - nearer) - float(_map_height) * 0.5)
-	_position_camera()
+	_position_active_camera()
 
 func _position_camera() -> void:
 	var distance := maxf(float(_map_height), float(_map_width)) * 1.5
@@ -305,6 +360,17 @@ func _position_camera() -> void:
 		cos(_camera_yaw) * horizontal_offset
 	)
 	_camera.look_at(_camera_target, Vector3.UP)
+
+func _position_active_camera() -> void:
+	_position_camera()
+	_sync_rts_camera_target()
+
+func _sync_rts_camera_target() -> void:
+	_rtscamera.set("orbit_center", _camera_target)
+	_rtscamera.call("_update_camera_position")
+
+func _active_camera() -> Camera3D:
+	return _rtscamera if _camera_mode == CAMERA_RTS else _camera
 
 func _add_zone_overlays() -> void:
 	var bands := [

@@ -170,7 +170,8 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 		return
 	if event is InputEventMouseMotion and _dragging and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
-		_move_pointer(event.position)
+		var allow_pan := is_instance_valid(_world_root) and int(_world_root.call("get_camera_mode")) == 1
+		_move_pointer(event.position, allow_pan)
 		accept_event()
 		return
 	if event is InputEventScreenTouch:
@@ -204,6 +205,8 @@ func _gui_input(event: InputEvent) -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed or event.echo:
 		return
+	if is_instance_valid(_world_root) and int(_world_root.call("get_camera_mode")) == 0:
+		return
 	var direction := Vector2.ZERO
 	match event.physical_keycode:
 		KEY_LEFT:
@@ -233,11 +236,11 @@ func _end_pointer(point: Vector2) -> void:
 	if not _pointer_moved:
 		_handle_map_tap(point)
 
-func _move_pointer(point: Vector2) -> void:
+func _move_pointer(point: Vector2, allow_pan: bool = true) -> void:
 	var delta := point - _last_pointer
 	if _press_position.distance_squared_to(point) > DRAG_THRESHOLD_SQUARED:
 		_pointer_moved = true
-	if _pointer_moved and is_instance_valid(_world_root):
+	if allow_pan and _pointer_moved and is_instance_valid(_world_root):
 		var viewport_delta := get_global_transform_with_canvas().basis_xform(delta)
 		_world_root.call("pan_camera", viewport_delta)
 	_last_pointer = point

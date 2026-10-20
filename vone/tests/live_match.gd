@@ -285,7 +285,7 @@ func _run() -> void:
 	var on_button: Vector2 = area_button.get_global_rect().get_center() - button_origin
 	# A point of the map near the hero (the area ability has a reach), as the window position the camera shows it at.
 	var near_hero: Dictionary = _find(GameLogic.KIND_HERO, 0)[0]
-	var camera := _main._world_3d.get_node("Camera3D") as Camera3D
+	var camera := _main._world_3d.get_node("RTScamera") as Camera3D
 	var near_world := Vector3(float(near_hero.x) / 1000.0 - 48.0, 0.0, float(near_hero.z) / 1000.0 - 3.0 - 56.0)
 	var on_map: Vector2 = camera.unproject_position(near_world) - button_origin
 	_press_ability(area_button, 2, on_button, true)

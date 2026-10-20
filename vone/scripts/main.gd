@@ -29,6 +29,7 @@ var _match_input: LineEdit
 var _seed_input: SpinBox
 var _entropy_input: LineEdit
 var _limit_selector: OptionButton
+var _camera_selector: OptionButton
 var _cap_input: LineEdit
 var _mode_selector: OptionButton
 var _status_label: Label
@@ -149,6 +150,10 @@ func _ready() -> void:
 func configure_3d_world(world: Node3D) -> void:
 	_world_3d = world
 
+func _on_camera_selected(index: int) -> void:
+	if is_instance_valid(_world_3d) and _world_3d.has_method("set_camera_mode"):
+		_world_3d.call("set_camera_mode", index)
+
 func _build_interface() -> void:
 	_set_dark_theme()
 	# The arena is the background of the whole window and takes every tap that no control catches. The
@@ -222,6 +227,23 @@ func _build_interface() -> void:
 	_entropy_input.custom_minimum_size = Vector2(220, 52)
 	match_options.add_child(_entropy_input)
 	_home.add_child(match_options)
+	if _world_3d != null:
+		var camera_options := HBoxContainer.new()
+		var camera_label := Label.new()
+		camera_label.text = "Camera view"
+		camera_label.custom_minimum_size = Vector2(120, 52)
+		camera_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		camera_options.add_child(camera_label)
+		_camera_selector = OptionButton.new()
+		_camera_selector.add_item("Camera 1: RTS")
+		_camera_selector.add_item("Camera 2: Debug (Camera3D)")
+		_camera_selector.select(0)
+		_camera_selector.tooltip_text = "Choose the default RTS view or the orthographic debug camera."
+		_camera_selector.custom_minimum_size = Vector2(260, 52)
+		_camera_selector.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_camera_selector.item_selected.connect(_on_camera_selected)
+		camera_options.add_child(_camera_selector)
+		_home.add_child(camera_options)
 	var limit_options := HBoxContainer.new()
 	_limit_selector = OptionButton.new()
 	_limit_selector.add_item("Unlimited")

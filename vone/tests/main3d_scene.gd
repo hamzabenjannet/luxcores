@@ -14,6 +14,7 @@ func _run() -> void:
 	_check("main scene is 3D", scene is Node3D, true)
 	_check("terrain is present", scene.get_node_or_null("Terrain") is MeshInstance3D, true)
 	_check("camera is present", scene.get_node_or_null("Camera3D") is Camera3D, true)
+	_check("RTS camera is present", scene.get_node_or_null("RTScamera") is Camera3D, true)
 	var canvas_layer: CanvasLayer
 	for child in scene.get_children():
 		if child is CanvasLayer:
@@ -32,6 +33,14 @@ func _run() -> void:
 		_check("3D touch overlay is active", touch_overlay.get_script() == load("res://scripts/arena_3d.gd"), true)
 		_check("zoom buttons are present", touch_overlay.get("_plus_button") is Button and touch_overlay.get("_minus_button") is Button, true)
 		_check("key settings overlay and button are available", game_interface.get("_key_settings_overlay") is Control and game_interface.get("_key_settings_button") is Button, true)
+		var camera_selector := game_interface.get("_camera_selector") as OptionButton
+		_check("camera selector defaults to the RTS camera", camera_selector != null and camera_selector.selected == 0, true)
+		_check("RTS camera is active by default", int(scene.call("get_camera_mode")) == 0 and (scene.get_node("RTScamera") as Camera3D).current, true)
+		if camera_selector != null:
+			camera_selector.item_selected.emit(1)
+			_check("camera selector activates the debug camera", int(scene.call("get_camera_mode")) == 1 and (scene.get_node("Camera3D") as Camera3D).current, true)
+			camera_selector.item_selected.emit(0)
+			_check("camera selector restores the RTS camera", int(scene.call("get_camera_mode")) == 0 and (scene.get_node("RTScamera") as Camera3D).current, true)
 
 	var entities: Array = []
 	for kind in range(1, 14):
@@ -78,13 +87,13 @@ func _run() -> void:
 	if touch_overlay != null:
 		var taps: Array[Vector2] = []
 		touch_overlay.tapped.connect(func(ground: Vector2) -> void: taps.append(ground))
-		var camera := scene.get_node("Camera3D") as Camera3D
-		var viewport_position := camera.unproject_position(Vector3(0.5, 0.0, 0.5))
+		var camera := scene.get_node("RTScamera") as Camera3D
+		var viewport_position := camera.unproject_position(Vector3(0.5, 0.0, 24.5))
 		var local_position := touch_overlay.get_global_transform_with_canvas().affine_inverse() * viewport_position
 		touch_overlay.call("_handle_map_tap", local_position)
 		_check("3D touch maps back to tile coordinates", taps.size() == 1, true)
 		if not taps.is_empty():
-			_check("3D touch preserves tile position", is_equal_approx(taps[0].x, 48.5) and is_equal_approx(taps[0].y, 56.5), true)
+			_check("3D touch preserves tile position", is_equal_approx(taps[0].x, 48.5) and is_equal_approx(taps[0].y, 80.5), true)
 
 	var initial_size := float(scene.call("get_camera_size"))
 	scene.call("zoom_by", 0.8)
@@ -92,6 +101,22 @@ func _run() -> void:
 	var initial_target: Vector3 = scene.call("get_camera_target")
 	scene.call("pan_camera", Vector2(30, 20))
 	_check("camera drag changes view target", scene.call("get_camera_target") != initial_target, true)
+	var rts_camera := scene.get_node("RTScamera")
+	var viewport_rect := Rect2(Vector2.ZERO, Vector2(1280.0, 960.0))
+	_check("RTS edge scroll moves left", rts_camera.call("_edge_scroll_movement", Vector2(0.0, 480.0), viewport_rect).x, -1.0)
+	_check("RTS edge scroll moves right", rts_camera.call("_edge_scroll_movement", Vector2(1280.0, 480.0), viewport_rect).x, 1.0)
+	_check("RTS edge scroll moves up", rts_camera.call("_edge_scroll_movement", Vector2(640.0, 0.0), viewport_rect).z, -1.0)
+	_check("RTS edge scroll moves down", rts_camera.call("_edge_scroll_movement", Vector2(640.0, 960.0), viewport_rect).z, 1.0)
+	scene.call("set_camera_mode", 0)
+	var rts_target: Vector3 = scene.call("get_camera_target")
+	touch_overlay.call("_begin_pointer", Vector2.ZERO)
+	touch_overlay.call("_move_pointer", Vector2(10.0, 0.0), false)
+	_check("left dragging does not pan the RTS camera", scene.call("get_camera_target"), rts_target)
+	scene.call("set_camera_mode", 1)
+	var debug_target: Vector3 = scene.call("get_camera_target")
+	touch_overlay.call("_begin_pointer", Vector2.ZERO)
+	touch_overlay.call("_move_pointer", Vector2(10.0, 0.0))
+	_check("left dragging pans the debug camera", scene.call("get_camera_target") != debug_target, true)
 	var scene_camera := scene.get_node("Camera3D") as Camera3D
 	var initial_camera_position := scene_camera.position
 	if touch_overlay != null:
