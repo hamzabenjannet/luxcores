@@ -126,28 +126,37 @@ func _run() -> void:
 		wheel_up.button_index = MOUSE_BUTTON_WHEEL_UP
 		wheel_up.pressed = true
 		touch_overlay.call("_gui_input", wheel_up)
-		_check("mouse wheel rotation eases instead of snapping", scene_camera.position == mouse_baseline, true)
-		_check("mouse wheel rotation preserves zoom", float(touch_overlay.call("get_zoom")), initial_zoom)
-		_advance_camera(scene)
-		_check("wheel up tilts the camera", scene_camera.position != mouse_baseline, true)
+		_check("mouse wheel zooms without rotating the camera", float(touch_overlay.call("get_zoom")) > initial_zoom and scene_camera.position == mouse_baseline, true)
 		var wheel_down := InputEventMouseButton.new()
 		wheel_down.button_index = MOUSE_BUTTON_WHEEL_DOWN
 		wheel_down.pressed = true
 		touch_overlay.call("_gui_input", wheel_down)
+		_check("wheel down restores the previous zoom", is_equal_approx(float(touch_overlay.call("get_zoom")), initial_zoom), true)
+		var middle_press := InputEventMouseButton.new()
+		middle_press.button_index = MOUSE_BUTTON_MIDDLE
+		middle_press.pressed = true
+		touch_overlay.call("_gui_input", middle_press)
+		var horizontal_mouse_drag := InputEventMouseMotion.new()
+		horizontal_mouse_drag.relative = Vector2(30.0, 0.0)
+		touch_overlay.call("_gui_input", horizontal_mouse_drag)
 		_advance_camera(scene)
-		_check("wheel down reverses the vertical scroll", scene_camera.position.distance_to(mouse_baseline) < 0.1, true)
-		var wheel_right := InputEventMouseButton.new()
-		wheel_right.button_index = MOUSE_BUTTON_WHEEL_RIGHT
-		wheel_right.pressed = true
-		touch_overlay.call("_gui_input", wheel_right)
+		_check("middle-button horizontal mouse movement orbits the camera", scene_camera.position != mouse_baseline, true)
+		var position_after_horizontal_drag := scene_camera.position
+		var vertical_mouse_drag := InputEventMouseMotion.new()
+		vertical_mouse_drag.relative = Vector2(0.0, -20.0)
+		touch_overlay.call("_gui_input", vertical_mouse_drag)
 		_advance_camera(scene)
-		_check("wheel right orbits the camera", scene_camera.position != mouse_baseline, true)
-		var wheel_left := InputEventMouseButton.new()
-		wheel_left.button_index = MOUSE_BUTTON_WHEEL_LEFT
-		wheel_left.pressed = true
-		touch_overlay.call("_gui_input", wheel_left)
+		_check("middle-button vertical mouse movement adjusts elevation", scene_camera.position != position_after_horizontal_drag, true)
+		var middle_release := InputEventMouseButton.new()
+		middle_release.button_index = MOUSE_BUTTON_MIDDLE
+		middle_release.pressed = false
+		touch_overlay.call("_gui_input", middle_release)
+		var position_after_middle_drag := scene_camera.position
+		var mouse_motion_after_release := InputEventMouseMotion.new()
+		mouse_motion_after_release.relative = Vector2(30.0, -20.0)
+		touch_overlay.call("_gui_input", mouse_motion_after_release)
 		_advance_camera(scene)
-		_check("wheel left reverses horizontal scrolling", scene_camera.position.distance_to(mouse_baseline) < 0.1, true)
+		_check("mouse movement after middle-button release does not swivel", scene_camera.position == position_after_middle_drag, true)
 		var position_before_pan := scene_camera.position
 		var pan_gesture := InputEventPanGesture.new()
 		pan_gesture.delta = Vector2(20.0, 0.0)

@@ -7,11 +7,12 @@ const GameLogic = preload("res://scripts/game_logic.gd")
 
 const DRAG_THRESHOLD_SQUARED := 25.0
 const ZOOM_FACTOR := 1.25
-const SCROLL_ROTATION_PER_PIXEL := 0.02
+const CAMERA_ROTATION_PER_PIXEL := 0.02
 
 var _world_root: Node3D
 var _map: Dictionary = {}
 var _dragging := false
+var _rotating_camera := false
 var _pointer_moved := false
 var _last_pointer := Vector2.ZERO
 var _press_position := Vector2.ZERO
@@ -140,29 +141,32 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventPanGesture:
 		# Trackpad scrolling rotates the view; magnify gestures above remain zoom.
 		if is_instance_valid(_world_root):
-			_world_root.call("rotate_camera", event.delta * SCROLL_ROTATION_PER_PIXEL)
+			_world_root.call("rotate_camera", event.delta * CAMERA_ROTATION_PER_PIXEL)
 		accept_event()
 		return
 	if event is InputEventMouseButton and event.pressed:
-		var scroll_direction := Vector2.ZERO
 		match event.button_index:
 			MOUSE_BUTTON_WHEEL_UP:
-				scroll_direction.y = -1.0
+				set_zoom(GameLogic.pinch_zoom(get_zoom(), 1.0, 1.1))
 			MOUSE_BUTTON_WHEEL_DOWN:
-				scroll_direction.y = 1.0
-			MOUSE_BUTTON_WHEEL_LEFT:
-				scroll_direction.x = -1.0
-			MOUSE_BUTTON_WHEEL_RIGHT:
-				scroll_direction.x = 1.0
-		if not scroll_direction.is_zero_approx() and is_instance_valid(_world_root):
-			_world_root.call("rotate_camera", scroll_direction)
+				set_zoom(GameLogic.pinch_zoom(get_zoom(), 1.0, 1.0 / 1.1))
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP or event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			accept_event()
 			return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_MIDDLE:
+		_rotating_camera = event.pressed
+		accept_event()
+		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			_begin_pointer(event.position)
 		else:
 			_end_pointer(event.position)
+		accept_event()
+		return
+	if event is InputEventMouseMotion and _rotating_camera:
+		if is_instance_valid(_world_root):
+			_world_root.call("rotate_camera", event.relative * CAMERA_ROTATION_PER_PIXEL)
 		accept_event()
 		return
 	if event is InputEventMouseMotion and _dragging and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
