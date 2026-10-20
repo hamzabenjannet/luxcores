@@ -39,6 +39,8 @@ var _map_height := 112
 var _camera_target := Vector3.ZERO
 var _camera_yaw := 0.0
 var _camera_pitch := atan(1.0 / 0.8)
+var _camera_yaw_target := 0.0
+var _camera_pitch_target := atan(1.0 / 0.8)
 ## The camera size (vertical extent in world units) at zoom 1, which shows 32 tiles across and at least 28 tall (GDD 10.1).
 var _view_size := 100.0
 var _ghost: MeshInstance3D
@@ -56,6 +58,7 @@ const VIEW_TILES_WIDE := 32.0
 ## A wide window shows at least this many tiles top to bottom at zoom 1, as in the web client.
 const VIEW_TILES_TALL_MIN := 28.0
 const CAMERA_ROTATION_STEP := deg_to_rad(5.0)
+const CAMERA_ROTATION_SMOOTHING := 12.0
 const CAMERA_PITCH_MIN := deg_to_rad(15.0)
 const CAMERA_PITCH_MAX := deg_to_rad(75.0)
 
@@ -150,9 +153,19 @@ func is_following() -> bool:
 	return _following
 
 func _process(delta: float) -> void:
+	var camera_changed := false
 	if _following and _has_follow_point:
 		# Ease toward the hero, a little faster than it walks; the easing follows the frame time.
 		_camera_target = _camera_target.lerp(_follow_point, 1.0 - exp(-minf(delta, 0.1) * 8.0))
+		camera_changed = true
+	var rotation_weight := 1.0 - exp(-minf(delta, 0.1) * CAMERA_ROTATION_SMOOTHING)
+	if absf(angle_difference(_camera_yaw, _camera_yaw_target)) > 0.0001:
+		_camera_yaw = lerp_angle(_camera_yaw, _camera_yaw_target, rotation_weight)
+		camera_changed = true
+	if absf(_camera_pitch - _camera_pitch_target) > 0.0001:
+		_camera_pitch = lerpf(_camera_pitch, _camera_pitch_target, rotation_weight)
+		camera_changed = true
+	if camera_changed:
 		_position_camera()
 
 func set_selection(entity_id: int) -> void:
@@ -191,9 +204,8 @@ func pan_camera(screen_delta: Vector2) -> void:
 
 func rotate_camera(direction: Vector2) -> void:
 	_following = false
-	_camera_yaw = wrapf(_camera_yaw + direction.x * CAMERA_ROTATION_STEP, -PI, PI)
-	_camera_pitch = clampf(_camera_pitch - direction.y * CAMERA_ROTATION_STEP, CAMERA_PITCH_MIN, CAMERA_PITCH_MAX)
-	_position_camera()
+	_camera_yaw_target = wrapf(_camera_yaw_target + direction.x * CAMERA_ROTATION_STEP, -PI, PI)
+	_camera_pitch_target = clampf(_camera_pitch_target - direction.y * CAMERA_ROTATION_STEP, CAMERA_PITCH_MIN, CAMERA_PITCH_MAX)
 
 ## The zoom factor; 1 shows 32 tiles across. The limits are GameLogic.ZOOM_MIN and ZOOM_MAX.
 func get_zoom() -> float:

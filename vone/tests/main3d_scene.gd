@@ -98,6 +98,7 @@ func _run() -> void:
 		left_key.physical_keycode = KEY_LEFT
 		left_key.pressed = true
 		touch_overlay.call("_unhandled_key_input", left_key)
+		_advance_camera(scene)
 		_check("left arrow rotates the camera", scene_camera.position != initial_camera_position, true)
 		_check("camera rotation stops hero follow", bool(scene.call("is_following")), false)
 		var position_after_left := scene_camera.position
@@ -105,17 +106,59 @@ func _run() -> void:
 		up_key.physical_keycode = KEY_UP
 		up_key.pressed = true
 		touch_overlay.call("_unhandled_key_input", up_key)
+		_advance_camera(scene)
 		_check("up arrow changes camera elevation", scene_camera.position != position_after_left, true)
 		var right_key := InputEventKey.new()
 		right_key.physical_keycode = KEY_RIGHT
 		right_key.pressed = true
 		touch_overlay.call("_unhandled_key_input", right_key)
+		_advance_camera(scene)
 		_check("right arrow rotates the camera back", scene_camera.position != position_after_left, true)
 		var down_key := InputEventKey.new()
 		down_key.physical_keycode = KEY_DOWN
 		down_key.pressed = true
 		touch_overlay.call("_unhandled_key_input", down_key)
-		_check("down arrow reverses the elevation change", scene_camera.position.distance_to(initial_camera_position) < 0.001, true)
+		_advance_camera(scene)
+		_check("down arrow reverses the elevation change", scene_camera.position.distance_to(initial_camera_position) < 0.1, true)
+		var mouse_baseline := scene_camera.position
+		var initial_zoom := float(touch_overlay.call("get_zoom"))
+		var wheel_up := InputEventMouseButton.new()
+		wheel_up.button_index = MOUSE_BUTTON_WHEEL_UP
+		wheel_up.pressed = true
+		touch_overlay.call("_gui_input", wheel_up)
+		_check("mouse wheel rotation eases instead of snapping", scene_camera.position == mouse_baseline, true)
+		_check("mouse wheel rotation preserves zoom", float(touch_overlay.call("get_zoom")), initial_zoom)
+		_advance_camera(scene)
+		_check("wheel up tilts the camera", scene_camera.position != mouse_baseline, true)
+		var wheel_down := InputEventMouseButton.new()
+		wheel_down.button_index = MOUSE_BUTTON_WHEEL_DOWN
+		wheel_down.pressed = true
+		touch_overlay.call("_gui_input", wheel_down)
+		_advance_camera(scene)
+		_check("wheel down reverses the vertical scroll", scene_camera.position.distance_to(mouse_baseline) < 0.1, true)
+		var wheel_right := InputEventMouseButton.new()
+		wheel_right.button_index = MOUSE_BUTTON_WHEEL_RIGHT
+		wheel_right.pressed = true
+		touch_overlay.call("_gui_input", wheel_right)
+		_advance_camera(scene)
+		_check("wheel right orbits the camera", scene_camera.position != mouse_baseline, true)
+		var wheel_left := InputEventMouseButton.new()
+		wheel_left.button_index = MOUSE_BUTTON_WHEEL_LEFT
+		wheel_left.pressed = true
+		touch_overlay.call("_gui_input", wheel_left)
+		_advance_camera(scene)
+		_check("wheel left reverses horizontal scrolling", scene_camera.position.distance_to(mouse_baseline) < 0.1, true)
+		var position_before_pan := scene_camera.position
+		var pan_gesture := InputEventPanGesture.new()
+		pan_gesture.delta = Vector2(20.0, 0.0)
+		touch_overlay.call("_gui_input", pan_gesture)
+		_advance_camera(scene)
+		_check("trackpad scrolling rotates the camera", scene_camera.position != position_before_pan, true)
+		var position_before_pinch := scene_camera.position
+		var pinch := InputEventMagnifyGesture.new()
+		pinch.factor = 1.2
+		touch_overlay.call("_gui_input", pinch)
+		_check("trackpad pinch zooms without rotating the camera", float(touch_overlay.call("get_zoom")) != initial_zoom and scene_camera.position == position_before_pinch, true)
 
 	print("%d checks, %d failed" % [_checks, _failures])
 	scene.queue_free()
@@ -127,3 +170,7 @@ func _check(name: String, actual: Variant, expected: Variant) -> void:
 		return
 	_failures += 1
 	printerr("FAIL %s\n  actual:   %s\n  expected: %s" % [name, str(actual), str(expected)])
+
+func _advance_camera(scene: Node) -> void:
+	for _frame in range(60):
+		scene.call("_process", 1.0 / 60.0)

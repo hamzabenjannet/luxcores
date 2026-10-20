@@ -7,6 +7,7 @@ const GameLogic = preload("res://scripts/game_logic.gd")
 
 const DRAG_THRESHOLD_SQUARED := 25.0
 const ZOOM_FACTOR := 1.25
+const SCROLL_ROTATION_PER_PIXEL := 0.02
 
 var _world_root: Node3D
 var _map: Dictionary = {}
@@ -136,10 +137,27 @@ func _gui_input(event: InputEvent) -> void:
 		set_zoom(GameLogic.pinch_zoom(get_zoom(), 1.0, event.factor))
 		accept_event()
 		return
-	if event is InputEventMouseButton and event.pressed and (event.button_index == MOUSE_BUTTON_WHEEL_UP or event.button_index == MOUSE_BUTTON_WHEEL_DOWN):
-		set_zoom(GameLogic.pinch_zoom(get_zoom(), 1.0, 1.1 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0 / 1.1))
+	if event is InputEventPanGesture:
+		# Trackpad scrolling rotates the view; magnify gestures above remain zoom.
+		if is_instance_valid(_world_root):
+			_world_root.call("rotate_camera", event.delta * SCROLL_ROTATION_PER_PIXEL)
 		accept_event()
 		return
+	if event is InputEventMouseButton and event.pressed:
+		var scroll_direction := Vector2.ZERO
+		match event.button_index:
+			MOUSE_BUTTON_WHEEL_UP:
+				scroll_direction.y = -1.0
+			MOUSE_BUTTON_WHEEL_DOWN:
+				scroll_direction.y = 1.0
+			MOUSE_BUTTON_WHEEL_LEFT:
+				scroll_direction.x = -1.0
+			MOUSE_BUTTON_WHEEL_RIGHT:
+				scroll_direction.x = 1.0
+		if not scroll_direction.is_zero_approx() and is_instance_valid(_world_root):
+			_world_root.call("rotate_camera", scroll_direction)
+			accept_event()
+			return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			_begin_pointer(event.position)
