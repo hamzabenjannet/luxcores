@@ -270,7 +270,7 @@ func _build_interface() -> void:
 
 	_status_label = Label.new()
 	_status_label.text = "Connect to a Luxcores backend to start."
-	_status_label.add_theme_font_size_override("font_size", 17)
+	_status_label.add_theme_font_size_override("font_size", 14)
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status_label.add_theme_color_override("font_color", Color("#aabbd0"))
 	_status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -285,69 +285,76 @@ func _build_interface() -> void:
 
 	# Top: the match, its phase and the clock, the status line and the Start and Leave buttons.
 	_top_panel = PanelContainer.new()
-	_top_panel.add_theme_stylebox_override("panel", _overlay_style(0.8))
+	var top_style := _overlay_style(0.8)
+	top_style.set_content_margin_all(6)
+	_top_panel.add_theme_stylebox_override("panel", top_style)
 	_top_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_game.add_child(_top_panel)
 	_top_box = VBoxContainer.new()
-	_top_box.add_theme_constant_override("separation", 4)
+	_top_box.add_theme_constant_override("separation", 3)
 	_top_panel.add_child(_top_box)
 	var match_id_row := HBoxContainer.new()
-	match_id_row.add_theme_constant_override("separation", 8)
+	match_id_row.add_theme_constant_override("separation", 5)
 	var match_id_label := Label.new()
 	match_id_label.text = "Match"
-	match_id_label.add_theme_font_size_override("font_size", 16)
+	match_id_label.add_theme_font_size_override("font_size", 13)
 	match_id_row.add_child(match_id_label)
 	_match_id_input = LineEdit.new()
 	_match_id_input.editable = false
 	_match_id_input.select_all_on_focus = true
-	_match_id_input.custom_minimum_size = Vector2(120, 40)
+	_match_id_input.custom_minimum_size = Vector2(120, 36)
 	_match_id_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_match_id_input.add_theme_font_size_override("font_size", 12)
 	match_id_row.add_child(_match_id_input)
 	var copy_match_id_button := _make_button("COPY", Color("#34577a"))
-	copy_match_id_button.custom_minimum_size = Vector2(70, 40)
+	copy_match_id_button.custom_minimum_size = Vector2(58, 36)
 	copy_match_id_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	copy_match_id_button.add_theme_font_size_override("font_size", 12)
 	copy_match_id_button.pressed.connect(_copy_match_id)
 	match_id_row.add_child(copy_match_id_button)
 	_start_button = _make_button("START", Color("#287557"))
-	_start_button.custom_minimum_size = Vector2(80, 40)
+	_start_button.custom_minimum_size = Vector2(64, 36)
 	_start_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_start_button.add_theme_font_size_override("font_size", 12)
 	_start_button.pressed.connect(_start_match)
 	match_id_row.add_child(_start_button)
 	_leave_button = _make_button("LEAVE", Color("#52313b"))
-	_leave_button.custom_minimum_size = Vector2(80, 40)
+	_leave_button.custom_minimum_size = Vector2(64, 36)
 	_leave_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_leave_button.add_theme_font_size_override("font_size", 12)
 	_leave_button.pressed.connect(_on_leave_pressed)
 	match_id_row.add_child(_leave_button)
+	_key_settings_button = _make_button("KEYS", Color("#34577a"))
+	_key_settings_button.custom_minimum_size = Vector2(58, 36)
+	_key_settings_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	_key_settings_button.add_theme_font_size_override("font_size", 12)
+	_key_settings_button.pressed.connect(_open_key_settings)
+	match_id_row.add_child(_key_settings_button)
 	_top_box.add_child(match_id_row)
 	var labels_row := HBoxContainer.new()
-	labels_row.add_theme_constant_override("separation", 14)
+	labels_row.add_theme_constant_override("separation", 8)
 	_match_label = Label.new()
 	_match_label.text = ""
-	_match_label.add_theme_font_size_override("font_size", 16)
+	_match_label.add_theme_font_size_override("font_size", 12)
 	_match_label.add_theme_color_override("font_color", Color("#d5e5fa"))
 	labels_row.add_child(_match_label)
 	_phase_label = Label.new()
 	_phase_label.text = "LOBBY"
-	_phase_label.add_theme_font_size_override("font_size", 18)
+	_phase_label.add_theme_font_size_override("font_size", 13)
 	_phase_label.add_theme_color_override("font_color", Color("#f0bd68"))
 	labels_row.add_child(_phase_label)
 	_world_label = Label.new()
 	_world_label.text = "Waiting for match snapshot"
-	_world_label.add_theme_font_size_override("font_size", 17)
+	_world_label.add_theme_font_size_override("font_size", 12)
 	_world_label.add_theme_color_override("font_color", Color("#b7c7da"))
 	_world_label.clip_text = true
 	_world_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	labels_row.add_child(_world_label)
-	_key_settings_button = _make_button("KEYS", Color("#34577a"))
-	_key_settings_button.custom_minimum_size = Vector2(76, 40)
-	_key_settings_button.size_flags_horizontal = Control.SIZE_SHRINK_END
-	_key_settings_button.pressed.connect(_open_key_settings)
-	labels_row.add_child(_key_settings_button)
 	_top_box.add_child(labels_row)
 
 	_build_description = Label.new()
 	_build_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_build_description.add_theme_font_size_override("font_size", 15)
+	_build_description.add_theme_font_size_override("font_size", 13)
 	_build_description.add_theme_color_override("font_color", Color("#d5e5fa"))
 	_build_description.visible = false
 	_top_box.add_child(_build_description)

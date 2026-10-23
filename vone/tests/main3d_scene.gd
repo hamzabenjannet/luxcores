@@ -47,6 +47,13 @@ func _run() -> void:
 		_check("3D touch overlay is active", touch_overlay.get_script() == load("res://scripts/arena_3d.gd"), true)
 		_check("zoom buttons are present", touch_overlay.get("_plus_button") is Button and touch_overlay.get("_minus_button") is Button, true)
 		_check("key settings overlay and button are available", game_interface.get("_key_settings_overlay") is Control and game_interface.get("_key_settings_button") is Button, true)
+		var leave_button := game_interface.get("_leave_button") as Button
+		var keys_button := game_interface.get("_key_settings_button") as Button
+		var stats_label := game_interface.get("_world_label") as Label
+		_check("KEYS sits directly to the right of LEAVE", keys_button.get_parent() == leave_button.get_parent() and keys_button.get_index() == leave_button.get_index() + 1, true)
+		_check("KEYS stays out of the stats row", keys_button.get_parent() != stats_label.get_parent(), true)
+		_check("match HUD buttons use compact sizes", leave_button.custom_minimum_size.y <= 36.0 and keys_button.custom_minimum_size.y <= 36.0, true)
+		_check("match stats use compact text", stats_label.get_theme_font_size("font_size") <= 12, true)
 		var camera_selector := game_interface.get("_camera_selector") as OptionButton
 		_check("camera selector defaults to the RTS camera", camera_selector != null and camera_selector.selected == 0, true)
 		_check("RTS camera is active by default", int(scene.call("get_camera_mode")) == 0 and (scene.get_node("RTScamera") as Camera3D).current, true)
