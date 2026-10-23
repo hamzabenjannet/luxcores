@@ -15,6 +15,18 @@ func _run() -> void:
 	_check("terrain is present", scene.get_node_or_null("Terrain") is MeshInstance3D, true)
 	_check("camera is present", scene.get_node_or_null("Camera3D") is Camera3D, true)
 	_check("RTS camera is present", scene.get_node_or_null("RTScamera") is Camera3D, true)
+	var sun := scene.get_node("DirectionalLight3D") as DirectionalLight3D
+	_check("sun casts shadows", sun.shadow_enabled, true)
+	scene.call("set_balance", {"dayNight": {"dayTicks": 8, "nightTicks": 4}})
+	scene.call("_update_sun", 4.0)
+	var noon_position := sun.position
+	_check("daytime sun rises above the arena", noon_position.y > 0.0, true)
+	_check("daytime sun aims toward the arena", (sun.global_basis * Vector3.FORWARD).normalized().dot((-sun.position).normalized()) > 0.99, true)
+	_check("daytime sun reaches full strength", is_equal_approx(sun.light_energy, 2.0), true)
+	scene.call("_update_sun", 10.0)
+	_check("nighttime sun passes below the arena", sun.position.y < 0.0, true)
+	_check("nighttime sun fades out", is_equal_approx(sun.light_energy, 0.0), true)
+	_check("sun moves around the arena over the cycle", sun.position != noon_position, true)
 	var canvas_layer: CanvasLayer
 	for child in scene.get_children():
 		if child is CanvasLayer:
@@ -55,7 +67,10 @@ func _run() -> void:
 			"hp": 10000,
 			"attack": (kind % 3) + 1,
 		})
-	var balance := {"hpFactor": {"core": 1, "default": 10}}
+	var balance := {
+		"hpFactor": {"core": 1, "default": 10},
+		"dayNight": {"dayTicks": 8, "nightTicks": 4},
+	}
 	var heroes := {"roster": [{"id": 1, "name": "Test Hero"}]}
 	scene.call("set_balance", balance)
 	if touch_overlay != null:

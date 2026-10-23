@@ -4458,6 +4458,7 @@ script = ExtResource("11_dssb6")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1270712680]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 25.836966, -20.194199)
+shadow_enabled = true
 light_energy = 2.0
 light_indirect_energy = 2.0
 light_volumetric_fog_energy = 4.0

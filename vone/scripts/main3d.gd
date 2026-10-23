@@ -22,6 +22,7 @@ const TEMPLATE_NAMES := [
 @onready var _terrain: MeshInstance3D = $Terrain
 @onready var _camera: Camera3D = $Camera3D
 @onready var _rtscamera: Camera3D = $RTScamera
+@onready var _sun: DirectionalLight3D = $DirectionalLight3D
 
 const CAMERA_RTS := 0
 const CAMERA_DEBUG := 1
@@ -36,6 +37,9 @@ var _templates: Dictionary = {}
 var _entities_by_id: Dictionary = {}
 var _layout: Dictionary = {}
 var _snapshot: Dictionary = {}
+var _day_night := {"dayTicks": 800, "nightTicks": 400}
+var _sun_tick := 0.0
+var _sun_tick_target := 0.0
 var _hp_factor := {"core": 1, "default": 10}
 var _hero_names: Array = []
 var _item_names: Array = []
@@ -101,6 +105,7 @@ func _ready() -> void:
 	_terrain.visible = true
 	_add_interface()
 	_configure_map()
+	_update_sun(_sun_tick)
 
 func _add_interface() -> void:
 	var canvas := CanvasLayer.new()
@@ -124,6 +129,10 @@ func _add_interface() -> void:
 func set_balance(balance: Dictionary, heroes: Dictionary = {}, items: Dictionary = {}) -> void:
 	if balance.has("hpFactor"):
 		_hp_factor = balance.hpFactor
+	var day_night: Variant = balance.get("dayNight")
+	if day_night is Dictionary:
+		_day_night = day_night
+		_update_sun(_sun_tick)
 	_hero_names = []
 	for entry in heroes.get("roster", []):
 		_hero_names.append(String(entry.name))
@@ -135,6 +144,10 @@ func set_world(layout: Dictionary, world_snapshot: Dictionary, team: int) -> voi
 	var map_changed := layout != _layout
 	_layout = layout
 	_snapshot = world_snapshot
+	var snapshot_tick := float(world_snapshot.get("tick", 0))
+	if world_snapshot.is_empty() or snapshot_tick < _sun_tick_target:
+		_sun_tick = snapshot_tick
+	_sun_tick_target = snapshot_tick
 	_viewer_team = team
 	var next_width := int(layout.get("width", 96))
 	var next_height := int(layout.get("height", 112))
@@ -145,6 +158,7 @@ func set_world(layout: Dictionary, world_snapshot: Dictionary, team: int) -> voi
 		map_changed = true
 	if map_changed:
 		_configure_map()
+	_update_sun(_sun_tick)
 	if layout.is_empty():
 		_fitted_to_world = false # the next match frames its own base
 	elif not _fitted_to_world:
@@ -194,6 +208,10 @@ func get_camera_mode() -> int:
 	return _camera_mode
 
 func _process(delta: float) -> void:
+	if _snapshot.has("tick"):
+		var sun_weight := 1.0 - exp(-minf(delta, 0.1) * 12.0)
+		_sun_tick = lerpf(_sun_tick, _sun_tick_target, sun_weight)
+		_update_sun(_sun_tick)
 	if _camera_mode == CAMERA_RTS:
 		if _following and _has_follow_point:
 			_camera_target = _camera_target.lerp(_follow_point, 1.0 - exp(-minf(delta, 0.1) * 8.0))
@@ -214,6 +232,32 @@ func _process(delta: float) -> void:
 		camera_changed = true
 	if camera_changed:
 		_position_camera()
+
+func _update_sun(tick: float) -> void:
+	var day_ticks := maxi(1, int(_day_night.get("dayTicks", 800)))
+	var night_ticks := maxi(1, int(_day_night.get("nightTicks", 400)))
+	var cycle_ticks := day_ticks + night_ticks
+	var cycle_tick := fposmod(tick, float(cycle_ticks))
+	var phase: float
+	if cycle_tick < day_ticks:
+		phase = PI * cycle_tick / float(day_ticks)
+	else:
+		phase = PI + PI * (cycle_tick - day_ticks) / float(night_ticks)
+
+	var sun_height := sin(phase)
+	var orbit_radius := maxf(float(_map_width), float(_map_height)) * 0.65
+	_sun.position = Vector3(
+		cos(phase) * orbit_radius,
+		sun_height * orbit_radius * 0.9,
+		sin(phase) * orbit_radius
+	)
+	_sun.look_at(Vector3.ZERO, Vector3.UP)
+
+	var daylight := smoothstep(-0.12, 0.28, sun_height)
+	_sun.light_energy = 2.0 * daylight
+	_sun.light_indirect_energy = 2.0 * daylight
+	_sun.light_volumetric_fog_energy = 4.0 * daylight
+	_sun.light_specular = 2.0 * daylight
 
 func set_selection(entity_id: int) -> void:
 	_selected_entity_id = entity_id
