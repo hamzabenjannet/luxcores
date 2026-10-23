@@ -3,6 +3,7 @@ extends Node3D
 
 const GameLogic = preload("res://scripts/game_logic.gd")
 const MainScript = preload("res://scripts/main.gd")
+const MinimapScript = preload("res://scripts/minimap_3d.gd")
 const CREEP_MELEE_MODEL = preload("res://assets/CreepMeleeModelAsset.glb")
 
 const TEAM_BLUE := Color("#3d8bff")
@@ -30,6 +31,7 @@ var _map_root: Node3D
 var _entity_root: Node3D
 var _effect_root: Node3D
 var _path_root: Node3D
+var _minimap: Control
 var _templates: Dictionary = {}
 var _entities_by_id: Dictionary = {}
 var _layout: Dictionary = {}
@@ -108,6 +110,16 @@ func _add_interface() -> void:
 	interface.configure_3d_world(self)
 	interface.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	canvas.add_child(interface)
+	_minimap = MinimapScript.new()
+	_minimap.name = "RTSMinimap"
+	_minimap.anchor_left = 0.0
+	_minimap.anchor_right = 0.0
+	_minimap.offset_left = 0.0
+	_minimap.offset_right = 125.0
+	_minimap.offset_top = 0.0
+	_minimap.offset_bottom = 125.0
+	_minimap.set_world_root(self)
+	canvas.add_child(_minimap)
 
 func set_balance(balance: Dictionary, heroes: Dictionary = {}, items: Dictionary = {}) -> void:
 	if balance.has("hpFactor"):
@@ -141,6 +153,10 @@ func set_world(layout: Dictionary, world_snapshot: Dictionary, team: int) -> voi
 	_remember_hero_point()
 	_render_entities()
 	_render_paths()
+	if is_instance_valid(_minimap):
+		_minimap.call("set_map_data", _layout, _snapshot, _camera_target)
+		_minimap.visible = _camera_mode == CAMERA_RTS and not _layout.is_empty()
+	_update_minimap()
 
 ## The ground point of the viewer's living hero, which the camera follows.
 func _remember_hero_point() -> void:
@@ -168,8 +184,11 @@ func set_camera_mode(mode: int) -> void:
 	_camera.current = mode == CAMERA_DEBUG
 	_rtscamera.set_process(mode == CAMERA_RTS)
 	_rtscamera.set_process_unhandled_input(mode == CAMERA_RTS)
+	if is_instance_valid(_minimap):
+		_minimap.visible = mode == CAMERA_RTS and not _layout.is_empty()
 	if mode == CAMERA_RTS:
 		_sync_rts_camera_target()
+		_update_minimap()
 
 func get_camera_mode() -> int:
 	return _camera_mode
@@ -179,6 +198,7 @@ func _process(delta: float) -> void:
 		if _following and _has_follow_point:
 			_camera_target = _camera_target.lerp(_follow_point, 1.0 - exp(-minf(delta, 0.1) * 8.0))
 			_sync_rts_camera_target()
+		_update_minimap()
 		return
 	var camera_changed := false
 	if _following and _has_follow_point:
@@ -214,6 +234,23 @@ func get_camera_target() -> Vector3:
 		var target: Vector3 = _rtscamera.get("orbit_center")
 		return target
 	return _camera_target
+
+func jump_camera_to_map_position(map_position: Vector2) -> void:
+	if _camera_mode != CAMERA_RTS:
+		return
+	_following = false
+	_camera_target = Vector3(
+		clampf(map_position.x, 0.0, float(_map_width)) - float(_map_width) * 0.5,
+		0.0,
+		clampf(map_position.y, 0.0, float(_map_height)) - float(_map_height) * 0.5
+	)
+	_sync_rts_camera_target()
+	_update_minimap()
+
+func _update_minimap() -> void:
+	if not is_instance_valid(_minimap):
+		return
+	_minimap.call("set_camera_target", get_camera_target())
 
 func camera_ray_origin(viewport_position: Vector2) -> Vector3:
 	return _active_camera().project_ray_origin(viewport_position)

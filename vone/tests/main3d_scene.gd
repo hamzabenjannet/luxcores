@@ -24,6 +24,8 @@ func _run() -> void:
 	var touch_overlay: Control
 	var game_page: Control
 	var game_interface: Control
+	var minimap: Control = scene.get("_minimap") as Control
+	_check("RTS minimap is 125 by 125 pixels at the top-left edge", minimap != null and minimap.size == Vector2(125.0, 125.0) and minimap.position == Vector2.ZERO, true)
 	if canvas_layer != null:
 		game_interface = canvas_layer.get_child(0) as Control
 		var home := game_interface.get("_home") as Control
@@ -74,6 +76,7 @@ func _run() -> void:
 	if game_page != null:
 		game_page.visible = true
 	await process_frame
+	_check("RTS minimap appears in RTS mode", minimap.visible, true)
 	_check("all entity kinds render", int(scene.call("get_rendered_entity_count")), entities.size())
 	var melee_entity := scene.get_node_or_null("Entities/Entity_9") as Node3D
 	var melee_model := melee_entity.find_child("target_character", true, false) if melee_entity != null else null
@@ -108,11 +111,16 @@ func _run() -> void:
 	_check("RTS edge scroll moves up", rts_camera.call("_edge_scroll_movement", Vector2(640.0, 0.0), viewport_rect).z, -1.0)
 	_check("RTS edge scroll moves down", rts_camera.call("_edge_scroll_movement", Vector2(640.0, 960.0), viewport_rect).z, 1.0)
 	scene.call("set_camera_mode", 0)
-	var rts_target: Vector3 = scene.call("get_camera_target")
+	var minimap_rect: Rect2 = minimap.call("_map_rect")
+	_check("minimap map fills its window without padding", minimap_rect == Rect2(Vector2.ZERO, Vector2(125.0, 125.0)), true)
+	minimap.call("_handle_map_click", minimap_rect.get_center())
+	_check("minimap click jumps the RTS camera to that map point", scene.call("get_camera_target"), Vector3.ZERO)
+	var rts_target_after_click: Vector3 = scene.call("get_camera_target")
 	touch_overlay.call("_begin_pointer", Vector2.ZERO)
 	touch_overlay.call("_move_pointer", Vector2(10.0, 0.0), false)
-	_check("left dragging does not pan the RTS camera", scene.call("get_camera_target"), rts_target)
+	_check("left dragging does not pan the RTS camera", scene.call("get_camera_target"), rts_target_after_click)
 	scene.call("set_camera_mode", 1)
+	_check("RTS minimap hides in debug mode", minimap.visible, false)
 	var debug_target: Vector3 = scene.call("get_camera_target")
 	touch_overlay.call("_begin_pointer", Vector2.ZERO)
 	touch_overlay.call("_move_pointer", Vector2(10.0, 0.0))

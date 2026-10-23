@@ -213,7 +213,7 @@ Open for the owners:
 
 ## Client Controls (2026-10-20)
 
-- **Godot camera.** The start menu selects Camera 1 (RTS) by default and offers Camera 2 (orthographic Camera3D) for debugging. Camera 1 supports edge scrolling on all four borders and does not pan on left-click drag; Camera 2 keeps left-drag panning. The selected camera handles map picking, zoom and orbit controls. `vone/tests/main3d_scene.gd` checks both modes.
+- **Godot camera.** The start menu selects Camera 1 (RTS) by default and offers Camera 2 (orthographic Camera3D) for debugging. Camera 1 shows a 125 × 125 px minimap flush with the top-left corner and without internal padding. Clicking it jumps to that map point. Camera 1 supports edge scrolling on all four borders and ignores left-click dragging. Camera 2 keeps left-drag panning. Scene tests check both modes and minimap navigation.
 - **Barracks (web and Godot).** Dropdowns choose the creep group size, creep type and hero. A separate Pick Hero button confirms the choice. Recycle, Set Default Path and Order Creeps share one row. The existing command payloads remain unchanged.
 - **Hero keyboard slots (web and Godot).** Q/W/E/R call melee, ranged, area and shield in ability-slot order. Keys 1–4 call inventory slots 1–4, which hold Energy Boost, Energy Grab, Haste and Sluggish. Clicks still use the same actions.
 - **Key settings.** The KEYS button opens a remapping panel in each client. Each of the eight slots accepts a unique letter or digit. The web client saves to local storage; Godot saves to `user://luxcores.cfg`. These settings stay local to each client.

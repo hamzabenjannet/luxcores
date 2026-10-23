@@ -4313,7 +4313,7 @@ transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -3.1, 0.10000006, -0.1)
 mesh = SubResource("ArrayMesh_dssb6")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_fjf2k")
-metadata/_pb_pick_mesh_id = -9223365928740106609
+metadata/_pb_pick_mesh_id = -9223370246708980412
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 12
@@ -4323,7 +4323,7 @@ transform = Transform3D(-2.1855694e-06, 0, -50, 0, 10, 0, 50, 0, -2.1855694e-06,
 mesh = SubResource("ArrayMesh_4sdv7")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_rqqm0")
-metadata/_pb_pick_mesh_id = -9223365928052240775
+metadata/_pb_pick_mesh_id = -9223370246021115747
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 2
@@ -4333,7 +4333,7 @@ transform = Transform3D(0, 0, 1, 0, 1.7594656, 0, -1, 0, 0, -4.4375024, 0.173906
 mesh = SubResource("ArrayMesh_da6ww")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_h3fs6")
-metadata/_pb_pick_mesh_id = -9223365927867691406
+metadata/_pb_pick_mesh_id = -9223370245836565671
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 320
@@ -4343,7 +4343,7 @@ transform = Transform3D(0, 0, 1.7674925, 0, 1, 0, -1, 0, 0, -4.9, 0.1, -0.677450
 mesh = SubResource("ArrayMesh_vig3m")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_5iv1o")
-metadata/_pb_pick_mesh_id = -9223365911677694239
+metadata/_pb_pick_mesh_id = -9223370229646551510
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 320
@@ -4364,7 +4364,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, -1)
 mesh = SubResource("ArrayMesh_7h8rn")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_mr3va")
-metadata/_pb_pick_mesh_id = -9223365911509905224
+metadata/_pb_pick_mesh_id = -9223370229478779340
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 28
@@ -4375,7 +4375,7 @@ mesh = SubResource("ArrayMesh_rqqm0")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_lm1mb")
 collider_type = 2
-metadata/_pb_pick_mesh_id = -9223365910016749296
+metadata/_pb_pick_mesh_id = -9223370227985607063
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 20
@@ -4385,7 +4385,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.2, 0, 0.8)
 mesh = SubResource("ArrayMesh_fw4j6")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_23y4a")
-metadata/_pb_pick_mesh_id = -9223365908942992404
+metadata/_pb_pick_mesh_id = -9223370226911865193
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 8
@@ -4395,7 +4395,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.8999999, 0.2, 1.1)
 mesh = SubResource("ArrayMesh_h3fs6")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_qdiup")
-metadata/_pb_pick_mesh_id = -9223365908456451780
+metadata/_pb_pick_mesh_id = -9223370226425325906
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 16
@@ -4405,7 +4405,7 @@ transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -2.6000001, 0.1, 1)
 mesh = SubResource("ArrayMesh_resw4")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_uujn8")
-metadata/_pb_pick_mesh_id = -9223365907567259365
+metadata/_pb_pick_mesh_id = -9223370225536133405
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 32
@@ -4415,7 +4415,7 @@ transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -3.1, 0.2, 0.90000004)
 mesh = SubResource("ArrayMesh_5iv1o")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_rnkjm")
-metadata/_pb_pick_mesh_id = -9223365905872761867
+metadata/_pb_pick_mesh_id = -9223370223841634539
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 32
@@ -4425,7 +4425,7 @@ transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -3.1, 0.3, 0.5)
 mesh = SubResource("ArrayMesh_3v655")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_nfwrv")
-metadata/_pb_pick_mesh_id = -9223365904178261609
+metadata/_pb_pick_mesh_id = -9223370222147135670
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 32
@@ -4435,7 +4435,7 @@ transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -3.8, 0.05, 0.2)
 mesh = SubResource("ArrayMesh_rmcg2")
 script = ExtResource("2_qmevj")
 pb_mesh_data = SubResource("Resource_ubfpd")
-metadata/_pb_pick_mesh_id = -9223365902483779688
+metadata/_pb_pick_mesh_id = -9223370220452636801
 metadata/_pb_pick_tmesh = Object(TriangleMesh,"script":null)
 
 metadata/_pb_pick_tris = 12
@@ -4443,51 +4443,6 @@ metadata/_pb_pick_tris = 12
 [node name="Camera3D" type="Camera3D" parent="." unique_id=1549623154]
 transform = Transform3D(0.98466593, -0.006415114, 0.17433237, -0.10175204, 0.79060787, 0.60380954, -0.14170219, -0.61228937, 0.7778318, 0.34267294, 13.502886, 12.576866)
 fov = 75.16254
-
-[node name="SpotLight3D3" type="SpotLight3D" parent="." unique_id=1603087587]
-transform = Transform3D(0.7880272, 0.6064658, 0.10589016, -0.1015823, -0.041553557, 0.9939591, 0.6072023, -0.7940232, 0.028860703, -4.7229776, 17.135742, 4.1300573)
-light_energy = 16.0
-light_indirect_energy = 16.0
-light_volumetric_fog_energy = 0.0
-light_size = 0.8
-spot_range = 28.14294
-spot_angle = 57.601887
-
-[node name="SpotLight3D4" type="SpotLight3D" parent="." unique_id=1911795881]
-transform = Transform3D(0.7880272, 0.6064658, 0.10589016, -0.1015823, -0.041553557, 0.9939591, 0.6072023, -0.7940232, 0.028860703, -12.574167, 18.147816, -1.9195561)
-light_energy = 16.0
-light_indirect_energy = 16.0
-light_volumetric_fog_energy = 0.0
-light_size = 0.8
-spot_range = 28.14294
-spot_angle = 57.601887
-
-[node name="SpotLight3D5" type="SpotLight3D" parent="." unique_id=1418739391]
-transform = Transform3D(0.7880272, 0.6064658, 0.10589016, -0.1015823, -0.041553557, 0.9939591, 0.6072023, -0.7940232, 0.028860703, 6.3317757, 15.710705, 12.648128)
-light_energy = 16.0
-light_indirect_energy = 16.0
-light_volumetric_fog_energy = 0.0
-light_size = 0.8
-spot_range = 28.14294
-spot_angle = 57.601887
-
-[node name="SpotLight3D6" type="SpotLight3D" parent="." unique_id=240480962]
-transform = Transform3D(0.7880272, 0.6064658, 0.10589016, -0.1015823, -0.041553557, 0.9939591, 0.6072023, -0.7940232, 0.028860703, 18.787756, 14.1050415, 22.245893)
-light_energy = 16.0
-light_indirect_energy = 16.0
-light_volumetric_fog_energy = 0.0
-light_size = 0.8
-spot_range = 28.14294
-spot_angle = 57.601887
-
-[node name="SpotLight3D7" type="SpotLight3D" parent="." unique_id=496123698]
-transform = Transform3D(0.7880272, 0.6064658, 0.10589016, -0.1015823, -0.041553557, 0.9939591, 0.6072023, -0.7940232, 0.028860703, -22.75375, 19.460035, -9.763277)
-light_energy = 16.0
-light_indirect_energy = 16.0
-light_volumetric_fog_energy = 0.0
-light_size = 0.8
-spot_range = 28.14294
-spot_angle = 57.601887
 
 [node name="autumn-tree-light" parent="." unique_id=1215865663 instance=ExtResource("9_iicx7")]
 transform = Transform3D(1, 0, 0, 0, 1.3405281, 0, 0, 0, 1, -2.117, 0, 1.195)
@@ -4500,3 +4455,10 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.817045, 0.1, 1.195013)
 [node name="RTScamera" type="Camera3D" parent="." unique_id=1218638208]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.520314, 9.155515, 10.511658)
 script = ExtResource("11_dssb6")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1270712680]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 25.836966, -20.194199)
+light_energy = 2.0
+light_indirect_energy = 2.0
+light_volumetric_fog_energy = 4.0
+light_specular = 2.0
