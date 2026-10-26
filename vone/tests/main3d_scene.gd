@@ -100,6 +100,13 @@ func _run() -> void:
 	await process_frame
 	_check("RTS minimap appears in RTS mode", minimap.visible, true)
 	_check("all entity kinds render", int(scene.call("get_rendered_entity_count")), entities.size())
+	var barracks_entity := scene.get_node_or_null("Entities/Entity_6") as Node3D
+	var barracks_meshes := barracks_entity.find_children("*", "MeshInstance3D", true, false) if barracks_entity != null else []
+	_check("Barracks uses the imported creep Barracks model", not barracks_meshes.is_empty(), true)
+	if not barracks_meshes.is_empty():
+		_check("Barracks carries no team tint", (barracks_meshes[0] as MeshInstance3D).get_surface_override_material(0) == null, true)
+		var barracks_material := (barracks_meshes[0] as MeshInstance3D).get_active_material(0) as StandardMaterial3D
+		_check("Barracks keeps its imported texture", barracks_material != null and barracks_material.albedo_texture != null, true)
 	var melee_entity := scene.get_node_or_null("Entities/Entity_9") as Node3D
 	var melee_model := melee_entity.find_child("target_character", true, false) if melee_entity != null else null
 	_check("melee creeps use the imported detailed model", melee_model is Node3D, true)
@@ -108,7 +115,35 @@ func _run() -> void:
 		_check("melee model contains its imported mesh", not melee_meshes.is_empty(), true)
 		if not melee_meshes.is_empty():
 			var surface_material := (melee_meshes[0] as MeshInstance3D).get_active_material(0) as StandardMaterial3D
-			_check("team tint keeps the imported texture", surface_material != null and surface_material.albedo_texture != null, true)
+			_check("melee creep keeps the imported texture", surface_material != null and surface_material.albedo_texture != null, true)
+			_check("melee creep carries no team tint", surface_material != null and surface_material.albedo_color == Color.WHITE and (melee_meshes[0] as MeshInstance3D).get_surface_override_material(0) == null, true)
+	var tower_entity := scene.get_node_or_null("Entities/Entity_7") as Node3D
+	var tower_meshes := tower_entity.find_children("*", "MeshInstance3D", true, false) if tower_entity != null else []
+	_check("buildings built from the scene meshes carry no team tint", not tower_meshes.is_empty() and (tower_meshes[0] as MeshInstance3D).material_override == null, true)
+	var roster: Array = []
+	for hero_name in ["Halo", "Prism", "Flare", "Aurora", "Corona"]:
+		roster.append({"id": roster.size(), "name": hero_name})
+	scene.call("set_balance", balance, {"roster": roster})
+	var hero_entities: Array = []
+	for hero_type in range(1, 7):
+		hero_entities.append({"id": 200 + hero_type, "kind": 10, "team": 0, "owner": 0, "x": 48000, "z": 56000, "hp": 10000, "heroType": hero_type})
+	scene.call("set_world", layout, {"entities": hero_entities}, 0)
+	await process_frame
+	var hero_files := ["hero01", "hero02", "hero03", "hero04", "hero05"]
+	for index in hero_files.size():
+		var hero_node := scene.get_node_or_null("Entities/Entity_%d" % (201 + index)) as Node3D
+		var hero_meshes := hero_node.find_children("*", "MeshInstance3D", true, false) if hero_node != null else []
+		var hero_mesh := hero_meshes[0] as MeshInstance3D if not hero_meshes.is_empty() else null
+		_check("%s renders the %s model" % [roster[index].name, hero_files[index]], hero_mesh != null and hero_mesh.mesh.resource_path.begins_with("res://assets/%s.glb" % hero_files[index]), true)
+		var hero_material := hero_mesh.get_active_material(0) as StandardMaterial3D if hero_mesh != null else null
+		_check("%s keeps its imported texture" % roster[index].name, hero_material != null and hero_material.albedo_texture != null, true)
+		_check("%s carries no team tint" % roster[index].name, hero_material != null and hero_material.albedo_color == Color.WHITE, true)
+	var unknown_hero := scene.get_node_or_null("Entities/Entity_206") as Node3D
+	_check("a hero type outside the roster keeps the capsule", unknown_hero != null and unknown_hero.find_children("*", "MeshInstance3D", true, false).size() == 1 and (unknown_hero.find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D).mesh is CapsuleMesh, true)
+	scene.call("set_balance", balance, heroes)
+	scene.call("set_world", layout, snapshot, 0)
+	await process_frame
+
 	if touch_overlay != null:
 		var taps: Array[Vector2] = []
 		touch_overlay.tapped.connect(func(ground: Vector2) -> void: taps.append(ground))

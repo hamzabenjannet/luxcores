@@ -6,5 +6,22 @@
   ],
   "settings": {
     "godotTools.editorPath.godot4": "/Applications/Godot.app",
+    "chat.tools.terminal.autoApprove": {
+      "command": true,
+      "true": true,
+      "/^python3 -c 'import json,struct; p=\"vone/assets/creepBarracks\\.glb\"; f=open\\(p,\"rb\"\\); h=f\\.read\\(12\\); n,kind=struct\\.unpack\\(\"<II\",f\\.read\\(8\\)\\); d=json\\.loads\\(f\\.read\\(n\\)\\); print\\(\"nodes\", \\[\\(x\\.get\\(\"name\"\\), x\\.get\\(\"translation\"\\), x\\.get\\(\"scale\"\\)\\) for x in d\\.get\\(\"nodes\",\\[\\]\\)\\]\\); print\\(\"accessors\", \\[\\(i,a\\.get\\(\"min\"\\),a\\.get\\(\"max\"\\)\\) for i,a in enumerate\\(d\\.get\\(\"accessors\",\\[\\]\\)\\) if a\\.get\\(\"type\"\\)==\"VEC3\" and \"min\" in a\\]\\)'$/": {
+        "approve": true,
+        "matchCommandLine": true,
+      },
+      "/^node --test$/": {
+        "approve": true,
+        "matchCommandLine": true,
+      },
+      "/Applications/Godot.app/Contents/MacOS/Godot": true,
+      "/^/Applications/Godot\\.app/Contents/MacOS/Godot --headless --path vone --script res://tests/run_tests\\.gd$/": {
+        "approve": true,
+        "matchCommandLine": true,
+      },
+    },
   },
 }

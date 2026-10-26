@@ -5,6 +5,17 @@ const GameLogic = preload("res://scripts/game_logic.gd")
 const MainScript = preload("res://scripts/main.gd")
 const MinimapScript = preload("res://scripts/minimap_3d.gd")
 const CREEP_MELEE_MODEL = preload("res://assets/CreepMeleeModelAsset.glb")
+const BARRACKS_MODEL = preload("res://assets/creepBarracks.glb")
+## Hero models by roster name (data/heroes.json). A name missing here renders as the capsule.
+const HERO_MODELS := {
+	"Halo": preload("res://assets/hero01.glb"),
+	"Prism": preload("res://assets/hero02.glb"),
+	"Flare": preload("res://assets/hero03.glb"),
+	"Aurora": preload("res://assets/hero04.glb"),
+	"Corona": preload("res://assets/hero05.glb"),
+}
+## The hero models are 2 tiles tall with their origin at the middle, so a scale of 0.8 gives the capsule's 1.6 height.
+const HERO_MODEL_SCALE := 0.8
 
 const TEAM_BLUE := Color("#3d8bff")
 const TEAM_RED := Color("#ff4d4d")
@@ -575,11 +586,22 @@ func _make_entity(entity: Dictionary) -> Node3D:
 	anchor.position = Vector3(x, 0.12, z)
 	var template_name := _template_for(entity)
 	var template := _templates.get(template_name) as MeshInstance3D
-	if template_name == "CreepMeleeModelAsset":
+	if template_name == "Barracks":
+		var barracks_model := BARRACKS_MODEL.instantiate() as Node3D
+		barracks_model.position.y = 0.9
+		var barracks_template := _templates.get(template_name) as Node3D
+		if barracks_template != null:
+			barracks_model.rotation = barracks_template.rotation
+		anchor.add_child(barracks_model)
+	elif template_name == "CreepMeleeModelAsset":
 		var melee_model := CREEP_MELEE_MODEL.instantiate() as Node3D
 		melee_model.scale = Vector3.ONE * 0.5
-		_tint_melee_model(melee_model, tint)
 		anchor.add_child(melee_model)
+	elif kind == GameLogic.KIND_HERO and HERO_MODELS.has(_hero_name_of(entity)):
+		var hero_model := (HERO_MODELS[_hero_name_of(entity)] as PackedScene).instantiate() as Node3D
+		hero_model.scale = Vector3.ONE * HERO_MODEL_SCALE
+		hero_model.position.y = HERO_MODEL_SCALE
+		anchor.add_child(hero_model)
 	else:
 		var model := MeshInstance3D.new()
 		if template != null and template.mesh != null:
@@ -588,7 +610,6 @@ func _make_entity(entity: Dictionary) -> Node3D:
 		else:
 			model.mesh = _fallback_mesh(kind)
 			model.scale = Vector3.ONE * (1.6 if kind == GameLogic.KIND_CORE else 0.7)
-		model.material_override = _flat_material(tint)
 		anchor.add_child(model)
 	if kind == GameLogic.KIND_TOWER:
 		_add_tower_marker(anchor, entity)
@@ -605,6 +626,11 @@ func _make_entity(entity: Dictionary) -> Node3D:
 		label.modulate = tint.lightened(0.22)
 		anchor.add_child(label)
 	return anchor
+
+## The roster name of a hero entity, or an empty string when its type is unknown. `heroType` is the roster id plus one.
+func _hero_name_of(entity: Dictionary) -> String:
+	var hero_type := int(entity.get("heroType", 0))
+	return String(_hero_names[hero_type - 1]) if hero_type > 0 and hero_type <= _hero_names.size() else ""
 
 func _template_for(entity: Dictionary) -> String:
 	var kind := int(entity.get("kind", 0))
@@ -639,20 +665,6 @@ func _template_for(entity: Dictionary) -> String:
 					return "CreepMeleeModelAsset"
 		_:
 			return ""
-
-func _tint_melee_model(model: Node3D, tint: Color) -> void:
-	for node in model.find_children("*", "MeshInstance3D", true, false):
-		var mesh_instance := node as MeshInstance3D
-		if mesh_instance.mesh == null:
-			continue
-		for surface in mesh_instance.mesh.get_surface_count():
-			var source_material := mesh_instance.get_active_material(surface) as StandardMaterial3D
-			if source_material == null:
-				mesh_instance.set_surface_override_material(surface, _flat_material(tint))
-				continue
-			var team_material := source_material.duplicate() as StandardMaterial3D
-			team_material.albedo_color *= tint
-			mesh_instance.set_surface_override_material(surface, team_material)
 
 func _fallback_mesh(kind: int) -> Mesh:
 	if kind == GameLogic.KIND_HERO:
