@@ -100,6 +100,17 @@ func _run() -> void:
 	await process_frame
 	_check("RTS minimap appears in RTS mode", minimap.visible, true)
 	_check("all entity kinds render", int(scene.call("get_rendered_entity_count")), entities.size())
+	# Every collector and the tower render an imported model, whose root the importer names Sketchfab_Scene,
+	# and the model keeps its own materials with no team tint.
+	for building in [["Solar", 2], ["Wind", 3], ["Geothermal", 4], ["Nuclear", 5], ["Tower", 7]]:
+		var building_entity := scene.get_node_or_null("Entities/Entity_%d" % int(building[1])) as Node3D
+		var building_model := building_entity.find_child("Sketchfab_Scene", false, false) if building_entity != null else null
+		_check("%s uses its imported model" % String(building[0]), building_model is Node3D, true)
+		if building_model is Node3D:
+			var building_meshes := building_model.find_children("*", "MeshInstance3D", true, false)
+			_check("%s model contains its imported meshes" % String(building[0]), not building_meshes.is_empty(), true)
+			if not building_meshes.is_empty():
+				_check("%s carries no team tint" % String(building[0]), (building_meshes[0] as MeshInstance3D).get_surface_override_material(0) == null, true)
 	var barracks_entity := scene.get_node_or_null("Entities/Entity_6") as Node3D
 	var barracks_meshes := barracks_entity.find_children("*", "MeshInstance3D", true, false) if barracks_entity != null else []
 	_check("Barracks uses the imported creep Barracks model", not barracks_meshes.is_empty(), true)

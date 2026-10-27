@@ -6,6 +6,47 @@ const MainScript = preload("res://scripts/main.gd")
 const MinimapScript = preload("res://scripts/minimap_3d.gd")
 const CREEP_MELEE_MODEL = preload("res://assets/CreepMeleeModelAsset.glb")
 const BARRACKS_MODEL = preload("res://assets/creepBarracks.glb")
+## Imported models for the collectors and the towers, by template name. Each model arrives in its own units with
+## its own origin, so `scale` fits it on a tile and `center`, in model units, centers it and rests it on the ground.
+## The sizes are the merged bounds measured in Godot: solar 1135 by 131 by 634, wind 14 by 108 by 57,
+## geothermal 3288 by 1827 by 4044, nuclear 49 by 25 by 82, and the three towers 23 by 90, 37 by 87 and 2.3 by 9.9.
+const BUILDING_MODELS := {
+	"Solar": {
+		"scene": preload("res://assets/solar_panels.glb"),
+		"scale": 0.0011,
+		"center": Vector3(-482.6, 2.2, -93.2),
+	},
+	"Wind": {
+		"scene": preload("res://assets/wind_turbine.glb"),
+		"scale": 0.017,
+		"center": Vector3(2.8, 75.3, 8.4),
+	},
+	"Geothermal": {
+		"scene": preload("res://assets/geothermal_power_station.glb"),
+		"scale": 0.00032,
+		"center": Vector3(0.0, 7.8, 22.0),
+	},
+	"Nuclear": {
+		"scene": preload("res://assets/nuclear_powerplant.glb"),
+		"scale": 0.0171,
+		"center": Vector3(-0.2, 1.0, -0.5),
+	},
+	"TowerRanged": {
+		"scene": preload("res://assets/ranged_tower_model_asset.glb"),
+		"scale": 0.0166,
+		"center": Vector3(0.0, 0.0, 0.0),
+	},
+	"TowerArea": {
+		"scene": preload("res://assets/area_tower_model_asset.glb"),
+		"scale": 0.0173,
+		"center": Vector3(0.0, 42.5, 0.0),
+	},
+	"TowerMelee": {
+		"scene": preload("res://assets/melee_tower_model_asset.glb"),
+		"scale": 0.152,
+		"center": Vector3(0.0, 0.5, 0.0),
+	},
+}
 ## Hero models by roster name (data/heroes.json). A name missing here renders as the capsule.
 const HERO_MODELS := {
 	"Halo": preload("res://assets/hero01.glb"),
@@ -586,7 +627,14 @@ func _make_entity(entity: Dictionary) -> Node3D:
 	anchor.position = Vector3(x, 0.12, z)
 	var template_name := _template_for(entity)
 	var template := _templates.get(template_name) as MeshInstance3D
-	if template_name == "Barracks":
+	if BUILDING_MODELS.has(template_name):
+		var model_spec: Dictionary = BUILDING_MODELS[template_name]
+		var model_scale := float(model_spec.scale)
+		var building_model := (model_spec.scene as PackedScene).instantiate() as Node3D
+		building_model.scale = Vector3.ONE * model_scale
+		building_model.position = (model_spec.center as Vector3) * model_scale
+		anchor.add_child(building_model)
+	elif template_name == "Barracks":
 		var barracks_model := BARRACKS_MODEL.instantiate() as Node3D
 		barracks_model.position.y = 0.9
 		var barracks_template := _templates.get(template_name) as Node3D
