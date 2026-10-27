@@ -1,11 +1,22 @@
 extends SceneTree
 ## Checks the main 3D scene, snapshot rendering and camera controls.
 
+const ModelLibrary = preload("res://scripts/model_library.gd")
+
 var _checks := 0
 var _failures := 0
 
 func _initialize() -> void:
 	_run.call_deferred()
+
+## The stable visual node of an entity, and whether it holds an imported model rather than a placeholder.
+## A placeholder is the `MeshInstance3D` the scene builds itself, so no check reads a name from inside a model.
+func _visual_of(scene: Node, id: int) -> Node3D:
+	var entity := scene.get_node_or_null("Entities/Entity_%d" % id) as Node3D
+	return entity.get_node_or_null(ModelLibrary.VISUAL_NAME) as Node3D if entity != null else null
+
+func _is_model(visual: Node3D) -> bool:
+	return visual != null and not (visual is MeshInstance3D) and not visual.find_children("*", "MeshInstance3D", true, false).is_empty()
 
 func _run() -> void:
 	var scene: Node = load("res://scenes/main3d.tscn").instantiate()
@@ -100,36 +111,33 @@ func _run() -> void:
 	await process_frame
 	_check("RTS minimap appears in RTS mode", minimap.visible, true)
 	_check("all entity kinds render", int(scene.call("get_rendered_entity_count")), entities.size())
-	# Every collector and the tower render an imported model, whose root the importer names Sketchfab_Scene,
-	# and the model keeps its own materials with no team tint.
+	# Every collector and the tower render an imported model under the stable node name, and the model keeps
+	# its own materials with no team tint. No check names a node inside a model, so a replacement file with a
+	# different hierarchy still passes.
 	for building in [["Lumen Core", 1], ["Solar", 2], ["Wind", 3], ["Geothermal", 4], ["Nuclear", 5], ["Tower", 7], ["Blocker", 8], ["Loot bag", 13]]:
-		var building_entity := scene.get_node_or_null("Entities/Entity_%d" % int(building[1])) as Node3D
-		var building_model := building_entity.find_child("Sketchfab_Scene", false, false) if building_entity != null else null
-		_check("%s uses its imported model" % String(building[0]), building_model is Node3D, true)
-		if building_model is Node3D:
+		var building_model := _visual_of(scene, int(building[1]))
+		_check("%s uses its imported model" % String(building[0]), _is_model(building_model), true)
+		if _is_model(building_model):
 			var building_meshes := building_model.find_children("*", "MeshInstance3D", true, false)
-			_check("%s model contains its imported meshes" % String(building[0]), not building_meshes.is_empty(), true)
-			if not building_meshes.is_empty():
-				_check("%s carries no team tint" % String(building[0]), (building_meshes[0] as MeshInstance3D).get_surface_override_material(0) == null, true)
-	var barracks_entity := scene.get_node_or_null("Entities/Entity_6") as Node3D
+			_check("%s carries no team tint" % String(building[0]), (building_meshes[0] as MeshInstance3D).get_surface_override_material(0) == null, true)
+	var barracks_entity := _visual_of(scene, 6)
 	var barracks_meshes := barracks_entity.find_children("*", "MeshInstance3D", true, false) if barracks_entity != null else []
 	_check("Barracks uses the imported creep Barracks model", not barracks_meshes.is_empty(), true)
 	if not barracks_meshes.is_empty():
 		_check("Barracks carries no team tint", (barracks_meshes[0] as MeshInstance3D).get_surface_override_material(0) == null, true)
 		var barracks_material := (barracks_meshes[0] as MeshInstance3D).get_active_material(0) as StandardMaterial3D
 		_check("Barracks keeps its imported texture", barracks_material != null and barracks_material.albedo_texture != null, true)
-	var melee_entity := scene.get_node_or_null("Entities/Entity_9") as Node3D
-	var melee_model := melee_entity.find_child("target_character", true, false) if melee_entity != null else null
-	_check("melee creeps use the imported detailed model", melee_model is Node3D, true)
-	if melee_model is Node3D:
+	var melee_model := _visual_of(scene, 9)
+	_check("melee creeps use the imported detailed model", _is_model(melee_model), true)
+	if _is_model(melee_model):
 		var melee_meshes := melee_model.find_children("*", "MeshInstance3D", true, false)
 		_check("melee model contains its imported mesh", not melee_meshes.is_empty(), true)
 		if not melee_meshes.is_empty():
 			var surface_material := (melee_meshes[0] as MeshInstance3D).get_active_material(0) as StandardMaterial3D
 			_check("melee creep keeps the imported texture", surface_material != null and surface_material.albedo_texture != null, true)
 			_check("melee creep carries no team tint", surface_material != null and surface_material.albedo_color == Color.WHITE and (melee_meshes[0] as MeshInstance3D).get_surface_override_material(0) == null, true)
-	var tower_entity := scene.get_node_or_null("Entities/Entity_7") as Node3D
-	var tower_meshes := tower_entity.find_children("*", "MeshInstance3D", true, false) if tower_entity != null else []
+	var tower_visual := _visual_of(scene, 7)
+	var tower_meshes := tower_visual.find_children("*", "MeshInstance3D", true, false) if tower_visual != null else []
 	_check("buildings built from the scene meshes carry no team tint", not tower_meshes.is_empty() and (tower_meshes[0] as MeshInstance3D).material_override == null, true)
 	# The ranged and area creeps and the four ground items each render their own imported model.
 	var item_list: Array = []
@@ -148,15 +156,12 @@ func _run() -> void:
 	scene.call("set_world", marker_layout, {"entities": model_entities}, 0)
 	await process_frame
 	for model_case in [["ranged creep", 300], ["area creep", 301], ["Energy Boost", 310], ["Energy Grab", 311], ["Haste", 312], ["Sluggish", 313]]:
-		var model_node := scene.get_node_or_null("Entities/Entity_%d" % int(model_case[1])) as Node3D
-		var imported := model_node.find_child("Sketchfab_Scene", false, false) if model_node != null else null
-		_check("%s uses its imported model" % String(model_case[0]), imported is Node3D, true)
-		if imported is Node3D:
-			_check("%s model contains its imported meshes" % String(model_case[0]), not imported.find_children("*", "MeshInstance3D", true, false).is_empty(), true)
+		var imported := _visual_of(scene, int(model_case[1]))
+		_check("%s uses its imported model" % String(model_case[0]), _is_model(imported), true)
 	var overlays := scene.get_node("MapOverlays")
 	_check("the geothermal vent of the map renders its imported model", overlays.find_children("Vent_*", "Node3D", false, false).size(), 1)
 	_check("every item spawn of the map renders its imported model", overlays.find_children("ItemSpawn_*", "Node3D", false, false).size(), 2)
-	_check("each marker holds one imported model", overlays.find_children("Sketchfab_Scene", "Node3D", true, false).size(), 3)
+	_check("each marker holds one imported model", overlays.find_children(ModelLibrary.VISUAL_NAME, "Node3D", true, false).size(), 3)
 
 	var roster: Array = []
 	for hero_name in ["Halo", "Prism", "Flare", "Aurora", "Corona"]:
@@ -169,15 +174,18 @@ func _run() -> void:
 	await process_frame
 	var hero_files := ["hero01", "hero02", "hero03", "hero04", "hero05"]
 	for index in hero_files.size():
-		var hero_node := scene.get_node_or_null("Entities/Entity_%d" % (201 + index)) as Node3D
-		var hero_meshes := hero_node.find_children("*", "MeshInstance3D", true, false) if hero_node != null else []
+		var hero_visual := _visual_of(scene, 201 + index)
+		var hero_meshes := hero_visual.find_children("*", "MeshInstance3D", true, false) if hero_visual != null else []
 		var hero_mesh := hero_meshes[0] as MeshInstance3D if not hero_meshes.is_empty() else null
-		_check("%s renders the %s model" % [roster[index].name, hero_files[index]], hero_mesh != null and hero_mesh.mesh.resource_path.begins_with("res://assets/%s.glb" % hero_files[index]), true)
+		# The roster name maps to the file in the library, and the entity renders a model rather than the capsule.
+		var hero_spec: Dictionary = ModelLibrary.hero_spec(String(roster[index].name))
+		_check("%s maps to the %s model" % [roster[index].name, hero_files[index]], not hero_spec.is_empty() and String(hero_spec.scene.resource_path) == "res://assets/%s.glb" % hero_files[index], true)
+		_check("%s renders that model" % roster[index].name, _is_model(hero_visual), true)
 		var hero_material := hero_mesh.get_active_material(0) as StandardMaterial3D if hero_mesh != null else null
 		_check("%s keeps its imported texture" % roster[index].name, hero_material != null and hero_material.albedo_texture != null, true)
 		_check("%s carries no team tint" % roster[index].name, hero_material != null and hero_material.albedo_color == Color.WHITE, true)
-	var unknown_hero := scene.get_node_or_null("Entities/Entity_206") as Node3D
-	_check("a hero type outside the roster keeps the capsule", unknown_hero != null and unknown_hero.find_children("*", "MeshInstance3D", true, false).size() == 1 and (unknown_hero.find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D).mesh is CapsuleMesh, true)
+	var unknown_hero := _visual_of(scene, 206) as MeshInstance3D
+	_check("a hero type outside the roster keeps the capsule", unknown_hero != null and unknown_hero.mesh is CapsuleMesh, true)
 	scene.call("set_balance", balance, heroes)
 	scene.call("set_world", layout, snapshot, 0)
 	await process_frame

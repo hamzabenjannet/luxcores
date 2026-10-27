@@ -4,142 +4,12 @@ extends Node3D
 const GameLogic = preload("res://scripts/game_logic.gd")
 const MainScript = preload("res://scripts/main.gd")
 const MinimapScript = preload("res://scripts/minimap_3d.gd")
-const CREEP_MELEE_MODEL = preload("res://assets/CreepMeleeModelAsset.glb")
-const BARRACKS_MODEL = preload("res://assets/creepBarracks.glb")
-## Imported models by template name (`_template_for`). Each model arrives in its own units with its own
-## origin, so `scale` fits it on a tile and `center`, in model units, centers it and rests it on the ground.
-## Both come from the merged bounds measured in Godot, which the comment of each entry names.
-const ENTITY_MODELS := {
-	## 120 by 120 by 120, centered on its middle: a Core 1.8 tiles across, under its lux label at 2.1.
-	"LumenCore": {
-		"scene": preload("res://assets/lux_core_model_asset.glb"),
-		"scale": 0.015,
-		"center": Vector3(0.0, 60.26, 0.0),
-	},
-	## 1135 by 131 by 634: a wide, flat panel field on a 1.25 by 0.7 tile footprint.
-	"Solar": {
-		"scene": preload("res://assets/solar_panels.glb"),
-		"scale": 0.0011,
-		"center": Vector3(-482.6, 2.2, -93.2),
-	},
-	## 14 by 108 by 57, its origin at the hub with the tower below: 1.84 tiles tall, under the lux label.
-	"Wind": {
-		"scene": preload("res://assets/wind_turbine.glb"),
-		"scale": 0.017,
-		"center": Vector3(2.8, 75.3, 8.4),
-	},
-	## 3288 by 1827 by 4044: a station 1.05 by 0.58 by 1.29 tiles.
-	"Geothermal": {
-		"scene": preload("res://assets/geothermal_power_station.glb"),
-		"scale": 0.00032,
-		"center": Vector3(0.0, 7.8, 22.0),
-	},
-	## 49 by 25 by 82: a plant 0.84 by 0.43 by 1.4 tiles.
-	"Nuclear": {
-		"scene": preload("res://assets/nuclear_powerplant.glb"),
-		"scale": 0.0171,
-		"center": Vector3(-0.2, 1.0, -0.5),
-	},
-	## 23 by 90 by 23: a tower 1.5 tiles tall.
-	"TowerRanged": {
-		"scene": preload("res://assets/ranged_tower_model_asset.glb"),
-		"scale": 0.0166,
-		"center": Vector3(0.0, 0.0, 0.0),
-	},
-	## 37 by 87 by 37, its origin 42.5 above its base: a tower 1.5 tiles tall.
-	"TowerArea": {
-		"scene": preload("res://assets/area_tower_model_asset.glb"),
-		"scale": 0.0173,
-		"center": Vector3(0.0, 42.5, 0.0),
-	},
-	## 2.3 by 9.9 by 2.3: a tower 1.5 tiles tall.
-	"TowerMelee": {
-		"scene": preload("res://assets/melee_tower_model_asset.glb"),
-		"scale": 0.152,
-		"center": Vector3(0.0, 0.5, 0.0),
-	},
-	## 1.3 by 2.7 by 0.6: a creep 0.85 tiles tall, the height of the melee creep model.
-	"CreepArea": {
-		"scene": preload("res://assets/creep_area_model_asset.glb"),
-		"scale": 0.32,
-		"center": Vector3(0.0022, 1.3527, 0.0248),
-	},
-	## 0.019 by 0.037 by 0.008: a creep 0.85 tiles tall, the height of the melee creep model.
-	"CreepRanged": {
-		"scene": preload("res://assets/creep_ranged_model_asset.glb"),
-		"scale": 23.3,
-		"center": Vector3(0.0, 0.0001, -0.0007),
-	},
-	## 20 by 1.8 by 20: a flat bag one tile across.
-	"LootBag": {
-		"scene": preload("res://assets/loot_bag_model_asset.glb"),
-		"scale": 0.049,
-		"center": Vector3(0.0, 1.2012, 0.0),
-	},
-	## 4.6 by 2 by 5, its origin at one corner: a blocker 0.83 by 0.36 by 0.9 tiles.
-	"Blocker": {
-		"scene": preload("res://assets/blocker_model_asset.glb"),
-		"scale": 0.18,
-		"center": Vector3(0.2952, 0.0, -2.4999),
-	},
-}
-
-## Models of the ground items, by item name (data/items.json), the same pattern as HERO_MODELS. A name
-## missing here renders as the orb. The sizes are the merged bounds measured in Godot.
-const ITEM_MODELS := {
-	## 23.5 by 3.2 by 23.5: a flat pickup 0.8 tiles across.
-	"Energy Boost": {
-		"scene": preload("res://assets/energy_boost_item_model_asset.glb"),
-		"scale": 0.034,
-		"center": Vector3(0.0, 1.0022, 0.0),
-	},
-	## 3.4 by 2.9 by 1.1: a pickup 0.7 tiles tall.
-	"Energy Grab": {
-		"scene": preload("res://assets/energy_grab_item_model_asset.glb"),
-		"scale": 0.238,
-		"center": Vector3(0.56, 0.02, -0.0139),
-	},
-	## 6.6 by 3.0 by 3.6, its origin 31.8 below the model: a pickup 0.8 tiles across.
-	"Haste": {
-		"scene": preload("res://assets/haste_item_model_asset.glb"),
-		"scale": 0.12,
-		"center": Vector3(0.0008, -31.8057, -29.8546),
-	},
-	## 6.5 by 10.0 by 9.3: a pickup 0.7 tiles tall.
-	"Sluggish": {
-		"scene": preload("res://assets/sluggish_item_model_asset.glb"),
-		"scale": 0.07,
-		"center": Vector3(-0.1651, -0.009, 1.5983),
-	},
-}
-
-## The map markers (GDD 10.1), by layout key. The geothermal vent model is 0.26 by 0.05 by 0.24 in its own
-## units and the item spawn model 200 by 30 by 200, so both end up about 0.9 tiles across and flat on the ground.
-const MAP_MODELS := {
-	"vents": {
-		"scene": preload("res://assets/geothermal_vent_model_asset.glb"),
-		"scale": 3.5,
-		"center": Vector3(0.0, -0.0004, 0.0012),
-	},
-	"itemSpawns": {
-		"scene": preload("res://assets/item_span_model_asset.glb"),
-		"scale": 0.0045,
-		"center": Vector3(0.0, 0.0, 0.0),
-	},
-}
-## Hero models by roster name (data/heroes.json). A name missing here renders as the capsule.
-const HERO_MODELS := {
-	"Halo": preload("res://assets/hero01.glb"),
-	"Prism": preload("res://assets/hero02.glb"),
-	"Flare": preload("res://assets/hero03.glb"),
-	"Aurora": preload("res://assets/hero04.glb"),
-	"Corona": preload("res://assets/hero05.glb"),
-}
-## The hero models are 2 tiles tall with their origin at the middle, so a scale of 0.8 gives the capsule's 1.6 height.
-const HERO_MODEL_SCALE := 0.8
+const ModelLibrary = preload("res://scripts/model_library.gd")
 
 const TEAM_BLUE := Color("#3d8bff")
 const TEAM_RED := Color("#ff4d4d")
+## The editor showcase instances of `scenes/main3d.tscn`, hidden at run time. The barracks takes its yaw from
+## the node of that name, so an artist can turn it in the editor.
 const TEMPLATE_NAMES := [
 	"Solar", "CreepRanged", "CreepArea", "CreepMeleeModelAsset", "LumenCore",
 	"Wind", "Geothermal", "Nuclear", "TowerArea", "TowerMelee",
@@ -647,7 +517,9 @@ func _add_map_models(key: String, marker_name: String) -> void:
 			0.06,
 			float(marker.get("tileZ", 0)) + 0.5 - float(_map_height) * 0.5
 		)
-		anchor.add_child(_instance_model(MAP_MODELS[key]))
+		var marker_model := ModelLibrary.instance(ModelLibrary.map_spec(key))
+		if marker_model != null:
+			anchor.add_child(marker_model)
 		_map_root.add_child(anchor)
 
 func _render_entities() -> void:
@@ -699,36 +571,14 @@ func _make_entity(entity: Dictionary) -> Node3D:
 	anchor.name = "Entity_%d" % id
 	anchor.position = Vector3(x, 0.12, z)
 	var template_name := _template_for(entity)
-	var template := _templates.get(template_name) as MeshInstance3D
-	if ENTITY_MODELS.has(template_name):
-		anchor.add_child(_instance_model(ENTITY_MODELS[template_name]))
-	elif kind == GameLogic.KIND_GROUND_ITEM and ITEM_MODELS.has(_item_name_of(entity)):
-		anchor.add_child(_instance_model(ITEM_MODELS[_item_name_of(entity)]))
+	var visual := ModelLibrary.instance(_model_spec(entity, template_name))
+	if visual == null:
+		visual = _placeholder_visual(kind)
 	elif template_name == "Barracks":
-		var barracks_model := BARRACKS_MODEL.instantiate() as Node3D
-		barracks_model.position.y = 0.9
-		var barracks_template := _templates.get(template_name) as Node3D
-		if barracks_template != null:
-			barracks_model.rotation = barracks_template.rotation
-		anchor.add_child(barracks_model)
-	elif template_name == "CreepMeleeModelAsset":
-		var melee_model := CREEP_MELEE_MODEL.instantiate() as Node3D
-		melee_model.scale = Vector3.ONE * 0.5
-		anchor.add_child(melee_model)
-	elif kind == GameLogic.KIND_HERO and HERO_MODELS.has(_hero_name_of(entity)):
-		var hero_model := (HERO_MODELS[_hero_name_of(entity)] as PackedScene).instantiate() as Node3D
-		hero_model.scale = Vector3.ONE * HERO_MODEL_SCALE
-		hero_model.position.y = HERO_MODEL_SCALE
-		anchor.add_child(hero_model)
-	else:
-		var model := MeshInstance3D.new()
-		if template != null and template.mesh != null:
-			model.mesh = template.mesh
-			model.transform = Transform3D(template.transform.basis.scaled(Vector3.ONE * 3.5), Vector3.ZERO)
-		else:
-			model.mesh = _fallback_mesh(kind)
-			model.scale = Vector3.ONE * (1.6 if kind == GameLogic.KIND_CORE else 0.7)
-		anchor.add_child(model)
+		var showcase := _templates.get(template_name) as Node3D
+		if showcase != null:
+			visual.rotation = showcase.rotation
+	anchor.add_child(visual)
 	if id == _selected_entity_id:
 		_add_selection_marker(anchor, tint)
 	var label_text := GameLogic.entity_text(entity, _hp_factor, _hero_names, _item_names) if kind != GameLogic.KIND_CREEP else ""
@@ -743,12 +593,26 @@ func _make_entity(entity: Dictionary) -> Node3D:
 		anchor.add_child(label)
 	return anchor
 
-## A model from one of the tables above, scaled and placed on the tile its anchor sits on.
-func _instance_model(spec: Dictionary) -> Node3D:
-	var model_scale := float(spec.scale)
-	var model := (spec.scene as PackedScene).instantiate() as Node3D
-	model.scale = Vector3.ONE * model_scale
-	model.position = (spec.center as Vector3) * model_scale
+## The model spec of an entity: by template name for a building, a tower or a creep, and by item or roster
+## name for a ground item or a hero. An empty spec means the placeholder mesh stands in.
+func _model_spec(entity: Dictionary, template_name: String) -> Dictionary:
+	var spec := ModelLibrary.entity_spec(template_name)
+	if not spec.is_empty():
+		return spec
+	match int(entity.get("kind", 0)):
+		GameLogic.KIND_GROUND_ITEM:
+			return ModelLibrary.item_spec(_item_name_of(entity))
+		GameLogic.KIND_HERO:
+			return ModelLibrary.hero_spec(_hero_name_of(entity))
+		_:
+			return {}
+
+## The placeholder of a kind, under the same node name a model takes, so gameplay reads one name either way.
+func _placeholder_visual(kind: int) -> Node3D:
+	var model := MeshInstance3D.new()
+	model.name = ModelLibrary.VISUAL_NAME
+	model.mesh = _fallback_mesh(kind)
+	model.scale = Vector3.ONE * (1.6 if kind == GameLogic.KIND_CORE else 0.7)
 	return model
 
 ## The item name of a ground item, or an empty string when its id is unknown. `itemId` is the item id plus one.
