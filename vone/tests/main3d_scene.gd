@@ -142,9 +142,10 @@ func _run() -> void:
 	]
 	for item in item_list:
 		model_entities.append({"id": 310 + int(item.id), "kind": 12, "team": -1, "owner": -1, "x": 48000, "z": 57000, "hp": 10000, "itemId": int(item.id) + 1})
-	var vent_layout := layout.duplicate(true)
-	vent_layout["vents"] = [{"tileX": 40, "tileZ": 60, "team": 0}]
-	scene.call("set_world", vent_layout, {"entities": model_entities}, 0)
+	var marker_layout := layout.duplicate(true)
+	marker_layout["vents"] = [{"tileX": 40, "tileZ": 60, "team": 0}]
+	marker_layout["itemSpawns"] = [{"tileX": 44, "tileZ": 60}, {"tileX": 52, "tileZ": 60}]
+	scene.call("set_world", marker_layout, {"entities": model_entities}, 0)
 	await process_frame
 	for model_case in [["ranged creep", 300], ["area creep", 301], ["Energy Boost", 310], ["Energy Grab", 311], ["Haste", 312], ["Sluggish", 313]]:
 		var model_node := scene.get_node_or_null("Entities/Entity_%d" % int(model_case[1])) as Node3D
@@ -152,8 +153,10 @@ func _run() -> void:
 		_check("%s uses its imported model" % String(model_case[0]), imported is Node3D, true)
 		if imported is Node3D:
 			_check("%s model contains its imported meshes" % String(model_case[0]), not imported.find_children("*", "MeshInstance3D", true, false).is_empty(), true)
-	var vent_models: Array = scene.get_node("MapOverlays").find_children("Sketchfab_Scene", "Node3D", true, false)
-	_check("the geothermal vent of the map renders its imported model", vent_models.size(), 1)
+	var overlays := scene.get_node("MapOverlays")
+	_check("the geothermal vent of the map renders its imported model", overlays.find_children("Vent_*", "Node3D", false, false).size(), 1)
+	_check("every item spawn of the map renders its imported model", overlays.find_children("ItemSpawn_*", "Node3D", false, false).size(), 2)
+	_check("each marker holds one imported model", overlays.find_children("Sketchfab_Scene", "Node3D", true, false).size(), 3)
 
 	var roster: Array = []
 	for hero_name in ["Halo", "Prism", "Flare", "Aurora", "Corona"]:

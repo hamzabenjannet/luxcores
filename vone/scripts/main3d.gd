@@ -113,11 +113,19 @@ const ITEM_MODELS := {
 	},
 }
 
-## The geothermal vent marker of the map (GDD 10.1), 0.26 by 0.05 by 0.24 in its own units.
-const VENT_MODEL := {
-	"scene": preload("res://assets/geothermal_vent_model_asset.glb"),
-	"scale": 3.5,
-	"center": Vector3(0.0, -0.0004, 0.0012),
+## The map markers (GDD 10.1), by layout key. The geothermal vent model is 0.26 by 0.05 by 0.24 in its own
+## units and the item spawn model 200 by 30 by 200, so both end up about 0.9 tiles across and flat on the ground.
+const MAP_MODELS := {
+	"vents": {
+		"scene": preload("res://assets/geothermal_vent_model_asset.glb"),
+		"scale": 3.5,
+		"center": Vector3(0.0, -0.0004, 0.0012),
+	},
+	"itemSpawns": {
+		"scene": preload("res://assets/item_span_model_asset.glb"),
+		"scale": 0.0045,
+		"center": Vector3(0.0, 0.0, 0.0),
+	},
 }
 ## Hero models by roster name (data/heroes.json). A name missing here renders as the capsule.
 const HERO_MODELS := {
@@ -534,8 +542,8 @@ func _configure_map() -> void:
 		child.queue_free()
 	_add_zone_overlays()
 	_add_lane_overlays()
-	_add_vent_models()
-	_add_map_markers("itemSpawns", Color("#f7dc69"))
+	_add_map_models("vents", "Vent")
+	_add_map_models("itemSpawns", "ItemSpawn")
 	if not _camera_initialized:
 		_fit_camera()
 		_camera_initialized = true
@@ -631,37 +639,21 @@ func _add_lane_overlays() -> void:
 		lane_mesh.material_override = _flat_material(Color(tint.r, tint.g, tint.b, 0.22))
 		_map_root.add_child(lane_mesh)
 
-## The geothermal vents of the map, each with the imported vent model on its tile.
-func _add_vent_models() -> void:
-	for vent in _layout.get("vents", []):
-		if not vent is Dictionary:
-			continue
-		var anchor := Node3D.new()
-		anchor.position = Vector3(
-			float(vent.get("tileX", 0)) + 0.5 - float(_map_width) * 0.5,
-			0.06,
-			float(vent.get("tileZ", 0)) + 0.5 - float(_map_height) * 0.5
-		)
-		anchor.add_child(_instance_model(VENT_MODEL))
-		_map_root.add_child(anchor)
-
-func _add_map_markers(key: String, tint: Color) -> void:
+## The markers of one layout key, each with its imported model on its tile. A marker carries its tile in
+## its name, as in Vent_40_60, so a test can find the markers of one key.
+func _add_map_models(key: String, marker_name: String) -> void:
 	for marker in _layout.get(key, []):
 		if not marker is Dictionary:
 			continue
-		var mesh_instance := MeshInstance3D.new()
-		var shape := CylinderMesh.new()
-		shape.top_radius = 0.28
-		shape.bottom_radius = 0.4
-		shape.height = 0.16
-		mesh_instance.mesh = shape
-		mesh_instance.material_override = _flat_material(tint)
-		mesh_instance.position = Vector3(
+		var anchor := Node3D.new()
+		anchor.name = "%s_%d_%d" % [marker_name, int(marker.get("tileX", 0)), int(marker.get("tileZ", 0))]
+		anchor.position = Vector3(
 			float(marker.get("tileX", 0)) + 0.5 - float(_map_width) * 0.5,
-			0.14,
+			0.06,
 			float(marker.get("tileZ", 0)) + 0.5 - float(_map_height) * 0.5
 		)
-		_map_root.add_child(mesh_instance)
+		anchor.add_child(_instance_model(MAP_MODELS[key]))
+		_map_root.add_child(anchor)
 
 func _render_entities() -> void:
 	if not is_instance_valid(_entity_root) or not is_instance_valid(_effect_root):
