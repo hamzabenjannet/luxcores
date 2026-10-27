@@ -102,7 +102,7 @@ func _run() -> void:
 	_check("all entity kinds render", int(scene.call("get_rendered_entity_count")), entities.size())
 	# Every collector and the tower render an imported model, whose root the importer names Sketchfab_Scene,
 	# and the model keeps its own materials with no team tint.
-	for building in [["Solar", 2], ["Wind", 3], ["Geothermal", 4], ["Nuclear", 5], ["Tower", 7]]:
+	for building in [["Lumen Core", 1], ["Solar", 2], ["Wind", 3], ["Geothermal", 4], ["Nuclear", 5], ["Tower", 7], ["Blocker", 8], ["Loot bag", 13]]:
 		var building_entity := scene.get_node_or_null("Entities/Entity_%d" % int(building[1])) as Node3D
 		var building_model := building_entity.find_child("Sketchfab_Scene", false, false) if building_entity != null else null
 		_check("%s uses its imported model" % String(building[0]), building_model is Node3D, true)
@@ -131,6 +131,30 @@ func _run() -> void:
 	var tower_entity := scene.get_node_or_null("Entities/Entity_7") as Node3D
 	var tower_meshes := tower_entity.find_children("*", "MeshInstance3D", true, false) if tower_entity != null else []
 	_check("buildings built from the scene meshes carry no team tint", not tower_meshes.is_empty() and (tower_meshes[0] as MeshInstance3D).material_override == null, true)
+	# The ranged and area creeps and the four ground items each render their own imported model.
+	var item_list: Array = []
+	for item_name in ["Energy Boost", "Energy Grab", "Haste", "Sluggish"]:
+		item_list.append({"id": item_list.size(), "name": item_name})
+	scene.call("set_balance", balance, {}, {"list": item_list})
+	var model_entities: Array = [
+		{"id": 300, "kind": 9, "team": 0, "owner": 0, "x": 48000, "z": 56000, "hp": 10000, "attack": 2},
+		{"id": 301, "kind": 9, "team": 0, "owner": 0, "x": 49000, "z": 56000, "hp": 10000, "attack": 3},
+	]
+	for item in item_list:
+		model_entities.append({"id": 310 + int(item.id), "kind": 12, "team": -1, "owner": -1, "x": 48000, "z": 57000, "hp": 10000, "itemId": int(item.id) + 1})
+	var vent_layout := layout.duplicate(true)
+	vent_layout["vents"] = [{"tileX": 40, "tileZ": 60, "team": 0}]
+	scene.call("set_world", vent_layout, {"entities": model_entities}, 0)
+	await process_frame
+	for model_case in [["ranged creep", 300], ["area creep", 301], ["Energy Boost", 310], ["Energy Grab", 311], ["Haste", 312], ["Sluggish", 313]]:
+		var model_node := scene.get_node_or_null("Entities/Entity_%d" % int(model_case[1])) as Node3D
+		var imported := model_node.find_child("Sketchfab_Scene", false, false) if model_node != null else null
+		_check("%s uses its imported model" % String(model_case[0]), imported is Node3D, true)
+		if imported is Node3D:
+			_check("%s model contains its imported meshes" % String(model_case[0]), not imported.find_children("*", "MeshInstance3D", true, false).is_empty(), true)
+	var vent_models: Array = scene.get_node("MapOverlays").find_children("Sketchfab_Scene", "Node3D", true, false)
+	_check("the geothermal vent of the map renders its imported model", vent_models.size(), 1)
+
 	var roster: Array = []
 	for hero_name in ["Halo", "Prism", "Flare", "Aurora", "Corona"]:
 		roster.append({"id": roster.size(), "name": hero_name})
