@@ -177,6 +177,17 @@ func _run() -> void:
 			break
 	var actions_row := _main._order_box.get_node("BarracksActions") as HBoxContainer
 	_check("recycle, default path and order share one row", actions_row.get_child_count() == 3 and actions_row.get_child(0).name == "BarracksRecycle" and actions_row.get_child(1).name == "SetDefaultPath" and actions_row.get_child(2).name == "OrderCreeps", true)
+	# The creep auto spawn toggle sits under the order controls and sends the opposite state (GDD 9.4).
+	var auto_button := _main._order_box.get_node("CreepAutoSpawn") as Button
+	_check("the barracks panel offers the auto spawn toggle", auto_button != null and auto_button.text == "Creep auto spawn", true)
+	auto_button.pressed.emit()
+	_check("the toggle turns auto spawn on", await _until(func(): return int(_find(GameLogic.KIND_BARRACKS, 0)[0].get("autoSpawn", 0)) == 1), true)
+	await process_frame
+	await process_frame
+	(_main._order_box.get_node("CreepAutoSpawn") as Button).pressed.emit()
+	_check("the toggle turns auto spawn off again", await _until(func(): return int(_find(GameLogic.KIND_BARRACKS, 0)[0].get("autoSpawn", 0)) == 0), true)
+	await process_frame
+	actions_row = _main._order_box.get_node("BarracksActions") as HBoxContainer
 	# The orders window is outside the barracks panel and starts collapsed.
 	_check("the orders window is not part of the barracks panel", not _main._panel.is_ancestor_of(_main._orders_window) and _main._orders_window.visible, true)
 	_check("the orders window starts collapsed", not _main._orders_scroll.visible and _main._orders_toggle.text == "Orders (0) ▸", true)

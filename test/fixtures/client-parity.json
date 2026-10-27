@@ -1,5 +1,5 @@
 {
-  "_doc": "Cases that the web client (src/client) and the Godot client (vone/scripts/game_logic.gd) must answer identically. test/client-parity.test.js runs them through JavaScript, vone/tests/run_tests.gd through GDScript. Kind codes follow KIND in src/sim/state.js. Tap cases use the real data files and the map of seed 1234567; ids 1 and 2 are the Cores, the entity lists below are small on purpose. M4 adds mixFor, queueLines, groupActions and the path and merge modes of resolveTap.",
+  "_doc": "Cases that the web client (src/client) and the Godot client (vone/scripts/game_logic.gd) must answer identically. test/client-parity.test.js runs them through JavaScript, vone/tests/run_tests.gd through GDScript. Kind codes follow KIND in src/sim/state.js. Tap cases use the real data files and the map of seed 1234567; ids 1 and 2 are the Cores, the entity lists below are small on purpose. M4 adds mixFor, queueLines, groupActions and the path and merge modes of resolveTap. The auto spawn toggle of a barracks panel is autoSpawnToggle (GDD 9.4).",
   "kinds": {
     "CORE": 1,
     "SOLAR": 2,
@@ -336,6 +336,40 @@
           }
         }
       ]
+    }
+  ],
+  "autoSpawnToggle": [
+    {
+      "entity": {
+        "id": 10,
+        "kind": 6,
+        "autoSpawn": 0
+      },
+      "expect": {
+        "label": "Creep auto spawn",
+        "on": false,
+        "command": {
+          "t": "setAutoSpawn",
+          "barracksId": 10,
+          "on": true
+        }
+      }
+    },
+    {
+      "entity": {
+        "id": 11,
+        "kind": 6,
+        "autoSpawn": 1
+      },
+      "expect": {
+        "label": "Creep auto spawn",
+        "on": true,
+        "command": {
+          "t": "setAutoSpawn",
+          "barracksId": 11,
+          "on": false
+        }
+      }
     }
   ],
   "resolveTap": [

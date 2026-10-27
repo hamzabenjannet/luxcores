@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { KIND, SPEC_VERSION } from '../src/sim/index.js';
 import { creepGroupLabels, entityText, entropyFromText, entropyText, isDay, tickCapFromText, tickCapText } from '../src/client/entity-text.js';
-import { abilityStates, actionsFor, canAfford, endsBuildMode, groupActions, heroLuxChoices, heroPickState, immediateCast, immediateUse, itemStates, mixFor, pendingKept, pendingLine, placement, queueLines, resolveTap, secondsText, shopStates } from '../src/client/ui/controls.js';
+import { abilityStates, actionsFor, autoSpawnToggle, canAfford, endsBuildMode, groupActions, heroLuxChoices, heroPickState, immediateCast, immediateUse, itemStates, mixFor, pendingKept, pendingLine, placement, queueLines, resolveTap, secondsText, shopStates } from '../src/client/ui/controls.js';
 import { HOLD_AIM_PX, clampZoom, holdAimPhase, holdAimRelease, pinchZoom } from '../src/client/input/gestures.js';
 import { leaveCall, leaveNeedsConfirm } from '../src/client/ui/leave.js';
 import { joinCall } from '../src/client/ui/rejoin.js';
@@ -89,6 +89,10 @@ test('panel action cases', () => {
     const actual = actionsFor(c.entity, data.buildings.tower).map(({ id, label, command, costLux }) => ({ id, label, command, ...(costLux === undefined ? {} : { costLux }) }));
     assert.deepEqual(actual, c.expect, JSON.stringify(c.entity));
   }
+});
+
+test('creep auto spawn toggle cases', () => {
+  for (const c of fixture.autoSpawnToggle) assert.deepEqual(autoSpawnToggle(c.entity), c.expect, JSON.stringify(c.entity));
 });
 
 test('creep order mix cases', () => {

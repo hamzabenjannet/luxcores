@@ -45,7 +45,7 @@ export const ENTITY_HASH_FIELDS = Object.freeze([
   'arrivalTick', 'projectileDamage', 'projectileProc',
   'projectileProcChance', 'projectileProcValue', 'groupId',
   'heroType', 'shieldHp', 'shieldTicks', 'cd0', 'cd1', 'cd2', 'cd3',
-  'itemId', 'speedMod', 'speedTicks',
+  'itemId', 'speedMod', 'speedTicks', 'autoSpawn',
 ]);
 
 /** Team fields included in the hash, in this exact order. */
@@ -113,6 +113,7 @@ export function emptyStats() {
  * @property {number} speedTicks ticks left on the attack speed change
  * @property {number[]} items loot bags: how many of each item id the bag holds; empty for other kinds
  * @property {number[][]} waypoints barracks: default path for new groups, as [x, z] pairs in units
+ * @property {number} autoSpawn barracks: 1 while auto spawn repeats every finished creep group (GDD 9.4)
  * @property {boolean[]} [visibleTo] derived per-team visibility, excluded from the hash
  */
 
@@ -297,7 +298,7 @@ export function entityDefaults() {
     arrivalTick: 0, projectileDamage: 0, projectileProc: 0,
     projectileProcChance: 0, projectileProcValue: 0, groupId: 0, waypoints: [],
     heroType: 0, shieldHp: 0, shieldTicks: 0, cd0: 0, cd1: 0, cd2: 0, cd3: 0,
-    itemId: 0, speedMod: 0, speedTicks: 0, items: [],
+    itemId: 0, speedMod: 0, speedTicks: 0, items: [], autoSpawn: 0,
   };
 }
 

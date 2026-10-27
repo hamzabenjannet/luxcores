@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { KIND, createState } from '../src/sim/index.js';
-import { ABILITY_SLOTS, ATTACK_TYPES, PALETTE, abilityStates, actionsFor, canAfford, heroLuxChoices, heroPickState, immediateCast, pendingLine, pickEntity, placement, resolveTap, secondsText } from '../src/client/ui/controls.js';
+import { ABILITY_SLOTS, ATTACK_TYPES, PALETTE, abilityStates, actionsFor, autoSpawnToggle, canAfford, heroLuxChoices, heroPickState, immediateCast, pendingLine, pickEntity, placement, resolveTap, secondsText } from '../src/client/ui/controls.js';
 import { actionForKey, DEFAULT_KEY_BINDINGS, defaultKeyBindings, keyLabel, normalizeKeyBindings } from '../src/client/input/key-bindings.js';
 import { loadData } from './helpers/load-data.js';
 
@@ -195,4 +195,14 @@ test('an order just sent shows in the queue before the snapshot has it', () => {
   assert.equal(pendingLine({ t: 'pickHero', heroId: 1, lux: 40 }, ['Prism', 'Halo']), 'Hero Halo 40 lux ...');
   assert.equal(pendingLine({ t: 'orderItem', itemId: 0 }, [], ['Haste']), 'Item Haste ...');
   assert.equal(pendingLine({ t: 'recycle' }), '');
+});
+
+test('the auto spawn toggle reads the barracks field of the sim and sends the opposite state', () => {
+  const barracks = { ...state.entities[0], id: 42, kind: KIND.BARRACKS, autoSpawn: 0 };
+  assert.deepEqual(autoSpawnToggle(barracks), {
+    label: 'Creep auto spawn', on: false, command: { t: 'setAutoSpawn', barracksId: 42, on: true },
+  });
+  assert.deepEqual(autoSpawnToggle({ ...barracks, autoSpawn: 1 }), {
+    label: 'Creep auto spawn', on: true, command: { t: 'setAutoSpawn', barracksId: 42, on: false },
+  });
 });

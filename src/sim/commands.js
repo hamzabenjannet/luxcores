@@ -9,7 +9,7 @@
  */
 
 import { tryBuild, tryCancelRecycle, tryRecycle, tryUpgradeTower } from './buildings.js';
-import { tryCancelQueue, tryMergeGroups, tryOrderCreeps, trySetBarracksPath, trySetGroupPath, trySplitGroup } from './creeps.js';
+import { tryCancelQueue, tryMergeGroups, tryOrderCreeps, trySetAutoSpawn, trySetBarracksPath, trySetGroupPath, trySplitGroup } from './creeps.js';
 import { tryCastAbility, tryPickHero } from './heroes.js';
 import { tryHeroAttack } from './systems/combat.js';
 import { tryHeroMove } from './systems/movement.js';
@@ -31,6 +31,7 @@ import { tryOrderItem, tryPickUp, tryUseItem } from './items.js';
  *  | {t:'recycle', buildingId:number}
  *  | {t:'cancelRecycle', buildingId:number}
  *  | {t:'orderCreeps', barracksId:number, mix:('melee'|'ranged'|'area')[]}
+ *  | {t:'setAutoSpawn', barracksId:number, on:boolean}
  *  | {t:'orderItem', barracksId:number, itemId:number}
  *  | {t:'cancelQueue', barracksId:number, orderId?:number, index?:number}
  *  | {t:'setBarracksPath', barracksId:number, waypoints:number[][]}
@@ -58,6 +59,7 @@ export const HANDLERS = {
   recycle: tryRecycle,
   cancelRecycle: tryCancelRecycle,
   orderCreeps: tryOrderCreeps,
+  setAutoSpawn: trySetAutoSpawn,
   cancelQueue: tryCancelQueue,
   setBarracksPath: trySetBarracksPath,
   setGroupPath: trySetGroupPath,

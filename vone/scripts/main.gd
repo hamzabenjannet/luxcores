@@ -1199,7 +1199,7 @@ func _show_barracks_controls(barracks: Dictionary, lux: int, min_left: int, acti
 	var cost := _order_count * int(creep.costLux)
 	var poor := not GameLogic.can_afford(lux, cost, min_left)
 	var waypoints: Array = barracks.get("waypoints", [])
-	var order_key := "%d|%d|%s|%d" % [int(barracks.id), _order_count, _order_type, waypoints.size()]
+	var order_key := "%d|%d|%s|%d|%d" % [int(barracks.id), _order_count, _order_type, waypoints.size(), int(barracks.get("autoSpawn", 0))]
 	if order_key != _order_key:
 		_order_key = order_key
 		_clear_box(_order_box)
@@ -1256,6 +1256,13 @@ func _show_barracks_controls(barracks: Dictionary, lux: int, min_left: int, acti
 		_order_button.pressed.connect(_run_panel_action.bind({"t": "orderCreeps", "barracksId": int(barracks.id), "mix": GameLogic.mix_for(_order_count, _order_type)}))
 		actions_row.add_child(_order_button)
 		_order_box.add_child(actions_row)
+		var auto: Dictionary = GameLogic.auto_spawn_toggle(barracks)
+		var auto_button := _make_button(String(auto.label), Color("#287557") if bool(auto.on) else Color("#2b3a52"))
+		auto_button.name = "CreepAutoSpawn"
+		auto_button.custom_minimum_size = Vector2(0, 48)
+		auto_button.tooltip_text = "Repeat the last creep order after every wave: %s" % ("on" if bool(auto.on) else "off")
+		auto_button.pressed.connect(_run_panel_action.bind(auto.command))
+		_order_box.add_child(auto_button)
 		if not waypoints.is_empty():
 			var clear_button := _make_button("Clear Path", Color("#52313b"))
 			clear_button.custom_minimum_size = Vector2(0, 48)

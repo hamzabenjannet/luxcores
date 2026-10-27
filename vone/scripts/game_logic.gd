@@ -683,6 +683,17 @@ static func resolve_tap(ctx: Dictionary) -> Dictionary:
 		return {"command": {"t": "heroMove", "x": roundi(ground.x * UNITS_PER_TILE), "z": roundi(ground.y * UNITS_PER_TILE)}, "deselect": true}
 	return {"select": null}
 
+## The creep auto spawn toggle of a barracks panel (GDD 9.4), the same rule as autoSpawnToggle in
+## src/client/ui/controls.js. The label never changes, `on` says whether the barracks repeats its creep
+## orders, and `command` sends the opposite state.
+static func auto_spawn_toggle(barracks: Dictionary) -> Dictionary:
+	var on := int(barracks.get("autoSpawn", 0)) == 1
+	return {
+		"label": "Creep auto spawn",
+		"on": on,
+		"command": {"t": "setAutoSpawn", "barracksId": int(barracks.get("id", 0)), "on": not on},
+	}
+
 ## Actions the panel offers for a selected own building: [{id, label, command, costLux?}].
 static func actions_for(entity: Dictionary, tower_data: Dictionary) -> Array:
 	var out: Array = []

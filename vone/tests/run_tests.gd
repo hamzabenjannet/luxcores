@@ -125,6 +125,8 @@ func _init() -> void:
 		_check("can afford %s" % JSON.stringify(c), GameLogic.can_afford(int(c.coreLuxMilli), int(c.costLux), int(c.minLeftLux)), bool(c.expect))
 	for c in fixture.actionsFor:
 		_check("actions for %s" % JSON.stringify(c.entity), _normalize(GameLogic.actions_for(c.entity, data.buildings.tower)), _normalize(c.expect))
+	for c in fixture.autoSpawnToggle:
+		_check("auto spawn toggle %s" % JSON.stringify(c.entity), _normalize(GameLogic.auto_spawn_toggle(c.entity)), _normalize(c.expect))
 	for c in fixture.mixFor:
 		_check("order mix %s" % JSON.stringify(c), _normalize(GameLogic.mix_for(int(c.count), String(c.type))), _normalize(c.expect))
 	for c in fixture.queueLines:

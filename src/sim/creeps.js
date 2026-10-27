@@ -110,6 +110,46 @@ export function tryOrderCreeps(state, playerId, cmd) {
 }
 
 /**
+ * `setAutoSpawn` command: turns the auto spawn toggle of a barracks on or off (GDD 9.4). While it is
+ * on, every creep group the barracks finishes queues the same mix again.
+ * @param {import('./state.js').SimState} state
+ * @param {number} playerId
+ * @param {{ barracksId?: unknown, on?: unknown }} cmd
+ * @returns {boolean}
+ */
+export function trySetAutoSpawn(state, playerId, cmd) {
+  const barracks = ownedBuilding(state, playerId, cmd.barracksId);
+  if (!barracks || barracks.kind !== KIND.BARRACKS || barracks.recycle > 0) return false;
+  if (typeof cmd.on !== 'boolean') return false;
+  barracks.autoSpawn = cmd.on ? 1 : 0;
+  return true;
+}
+
+/**
+ * Queues the same creep mix again at a barracks whose auto spawn toggle is on, right after it spawned
+ * a group (GDD 9.4). The repeat pays the full price like a manual order, so a team that cannot pay
+ * ends the chain; the toggle stays on and the next order it can pay for repeats again.
+ * @param {import('./state.js').SimState} state
+ * @param {import('./state.js').Order} order  the order that just spawned
+ * @param {import('./state.js').Entity} barracks
+ * @returns {boolean} true when a repeat entered the queue
+ */
+export function requeueAutoSpawn(state, order, barracks) {
+  if (barracks.autoSpawn !== 1 || barracks.recycle > 0) return false;
+  if (!spend(state, barracks.team, order.mix.length * state.config.balance.creep.costLux)) return false;
+  state.orders.push({
+    id: state.nextId++,
+    barracksId: barracks.id,
+    owner: order.owner,
+    type: ORDER_TYPE.creeps,
+    mix: order.mix.slice(),
+    ticksLeft: state.config.balance.creep.productionTicksPerGroup,
+    held: 0,
+  });
+  return true;
+}
+
+/**
  * Lux an order cost, in milli-lux.
  * @param {import('./state.js').SimState} state
  * @param {import('./state.js').Order} order

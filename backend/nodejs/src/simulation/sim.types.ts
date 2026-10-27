@@ -40,6 +40,8 @@ export interface SimEntity {
   groupId: number;
   /** Barracks: the default path of new groups, as [x, z] pairs in units. */
   waypoints: number[][];
+  /** Barracks: 1 while auto spawn repeats every finished creep group. */
+  autoSpawn: number;
   /** Heroes: the roster id plus one, 0 for other kinds. */
   heroType: number;
   /** Damage the shield still absorbs, in milli-HP, and the ticks it has left. */

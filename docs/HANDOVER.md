@@ -219,6 +219,17 @@ Open for the owners:
 - **Key settings.** The KEYS button opens a remapping panel in each client. Each of the eight slots accepts a unique letter or digit. The web client saves to local storage; Godot saves to `user://luxcores.cfg`. These settings stay local to each client.
 - **Validation.** `npm test` passed 259 tests. `npm run headless -- 1 1000` produced hash `389877c6`. Godot parity, live-match and main-scene tests passed 251, 135 and 33 checks. The full `npm run test:e2e` run passed 19 of 21 tests. The item shortcut test passed. The hero test passed its remapping and hotkey assertions before a later panel-visibility timeout. The creep-order test timed out while its cancel row changed.
 
+## Creep Auto Spawn (2026-10-27)
+
+Hamza asked for a toggle that keeps the waves coming, so one order feeds a lane without a tap per group. The rule is GDD 9.4 and the sim owns it, because a client-side repeat would stop at a reload and would never reach a resumed match.
+
+- **Sim.** A barracks carries `autoSpawn` (0 or 1, in the entity hash), the command `setAutoSpawn {barracksId, on}` flips it, and `requeueAutoSpawn` in `src/sim/creeps.js` queues the same mix again every time the production system spawns a group of that barracks. The repeat pays the full 5 lux per creep, so a team that cannot pay ends the chain with the toggle still on.
+- **Both clients.** One button, "Creep auto spawn", under the order controls of the barracks panel, lit while the toggle is on. The pure decision is `autoSpawnToggle` in `src/client/ui/controls.js` and `auto_spawn_toggle` in `vone/scripts/game_logic.gd`, with two parity cases.
+- **Server.** `COMMAND_TYPES` lists the command and the snapshot carries `autoSpawn`, so both clients read the state of the toggle from the server.
+- **Checks.** Three tests in `test/creeps.test.js` cover the repeat, the stop and the refusals. `SPEC_VERSION` stays 0.10.0 under the owners' exception, and the new entity field moved every hash, so all 7 golden replays were recorded again in the same commit.
+
+Open for the owners: Hama has not reviewed the button, and the GDD rule of section 9.4 waits for their approval, because both owners approve a game rule.
+
 ## Next Milestone: M10 (Cross-Browser Determinism and the Performance Pass)
 
 From `docs/TECH_ARCHITECTURE.md` section 14. Done when Node, Chrome on Android and Safari on iOS print identical hashes, and the performance numbers of the reference device are recorded here. Hamza's answers of 2026-10-19: the reference device is a Galaxy Wide class phone or a similar wide device, and the web client already plays comfortably on a Galaxy Tab Active3 (a wide tablet), so no tuning is due before the first numbers. The portrait lock is optional: the prompt in landscape now has a Play anyway button. The Godot UI adapts to wide screens later, when its interface gets its next pass.

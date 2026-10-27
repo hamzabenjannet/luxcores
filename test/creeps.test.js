@@ -432,3 +432,63 @@ test('the hash covers orders, groups and paths, and a replay of the commands rep
   assert.notEqual(play(['melee', 'melee'], [[11000, 80000]]), base, 'the path is part of the state');
   assert.notEqual(play(['melee', 'melee'], null), base);
 });
+
+test('auto spawn repeats the last creep order of a barracks after every group it spawns', () => {
+  const s = fresh();
+  const b = withBarracks(s);
+  send(s, 0, { t: 'setAutoSpawn', barracksId: b.id, on: true });
+  assert.equal(b.autoSpawn, 1);
+  const mix = ['melee', 'ranged', 'area', 'melee', 'ranged'];
+  const before = s.teams[0].coreLux;
+  order(s, b, mix);
+  assert.equal(s.teams[0].coreLux, before - 25 * MILLI, 'the first order pays 5 lux per creep');
+  run(s, build - 1);
+  assert.equal(creeps(s).length, 5, 'the first wave spawned');
+  assert.equal(s.orders.length, 1, 'the same wave is queued again');
+  assert.deepEqual(s.orders[0].mix, [1, 2, 3, 1, 2], 'the repeat keeps the mix of the order it followed');
+  assert.equal(s.orders[0].ticksLeft, build, 'the repeat starts its build time over');
+  assert.equal(s.teams[0].coreLux, before - 50 * MILLI, 'the repeat pays the full price');
+  run(s, build);
+  assert.equal(creeps(s).length, 10, 'the second wave spawned');
+  assert.equal(s.orders.length, 1, 'and queued a third');
+});
+
+test('auto spawn stops when it is turned off, and the lux runs the chain', () => {
+  const s = fresh();
+  const b = withBarracks(s);
+  send(s, 0, { t: 'setAutoSpawn', barracksId: b.id, on: true });
+  order(s, b, ['melee']);
+  run(s, build - 1);
+  assert.equal(s.orders.length, 1, 'the repeat is queued');
+  send(s, 0, { t: 'setAutoSpawn', barracksId: b.id, on: false });
+  assert.equal(b.autoSpawn, 0);
+  run(s, build);
+  assert.equal(creeps(s).length, 2, 'the queued repeat still spawns');
+  assert.equal(s.orders.length, 0, 'and nothing follows it');
+
+  // A team that cannot pay the repeat ends the chain, and the toggle stays on.
+  const t = fresh();
+  const c = withBarracks(t, 31, 90);
+  send(t, 0, { t: 'setAutoSpawn', barracksId: c.id, on: true });
+  order(t, c, ['melee']);
+  t.teams[0].coreLux = config.balance.core.minLeftAfterSpendLux + 4 * MILLI;
+  run(t, build - 1);
+  assert.equal(creeps(t).length, 1, 'the paid wave spawned');
+  assert.equal(t.orders.length, 0, 'the repeat went unpaid, so no order followed');
+  assert.equal(c.autoSpawn, 1, 'the toggle stays on');
+});
+
+test('setAutoSpawn takes the owner of the barracks, a barracks kind and a boolean', () => {
+  const s = fresh();
+  const b = withBarracks(s);
+  const core = s.entities.find((e) => e.kind === KIND.CORE && e.team === 0);
+  send(s, 1, { t: 'setAutoSpawn', barracksId: b.id, on: true });
+  assert.equal(b.autoSpawn, 0, 'the other player cannot toggle it');
+  send(s, 0, { t: 'setAutoSpawn', barracksId: core.id, on: true });
+  assert.equal(core.autoSpawn, 0, 'a Core is no barracks');
+  send(s, 0, { t: 'setAutoSpawn', barracksId: b.id, on: 1 });
+  assert.equal(b.autoSpawn, 0, 'a non-boolean is dropped');
+  send(s, 0, { t: 'recycle', buildingId: b.id });
+  send(s, 0, { t: 'setAutoSpawn', barracksId: b.id, on: true });
+  assert.equal(b.autoSpawn, 0, 'a barracks in its recycle channel takes no toggle');
+});

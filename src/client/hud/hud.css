@@ -185,6 +185,8 @@ button:disabled { opacity: 0.4; }
 .barracks-recycle { background: #75582b; }
 .barracks-path { background: #2f4c75; }
 .barracks-actions .order { background: #287557; }
+.barracks-auto { justify-content: center; background: #2b3a52; }
+.barracks-auto.on { background: #287557; border-color: var(--blue); }
 .hero-confirm { justify-content: center; }
 .hero-row .barracks-select { flex: 1 1 0; }
 .hero-controls { display: flex; gap: 6px; }

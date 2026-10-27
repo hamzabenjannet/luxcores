@@ -829,6 +829,7 @@ export class MatchRunnerService
         arrivalTick: e.arrivalTick,
         groupId: e.groupId,
         waypoints: e.waypoints,
+        autoSpawn: e.autoSpawn,
         heroType: e.heroType,
         shieldHp: e.shieldHp,
         shieldTicks: e.shieldTicks,

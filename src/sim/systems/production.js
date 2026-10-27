@@ -7,10 +7,11 @@
  * group never blocks the queue, so later orders skip ahead (GDD 9). Items and heroes share this
  * queue. A finished hero order puts the hero next to the barracks (GDD 7.1). A finished item order
  * is held until its owner has a hero and a free slot (GDD 8.1). A barracks in its recycle channel
- * stops producing.
+ * stops producing. A barracks whose auto spawn toggle is on queues the same mix again every time a
+ * group of it spawns, as long as its team can pay (GDD 9.4).
  */
 
-import { creepCount, findById, ORDER_TYPE, spawnGroup } from '../creeps.js';
+import { creepCount, findById, ORDER_TYPE, requeueAutoSpawn, spawnGroup } from '../creeps.js';
 import { spawnHero } from '../heroes.js';
 import { deliverHeldItems } from '../items.js';
 
@@ -26,6 +27,7 @@ export function run(state) {
     if (!barracks || creepCount(state, order.owner) + order.mix.length > cap) continue;
     spawnGroup(state, order, barracks);
     state.orders.splice(state.orders.indexOf(order), 1);
+    requeueAutoSpawn(state, order, barracks);
   }
 
   for (const player of state.players) deliverHeldItems(state, player.id);
@@ -43,6 +45,7 @@ export function run(state) {
       if (creepCount(state, order.owner) + order.mix.length <= cap) {
         spawnGroup(state, order, barracks);
         state.orders.splice(state.orders.indexOf(order), 1);
+        requeueAutoSpawn(state, order, barracks);
       } else {
         order.ticksLeft = 0;
         order.held = 1;

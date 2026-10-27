@@ -8,6 +8,15 @@ Status: draft v0.9.16. Numbers marked *(default)* live in `data/balance.json` an
 
 ## 0. Changelog
 
+### v0.9.16 → v0.9.17
+
+Hamza asked on 2026-10-27 for a way to keep the waves coming without a tap per group.
+
+| Area | Change |
+|---|---|
+| Creeps | A barracks carries a **creep auto spawn** toggle. While it is on, every creep group the barracks spawns queues the same mix again at the full price, so one order keeps a lane fed (section 9.4) |
+| Controls | The barracks panel gained one button, "Creep auto spawn", under the order controls (section 11.4) |
+
 ### v0.9.15 → v0.9.16
 
 Hamza asked on 2026-10-19 for the order queue in its own window, and for the bots to act on the same ticks while staying balanced.
@@ -567,6 +576,15 @@ The sections above left these details open. `src/sim/creeps.js` and the behavior
 - **Merge and split.** Merge needs no distance; the result may hold up to 30 creeps. A split gives the new group the creeps with the highest ids, so the original keeps the lowest and the odd one. Both halves keep the path and its progress.
 - **Entropy.** Creeps lose 0.1% of max HP per second like buildings and heroes (section 3.7).
 
+### 9.4 Creep auto spawn (M7, requested 2026-10-27)
+
+- Each barracks carries an **auto spawn** toggle, off when it is built. The owner flips it from the barracks panel, and it survives as long as the barracks does.
+- While the toggle is on, every creep group the barracks spawns queues the same mix again at the same barracks, at the full price of 5 lux per creep. The repeat starts its 2 s build time from the spawn tick.
+- The repeat pays like a manual order: a team that cannot pay queues nothing, and the chain ends there. The toggle stays on, so the next order the team can pay for repeats again.
+- A group held at the creep cap repeats when it finally spawns, never while it waits, so the cap stops the chain instead of filling the queue.
+- Turning the toggle off stops the repeats; an order already in the queue still runs. Recycling the barracks refunds the queue by the rules of section 9.3, and a barracks in its recycle channel takes no toggle and queues no repeat.
+- Several orders at one barracks each repeat themselves, so the queue keeps its length rather than growing.
+
 ## 10. Map
 
 ### 10.1 Layout
@@ -658,7 +676,7 @@ A hero told to attack a target walks until the target is in reach, hits it, and 
  ---------------------------------------
 ```
 
-The barracks panel stacks the title, the actions (Recycle), then the order, hero and item controls. It holds no queue, so a new order never changes its height or moves a button the player is tapping.
+The barracks panel stacks the title, the actions (Recycle), then the order, hero and item controls. Under the order controls sits one button, **Creep auto spawn**, which lights up while the barracks repeats its creep orders (section 9.4). It holds no queue, so a new order never changes its height or moves a button the player is tapping.
 
 The **orders window** floats at the top right, collapsed by default (a title bar, "Orders (2) ▸"). Open, it lists every order the player made at any barracks, newest first, three rows at a time with a scroll for the rest: the match time, the order ("Group of 3 RRM", "Hero Prism 40 lux", "Item Haste") and its state. A queued order shows its timer (or HELD) and a cancel button; a finished one shows done, and a cancelled one shows cancelled. An order shows as a dim row the moment the player taps, and the real row replaces it when the next snapshot arrives. The log keeps the newest 60 orders. A control that shows an amount of lux updates its text in place, so a press is never lost to a rebuilt button.
 

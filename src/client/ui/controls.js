@@ -446,6 +446,17 @@ export function actionsFor(e, towerData) {
 }
 
 /**
+ * The creep auto spawn toggle of a barracks panel (GDD 9.4). The label never changes, `on` says whether
+ * the barracks repeats its creep orders, and the command sends the opposite state.
+ * @param {import('../../sim/state.js').Entity} e  a barracks
+ * @returns {{ label: string, on: boolean, command: import('../../sim/commands.js').Command }}
+ */
+export function autoSpawnToggle(e) {
+  const on = e.autoSpawn === 1;
+  return { label: 'Creep auto spawn', on, command: { t: 'setAutoSpawn', barracksId: e.id, on: !on } };
+}
+
+/**
  * Builds the controls inside `root` and returns the hooks the page calls.
  * @param {{
  *   root: HTMLElement,
@@ -1125,7 +1136,7 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
   function renderBarracks(e, lux, actions) {
     const cost = orderCount * data.balance.creep.costLux; // whole lux: the data files are not converted
     const poor = !canAfford(lux, cost, minLeft);
-    const key = `${e.id}|${orderCount}|${orderType}|${e.waypoints.length}|${actions.map((a) => a.id).join(',')}`;
+    const key = `${e.id}|${orderCount}|${orderType}|${e.waypoints.length}|${e.autoSpawn}|${actions.map((a) => a.id).join(',')}`;
     if (key !== orderKey) {
       orderKey = key;
       const counts = /** @type {HTMLSelectElement} */ (el('select', 'barracks-select creep-count'));
@@ -1171,7 +1182,12 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
       actionsRow.append(path, orderButton);
       const choicesRow = el('div', 'barracks-options');
       choicesRow.append(counts, types);
-      const rows = [choicesRow, actionsRow];
+      const auto = autoSpawnToggle(e);
+      const autoButton = button(auto.label, () => issue(auto.command), 'action barracks-auto');
+      autoButton.dataset.autoSpawn = auto.on ? 'on' : 'off';
+      autoButton.setAttribute('aria-pressed', auto.on ? 'true' : 'false');
+      autoButton.classList.toggle('on', auto.on);
+      const rows = [choicesRow, actionsRow, autoButton];
       if (e.waypoints.length > 0) rows.push(button('Clear Path', () => issue({ t: 'setBarracksPath', barracksId: e.id, waypoints: [] })));
       orderRow.replaceChildren(...rows);
     }

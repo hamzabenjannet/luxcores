@@ -9,6 +9,7 @@ export const COMMAND_TYPES = [
   'recycle',
   'cancelRecycle',
   'orderCreeps',
+  'setAutoSpawn',
   'orderItem',
   'cancelQueue',
   'setBarracksPath',
