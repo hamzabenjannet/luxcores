@@ -145,6 +145,61 @@ const MAP_MODELS := {
 	},
 }
 
+## Terrain decoration models (`terrain_scatter.gd`), by prop name.
+##
+## These six files are photogrammetry scans with arbitrary origins, so `scale` and `center` follow the same
+## convention as every entry above: `scale` fits the model's widest horizontal side to the footprint named in
+## its comment, and `center`, in model units, moves the model's horizontal middle onto the anchor and its
+## lowest point onto the ground. Both come from the merged bounds of the glTF nodes, which each comment gives.
+## Five of the six fit one 5 tile terrain cell; `forest_loner` is a single tree and stays smaller on purpose.
+##
+## Two things differ from the entries above, on purpose. The scenes load on demand instead of through
+## `preload`, because the six files hold 165 MB and a match that draws no terrain must not pay for them.
+## The comments also record the triangle count, because `terrain_scatter.gd` spends a triangle budget while
+## it tiles: `rocks_formation_02` alone draws about 1.96 million triangles, which is more than the rest of
+## the map together on the GL Compatibility renderer this project targets.
+const TERRAIN_MODELS := {
+	## 34.7 by 13.5 by 23.7, 19 k triangles: a ridge 5 tiles wide and 1.9 tiles tall.
+	"forest_in_the_mountains": {
+		"path": "res://assets/3d/terrain/procedural/forest_in_the_mountains.glb",
+		"scale": 0.14402,
+		"center": Vector3(0.450, 1.017, -9.388),
+	},
+	## 31.9 by 29.9 by 34.1, 102 k triangles: one tall tree 3 tiles across and 2.6 tiles tall.
+	"forest_loner": {
+		"path": "res://assets/3d/terrain/procedural/forest_loner.glb",
+		"scale": 0.08800,
+		"center": Vector3(2.531, -1.859, 0.179),
+	},
+	## 88.6 by 22.9 by 55.7, 257 k triangles: a pond clearing 5 tiles wide and 1.3 tiles tall.
+	"forest_pond": {
+		"path": "res://assets/3d/terrain/procedural/forest_pond.glb",
+		"scale": 0.05641,
+		"center": Vector3(-14.231, 3.946, 2.200),
+	},
+	## 19.2 by 2.9 by 9.8, 152 k triangles: a flat wooded strip 5 tiles wide and 0.7 tiles tall.
+	"forest_with_a_road": {
+		"path": "res://assets/3d/terrain/procedural/forest_with_a_road.glb",
+		"scale": 0.25993,
+		"center": Vector3(4.731, 0.312, -0.499),
+	},
+	## 11.5 by 2.7 by 11.5, 160 k triangles: a rock shelf 5 tiles across and 1.2 tiles tall.
+	"rocks_formation_01": {
+		"path": "res://assets/3d/terrain/procedural/rocks_formation_01.glb",
+		"scale": 0.43531,
+		"center": Vector3(0.0, 0.357, 0.0),
+	},
+	## 57.0 by 14.6 by 55.6, 1.96 M triangles: a boulder field 5 tiles across and 1.3 tiles tall.
+	"rocks_formation_02": {
+		"path": "res://assets/3d/terrain/procedural/rocks_formation_02.glb",
+		"scale": 0.08766,
+		"center": Vector3(6.562, 6.950, 0.129),
+	},
+}
+
+## The terrain scenes already loaded, by prop name, so a second instance of one prop reloads nothing.
+static var _terrain_scenes := {}
+
 ## Hero models by roster name (data/heroes.json). A name missing here renders as the capsule. The models are
 ## 2 tiles tall with their origin at the middle, so a scale of 0.8 gives the capsule's 1.6 height.
 const HERO_MODELS := {
@@ -167,6 +222,22 @@ static func map_spec(layout_key: String) -> Dictionary:
 
 static func hero_spec(hero_name: String) -> Dictionary:
 	return HERO_MODELS.get(hero_name, {})
+
+## The spec of a terrain prop, with its scene loaded and cached, or `{}` for a name this library does not
+## know. The returned spec has the shape `instance` expects, so terrain goes through the same placement code
+## as every other model.
+static func terrain_spec(prop_name: String) -> Dictionary:
+	var entry: Dictionary = TERRAIN_MODELS.get(prop_name, {})
+	if entry.is_empty():
+		return {}
+	var scene: PackedScene = _terrain_scenes.get(prop_name)
+	if scene == null:
+		scene = load(String(entry.path)) as PackedScene
+		if scene == null:
+			push_warning("Terrain model %s did not load; the prop is skipped." % entry.path)
+			return {}
+		_terrain_scenes[prop_name] = scene
+	return {"scene": scene, "scale": entry.scale, "center": entry.center}
 
 ## The model of a spec, scaled and placed on the tile its anchor sits on, under the name `VISUAL_NAME`.
 ## Returns null for an empty spec, and for a file that no longer imports as a `Node3D`, so a caller that

@@ -127,7 +127,7 @@ static func clock_text(tick: int, tick_hz: int) -> String:
 ## The order log after a snapshot, the same rule as updateOrderLog in src/client/ui/order-log.js: an order of the
 ## player with no entry yet becomes a queued entry, and a queued entry whose order left the queue is done, or
 ## cancelled when its id is in `cancelled`. Entries are {id, barracksId, tick, label, state}, oldest first.
-static func update_order_log(log: Array, orders: Array, owner: int, tick: int, cancelled: Array, hero_names: Array = [], item_names: Array = []) -> Array:
+static func update_order_log(log_param: Array, orders: Array, owner: int, tick: int, cancelled: Array, hero_names: Array = [], item_names: Array = []) -> Array:
 	var live := {}
 	var mine: Array = []
 	for order in orders:
@@ -139,7 +139,7 @@ static func update_order_log(log: Array, orders: Array, owner: int, tick: int, c
 		cancelled_ids[int(id)] = true # an id read from JSON is a float, which Array.has would not match to an int
 	var next: Array = []
 	var known := {}
-	for entry in log:
+	for entry in log_param:
 		var copy: Dictionary = entry.duplicate()
 		if String(copy.state) == "queued" and not live.has(int(copy.id)):
 			copy["state"] = "cancelled" if cancelled_ids.has(int(copy.id)) else "done"
@@ -154,13 +154,13 @@ static func update_order_log(log: Array, orders: Array, owner: int, tick: int, c
 
 ## The rows the orders window shows, newest first: {id, barracksId, time, text, state, canCancel}. A queued entry
 ## shows its live timer and can be cancelled; a finished one shows "done" or "cancelled".
-static func log_rows(log: Array, orders: Array, tick_hz: int) -> Array:
+static func log_rows(log_param: Array, orders: Array, tick_hz: int) -> Array:
 	var by_id := {}
 	for order in orders:
 		by_id[int(order.id)] = order
 	var rows: Array = []
-	for index in range(log.size() - 1, -1, -1):
-		var entry: Dictionary = log[index]
+	for index in range(log_param.size() - 1, -1, -1):
+		var entry: Dictionary = log_param[index]
 		var queued := String(entry.state) == "queued"
 		var wait := String(entry.state)
 		if queued and by_id.has(int(entry.id)):

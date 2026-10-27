@@ -5,6 +5,7 @@ const GameLogic = preload("res://scripts/game_logic.gd")
 const MainScript = preload("res://scripts/main.gd")
 const MinimapScript = preload("res://scripts/minimap_3d.gd")
 const ModelLibrary = preload("res://scripts/model_library.gd")
+const TerrainScatter = preload("res://scripts/terrain_scatter.gd")
 
 const TEAM_BLUE := Color("#3d8bff")
 const TEAM_RED := Color("#ff4d4d")
@@ -21,11 +22,23 @@ const TEMPLATE_NAMES := [
 @onready var _rtscamera: Camera3D = $RTScamera
 @onready var _sun: DirectionalLight3D = $DirectionalLight3D
 
+## The five rows of the map, top (team 1) to bottom (team 0), in sevenths of the map height (GDD 10, and
+## the `rows` of data/mapgen.json). The zone overlays tint them and the terrain keeps off the build rows.
+const ZONE_BANDS := [
+	{"team": 1, "parts": 2, "row": "core"},
+	{"team": 1, "parts": 1, "row": "build"},
+	{"team": -1, "parts": 1, "row": "dmz"},
+	{"team": 0, "parts": 1, "row": "build"},
+	{"team": 0, "parts": 2, "row": "core"},
+]
+const ZONE_BAND_PARTS := 7
+
 const CAMERA_RTS := 0
 const CAMERA_DEBUG := 1
 const RTS_CAMERA_DEFAULT_DISTANCE := 25.0
 
 var _map_root: Node3D
+var _terrain_root: Node3D
 var _entity_root: Node3D
 var _effect_root: Node3D
 var _path_root: Node3D
@@ -44,6 +57,7 @@ var _paths: Array = []
 var _selected_entity_id := -1
 var _map_width := 96
 var _map_height := 112
+var _terrain_scatter := TerrainScatter.new()
 var _camera_target := Vector3.ZERO
 var _camera_yaw := 0.0
 var _camera_pitch := atan(1.0 / 0.8)
@@ -100,6 +114,9 @@ func _ready() -> void:
 			_templates[template_name] = template
 			template.visible = false
 	_terrain.visible = true
+	_terrain_root = Node3D.new()
+	_terrain_root.name = "Terrain3D"
+	add_child(_terrain_root)
 	_add_interface()
 	_configure_map()
 	_update_sun(_sun_tick)
@@ -303,15 +320,15 @@ func pan_camera(screen_delta: Vector2) -> void:
 	var viewport_height := maxf(1.0, get_viewport().get_visible_rect().size.y)
 	_following = false
 	var units_per_pixel: float
-	var basis: Basis
+	var camera_basis: Basis
 	if _camera_mode == CAMERA_RTS:
 		var distance := float(_rtscamera.get("orbit_distance"))
 		units_per_pixel = 2.0 * distance * tan(deg_to_rad(_rtscamera.fov) * 0.5) / viewport_height
-		basis = _rtscamera.global_basis
+		camera_basis = _rtscamera.global_basis
 	else:
 		units_per_pixel = _camera.size / viewport_height
-		basis = _camera.global_basis
-	var shift := (-basis.x * screen_delta.x - basis.y * screen_delta.y) * units_per_pixel
+		camera_basis = _camera.global_basis
+	var shift := (-camera_basis.x * screen_delta.x - camera_basis.y * screen_delta.y) * units_per_pixel
 	shift.y = 0.0
 	_camera_target += shift
 	_camera_target.x = clampf(_camera_target.x, -float(_map_width) * 0.5, float(_map_width) * 0.5)
@@ -368,7 +385,9 @@ func _marker_mesh(mesh: Mesh, color: Color) -> MeshInstance3D:
 ## The build ghost: a translucent box on the tile, green when the building can go there and red when not.
 func set_ghost(tile_x: int, tile_z: int, valid: bool) -> void:
 	_ghost.visible = true
-	_ghost.position = Vector3(float(tile_x) + 0.5 - float(_map_width) * 0.5, 0.3, float(tile_z) + 0.5 - float(_map_height) * 0.5)
+	var ghost_x := float(tile_x) + 0.5 - float(_map_width) * 0.5
+	var ghost_z := float(tile_z) + 0.5 - float(_map_height) * 0.5
+	_ghost.position = Vector3(ghost_x, 0.3 + _ground_height(ghost_x, ghost_z), ghost_z)
 	(_ghost.material_override as StandardMaterial3D).albedo_color = Color(0.3, 0.95, 0.63, 0.55) if valid else Color(1.0, 0.35, 0.35, 0.55)
 
 func clear_ghost() -> void:
@@ -380,7 +399,9 @@ func is_ghost_visible() -> bool:
 ## The aim ring of a held ability, at a ground point in tiles.
 func set_aim(point: Vector2) -> void:
 	_aim_ring.visible = true
-	_aim_ring.position = Vector3(point.x - float(_map_width) * 0.5, 0.05, point.y - float(_map_height) * 0.5)
+	var aim_x := point.x - float(_map_width) * 0.5
+	var aim_z := point.y - float(_map_height) * 0.5
+	_aim_ring.position = Vector3(aim_x, 0.05 + _ground_height(aim_x, aim_z), aim_z)
 
 func clear_aim() -> void:
 	_aim_ring.visible = false
@@ -409,6 +430,7 @@ func _configure_map() -> void:
 	_add_lane_overlays()
 	_add_map_models("vents", "Vent")
 	_add_map_models("itemSpawns", "ItemSpawn")
+	_scatter_terrain()
 	if not _camera_initialized:
 		_fit_camera()
 		_camera_initialized = true
@@ -451,14 +473,8 @@ func _active_camera() -> Camera3D:
 	return _rtscamera if _camera_mode == CAMERA_RTS else _camera
 
 func _add_zone_overlays() -> void:
-	var bands := [
-		{"team": 1, "parts": 2},
-		{"team": 1, "parts": 1},
-		{"team": -1, "parts": 1},
-		{"team": 0, "parts": 1},
-		{"team": 0, "parts": 2},
-	]
-	var part_height := float(_map_height) / 7.0
+	var bands := ZONE_BANDS
+	var part_height := float(_map_height) / float(ZONE_BAND_PARTS)
 	var z := -float(_map_height) * 0.5
 	for band in bands:
 		var height := part_height * float(band.parts)
@@ -504,6 +520,34 @@ func _add_lane_overlays() -> void:
 		lane_mesh.material_override = _flat_material(Color(tint.r, tint.g, tint.b, 0.22))
 		_map_root.add_child(lane_mesh)
 
+## Scatters the terrain scenery of the current map. A layout with no lane is the empty map between matches,
+## which stays bare. The two build rows go in as reserved rows, so no prop lands where a player may build.
+func _scatter_terrain() -> void:
+	if not is_instance_valid(_terrain_root):
+		return
+	var lanes: Array = _layout.get("lanes", [])
+	if _layout.is_empty() or lanes.is_empty():
+		_terrain_scatter.build(_terrain_root, {})
+		return
+	_terrain_scatter.build(_terrain_root, _layout, _reserved_rows())
+
+## The inclusive tile row ranges the terrain leaves alone: both build zones, from `ZONE_BANDS`.
+func _reserved_rows() -> Array:
+	var rows: Array = []
+	var part_height := float(_map_height) / float(ZONE_BAND_PARTS)
+	var z := 0.0
+	for band in ZONE_BANDS:
+		var band_height := part_height * float(band.parts)
+		if String(band.row) == "build":
+			rows.append(Vector2i(int(floor(z)), int(ceil(z + band_height)) - 1))
+		z += band_height
+	return rows
+
+## The height of the terrain, in tiles, under a point of the world (the centered coordinates the 3D nodes
+## use). It is 0 over every lane, build zone, Core and marker, so gameplay sits where it always sat.
+func _ground_height(world_x: float, world_z: float) -> float:
+	return _terrain_scatter.height_at(world_x + float(_map_width) * 0.5, world_z + float(_map_height) * 0.5)
+
 ## The markers of one layout key, each with its imported model on its tile. A marker carries its tile in
 ## its name, as in Vent_40_60, so a test can find the markers of one key.
 func _add_map_models(key: String, marker_name: String) -> void:
@@ -512,11 +556,9 @@ func _add_map_models(key: String, marker_name: String) -> void:
 			continue
 		var anchor := Node3D.new()
 		anchor.name = "%s_%d_%d" % [marker_name, int(marker.get("tileX", 0)), int(marker.get("tileZ", 0))]
-		anchor.position = Vector3(
-			float(marker.get("tileX", 0)) + 0.5 - float(_map_width) * 0.5,
-			0.06,
-			float(marker.get("tileZ", 0)) + 0.5 - float(_map_height) * 0.5
-		)
+		var marker_x := float(marker.get("tileX", 0)) + 0.5 - float(_map_width) * 0.5
+		var marker_z := float(marker.get("tileZ", 0)) + 0.5 - float(_map_height) * 0.5
+		anchor.position = Vector3(marker_x, 0.06 + _ground_height(marker_x, marker_z), marker_z)
 		var marker_model := ModelLibrary.instance(ModelLibrary.map_spec(key))
 		if marker_model != null:
 			anchor.add_child(marker_model)
@@ -551,9 +593,9 @@ func _render_creep_group_labels(entities: Array) -> void:
 		var tint := TEAM_BLUE if int(group_label.team) == 0 else TEAM_RED
 		var label := Label3D.new()
 		label.text = String(group_label.text)
-		label.position = Vector3(
-			float(group_label.x) / GameLogic.UNITS_PER_TILE - float(_map_width) * 0.5, 2.3,
-			float(group_label.z) / GameLogic.UNITS_PER_TILE - float(_map_height) * 0.5)
+		var label_x := float(group_label.x) / GameLogic.UNITS_PER_TILE - float(_map_width) * 0.5
+		var label_z := float(group_label.z) / GameLogic.UNITS_PER_TILE - float(_map_height) * 0.5
+		label.position = Vector3(label_x, 2.3 + _ground_height(label_x, label_z), label_z)
 		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		label.font_size = 32
 		label.pixel_size = 0.01
@@ -569,7 +611,7 @@ func _make_entity(entity: Dictionary) -> Node3D:
 	var z := float(entity.get("z", 0)) / GameLogic.UNITS_PER_TILE - float(_map_height) * 0.5
 	var anchor := Node3D.new()
 	anchor.name = "Entity_%d" % id
-	anchor.position = Vector3(x, 0.12, z)
+	anchor.position = Vector3(x, 0.12 + _ground_height(x, z), z)
 	var template_name := _template_for(entity)
 	var visual := ModelLibrary.instance(_model_spec(entity, template_name))
 	if visual == null:

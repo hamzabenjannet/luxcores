@@ -12,17 +12,17 @@ var _checks := 0
 var _failures := 0
 
 func _init() -> void:
-	var root := ProjectSettings.globalize_path("res://").path_join("..").simplify_path()
-	var fixture: Dictionary = _read_json(root.path_join("test/fixtures/client-parity.json"))
+	var repo_root := ProjectSettings.globalize_path("res://").path_join("..").simplify_path()
+	var fixture: Dictionary = _read_json(repo_root.path_join("test/fixtures/client-parity.json"))
 	var data := {
-		"heroes": _read_json(root.path_join("data/heroes.json")),
-		"buildings": _read_json(root.path_join("data/buildings.json")),
-		"balance": _read_json(root.path_join("data/balance.json")),
-		"mapgen": _read_json(root.path_join("data/mapgen.json")),
-		"items": _read_json(root.path_join("data/items.json")),
+		"heroes": _read_json(repo_root.path_join("data/heroes.json")),
+		"buildings": _read_json(repo_root.path_join("data/buildings.json")),
+		"balance": _read_json(repo_root.path_join("data/balance.json")),
+		"mapgen": _read_json(repo_root.path_join("data/mapgen.json")),
+		"items": _read_json(repo_root.path_join("data/items.json")),
 	}
 	if fixture.is_empty() or data.buildings.is_empty():
-		push_error("Could not read the fixture or the data files under %s" % root)
+		push_error("Could not read the fixture or the data files under %s" % repo_root)
 		quit(1)
 		return
 
@@ -54,10 +54,10 @@ func _init() -> void:
 	for c in fixture.leaveCall:
 		_check("leave call %s" % JSON.stringify(c), GameLogic.leave_call(String(c.status), String(c.role), bool(c.isHost)), String(c.expect))
 	for c in fixture.orderLog:
-		var log: Array = []
+		var log_param: Array = []
 		for step in c.steps:
-			log = GameLogic.update_order_log(log, step.orders, int(c.owner), int(step.tick), step.get("cancelled", []), fixture.orderLogNames.heroNames, fixture.orderLogNames.itemNames)
-		_check("order log: %s" % String(c.name), _normalize(log), _normalize(c.expect))
+			log_param = GameLogic.update_order_log(log_param, step.orders, int(c.owner), int(step.tick), step.get("cancelled", []), fixture.orderLogNames.heroNames, fixture.orderLogNames.itemNames)
+		_check("order log: %s" % String(c.name), _normalize(log_param), _normalize(c.expect))
 	for c in fixture.logRows:
 		_check("log rows: %s" % String(c.name), _normalize(GameLogic.log_rows(c.log, c.orders, int(c.tickHz))), _normalize(c.expect))
 	for c in fixture.clockText:
@@ -103,7 +103,10 @@ func _init() -> void:
 		_check("item buttons: %s" % String(c.name), _normalize(GameLogic.item_states(fixture.items, c.counts, int(c.funnelLux))), _normalize(c.expect))
 	for c in fixture.immediateUse:
 		var use := GameLogic.immediate_use(int(c.id), fixture.items)
-		_check("immediate use %s" % JSON.stringify(c), _normalize(use if not use.is_empty() else null), _normalize(c.expect))
+		var actual_use: Variant = null
+		if not use.is_empty():
+			actual_use = use
+		_check("immediate use %s" % JSON.stringify(c), _normalize(actual_use), _normalize(c.expect))
 	for c in fixture.shopStates:
 		_check("item shop: %s" % String(c.name), _normalize(GameLogic.shop_states(fixture.items, int(c.coreLuxMilli), int(c.minLeftLux))), _normalize(c.expect))
 	for c in fixture.matchSummary:
@@ -112,7 +115,10 @@ func _init() -> void:
 		_check("ends build mode %s" % JSON.stringify(c.command), GameLogic.ends_build_mode(c.command), bool(c.expect))
 	for c in fixture.immediateCast:
 		var cast := GameLogic.immediate_cast(int(c.slot), c.hero)
-		_check("immediate cast %s" % JSON.stringify(c), _normalize(cast if not cast.is_empty() else null), _normalize(c.expect))
+		var actual_cast: Variant = null
+		if not cast.is_empty():
+			actual_cast = cast
+		_check("immediate cast %s" % JSON.stringify(c), _normalize(actual_cast), _normalize(c.expect))
 	for c in fixture.heroPickState:
 		var state := GameLogic.hero_pick_state({
 			"player": c.player if c.player != null else {}, "hero_alive": bool(c.heroAlive), "hero_queued": bool(c.heroQueued),

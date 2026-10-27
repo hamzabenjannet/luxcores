@@ -19,6 +19,7 @@ A Match ID in the field joins that match instead. An ID of a bot match joins as 
 - Checks the server's spec version against `GameLogic.SPEC_VERSION` and refuses a server on another spec.
 - Loads `data/buildings.json`, `data/balance.json` and `data/mapgen.json` from the server, so costs, upgrades and the build zone never live in two places.
 - Draws the arena on the `Terrain` mesh, with colored team zones, lanes, vents, item spawns and every entity kind in 3D.
+- Tiles the whole map with procedural terrain from one seed (`scripts/terrain_scatter.gd`). About 90 forest, pond and rock props land on a grid of 5 tile cells. They keep clear of the lanes, the build zones, the Cores and the markers, and per-prop gaps hold one kind out of the cell next door. The props also define the ground height. Buildings, creeps, heroes, labels, the build ghost and the aim ring sit on it.
 - Orbits the directional sun around the arena from dawn through sunset, following the snapshot's day/night tick with changing height, direction, brightness and shadows.
 - Shows every entity's name and lux count (GDD 13.1), tower attack types, upgrade levels (`P2 S1`), stuns, recycle progress, aim lines and projectiles.
 - Keeps server-driven game rules and controls. A tap on the 3D terrain uses `scripts/game_logic.gd` to build, select or send an order.
@@ -36,6 +37,18 @@ A Match ID in the field joins that match instead. An ID of a bot match joins as 
 ## Staying in Step with the Web Client
 
 `scripts/game_logic.gd` holds the pure decisions: label text, affordability, tap resolution and the actions of a selected building. The web client implements the same functions in `src/client/entity-text.js` and `src/client/ui/controls.js`. `test/fixtures/client-parity.json` holds the cases both must answer alike. When you change a decision, change both clients and the fixture in one commit. Both test runs fail when only one side moves.
+
+## Terrain Scenery
+
+`scripts/terrain_scatter.gd` tiles the map with scenery and `ModelLibrary.TERRAIN_MODELS` names the six glTF files in `assets/3d/terrain/procedural/`. The script runs from `_configure_map` in `main3d.gd`, after the zone bands, the lanes and the markers, so it knows where it may not stand. It lays a grid of 5 tile cells over the map and gives one prop to every cell that gameplay does not claim. Each prop is drawn by weight from the six models, on a seed taken from the map's own `usedSeed`.
+
+The files are photogrammetry scans, not a height map: they share no ground plane and carry no collision shape. Each prop therefore declares a mound, a height and a radius measured by hand, and `height_at` returns the highest mound over a point. Clearance keeps every mound away from the lanes, the build zones, the Cores, the vents, the item spawns and the blockers. The ground is therefore flat at 0 wherever a building or a creep can be, and a hero that walks into the scenery is the only thing that climbs. Taps still read the flat plane at y = 0 through `arena_3d.gd`, which is why no mound passes 1 tile.
+
+Each scan arrives as hundreds or thousands of separate little meshes. `_merged_mesh` therefore merges a prop once into one mesh with one surface per material, and every copy of that prop draws from one `MultiMeshInstance3D`. A tiled map therefore costs five or six nodes and about 60 draw calls whatever the number of copies, and the merge is cached for the rest of the session. The first map of a session pays about 1.5 seconds for that merge, later maps about 70 ms.
+
+Triangles are the real cost, and they are a desktop figure. A tiled map draws 3 to 7 million triangles, because the open ground of a 96 by 112 tile map is large and the scans are dense. One copy of `forest_in_the_mountains` is 19 k triangles, the next four are 102 k to 257 k, and `rocks_formation_02` alone is 1.96 M. Lower `TRIANGLE_BUDGET` first on a slow device, and decimate `rocks_formation_02` before anything else.
+
+Tune the tiling in two places. `PROP_RULES` in `terrain_scatter.gd` holds the footprint, the mound, the weight, the cap, the same-kind gap and the triangle count of each prop. The constants above it hold the cell size, the jitter, the seed salt, the clearances and the budget. `ModelLibrary.TERRAIN_MODELS` holds the file, the scale and the pivot, and a replacement file needs those two numbers measured again.
 
 `GameLogic.SPEC_VERSION` must equal `SPEC_VERSION` in `src/sim/config.js`. Bump it only after porting the rule change that bumped the sim.
 

@@ -2,6 +2,7 @@ extends SceneTree
 ## Checks the main 3D scene, snapshot rendering and camera controls.
 
 const ModelLibrary = preload("res://scripts/model_library.gd")
+const TerrainScatter = preload("res://scripts/terrain_scatter.gd")
 
 var _checks := 0
 var _failures := 0
@@ -367,6 +368,8 @@ func _run() -> void:
 		game_interface.call("_refresh_key_binding_buttons")
 		(game_interface.get("_key_settings_overlay") as Control).visible = false
 
+	_check_terrain_scatter(scene)
+
 	print("%d checks, %d failed" % [_checks, _failures])
 	scene.queue_free()
 	quit(_failures)
@@ -381,3 +384,110 @@ func _check(name: String, actual: Variant, expected: Variant) -> void:
 func _advance_camera(scene: Node) -> void:
 	for _frame in range(60):
 		scene.call("_process", 1.0 / 60.0)
+
+
+## The procedural terrain. The checks run on `TerrainScatter.plan`, which is pure, so none of them loads the
+## 165 MB of scans; the scene check below only asks that the node the props go under exists.
+func _check_terrain_scatter(scene: Node) -> void:
+	_check("the scene holds a node for the terrain props", scene.get_node_or_null("Terrain3D") is Node3D, true)
+	var scatter_root := scene.get_node_or_null("Terrain3D/%s" % TerrainScatter.ROOT_NAME) as Node3D
+	_check("the empty map between matches stays bare", scatter_root != null and scatter_root.get_child_count() == 0, true)
+	for prop in TerrainScatter.PROP_NAMES:
+		_check("%s names a model the library can place" % prop, not ModelLibrary.TERRAIN_MODELS.get(prop, {}).is_empty(), true)
+		var rules: Dictionary = TerrainScatter.PROP_RULES.get(prop, {})
+		_check("%s keeps its mound inside its footprint" % prop, float(rules.mound_radius) <= float(rules.footprint) * 0.5, true)
+	_check("the desert rocks are gone from the library", ModelLibrary.TERRAIN_MODELS.has("rocks_in_a_desert"), false)
+	_check("the library and the tiling rules name the same props",
+		TerrainScatter.PROP_NAMES.size(), ModelLibrary.TERRAIN_MODELS.size())
+	# A map with one straight mid lane, two Cores and one vent, which is enough to test every clearance rule.
+	var map_width := 96
+	var map_height := 112
+	var lane_tiles: Array = []
+	for tile_z in range(20, 92):
+		for tile_x in range(46, 50):
+			lane_tiles.append(tile_z * map_width + tile_x)
+	var layout := {
+		"width": map_width, "height": map_height, "usedSeed": 4242,
+		"lanes": [{"team": 0, "lane": "mid", "tiles": lane_tiles}],
+		"cores": [{"team": 0, "tileX": 48, "tileZ": 96}, {"team": 1, "tileX": 48, "tileZ": 16}],
+		"vents": [{"team": 0, "tileX": 20, "tileZ": 90}], "blockers": [], "itemSpawns": [],
+	}
+	var reserved := [Vector2i(32, 47), Vector2i(64, 79)]
+	var plan := TerrainScatter.plan(layout, reserved)
+	# A tiled map fills its open ground: a sparse scatter of a dozen props would fail this.
+	_check("the tiling fills the open ground with props", plan.size() > 40, true)
+	_check("one seed plans one tiling", JSON.stringify(TerrainScatter.plan(layout, reserved)), JSON.stringify(plan))
+	_check("another seed plans another tiling",
+		JSON.stringify(TerrainScatter.plan({
+			"width": map_width, "height": map_height, "usedSeed": 99,
+			"lanes": layout.lanes, "cores": layout.cores, "vents": layout.vents,
+			"blockers": [], "itemSpawns": [],
+		}, reserved)) != JSON.stringify(plan), true)
+	var counts := {}
+	var triangles := 0
+	var clear_of_lanes := true
+	var clear_of_cores := true
+	var clear_of_build_rows := true
+	var inside_the_map := true
+	var same_kind_apart := true
+	for index in plan.size():
+		var entry: Dictionary = plan[index]
+		var radius := float(entry.radius)
+		counts[entry.prop] = int(counts.get(entry.prop, 0)) + 1
+		triangles += int(TerrainScatter.PROP_RULES[entry.prop].triangles)
+		if entry.x - radius < 0.0 or entry.x + radius > float(map_width) \
+				or entry.z - radius < 0.0 or entry.z + radius > float(map_height):
+			inside_the_map = false
+		for tile_index in lane_tiles:
+			@warning_ignore("integer_division")
+			var lane_point := Vector2(float(int(tile_index) % map_width) + 0.5, float(int(tile_index) / map_width) + 0.5)
+			if lane_point.distance_to(Vector2(entry.x, entry.z)) < radius + float(TerrainScatter.LANE_CLEARANCE):
+				clear_of_lanes = false
+		for core in layout.cores:
+			if Vector2(float(core.tileX) + 0.5, float(core.tileZ) + 0.5).distance_to(Vector2(entry.x, entry.z)) \
+					< radius + float(TerrainScatter.CORE_CLEARANCE):
+				clear_of_cores = false
+		for rows in reserved:
+			if entry.z + radius >= float(rows.x) and entry.z - radius <= float(rows.y) + 1.0:
+				clear_of_build_rows = false
+		for other_index in range(index + 1, plan.size()):
+			var other: Dictionary = plan[other_index]
+			if String(entry.prop) != String(other.prop):
+				continue
+			if Vector2(entry.x, entry.z).distance_to(Vector2(other.x, other.z)) \
+					< float(TerrainScatter.PROP_RULES[entry.prop].same_kind_gap):
+				same_kind_apart = false
+	_check("every prop stays on the map", inside_the_map, true)
+	_check("no prop reaches a lane", clear_of_lanes, true)
+	_check("no prop reaches a Core", clear_of_cores, true)
+	_check("no prop reaches a build zone", clear_of_build_rows, true)
+	_check("two props of one kind keep their own gap", same_kind_apart, true)
+	_check("the triangle budget holds", triangles <= TerrainScatter.TRIANGLE_BUDGET, true)
+	var over_cap := false
+	var kinds_used := 0
+	for prop in TerrainScatter.PROP_NAMES:
+		if int(counts.get(prop, 0)) > int(TerrainScatter.PROP_RULES[prop].max_count):
+			over_cap = true
+		if int(counts.get(prop, 0)) > 0:
+			kinds_used += 1
+	_check("no prop passes its own cap", over_cap, false)
+	_check("the tiling mixes several models", kinds_used >= 4, true)
+	# The ground the props imply: flat where the game is played, raised only where a prop stands.
+	var flat_over_lanes := true
+	for tile_index in lane_tiles:
+		@warning_ignore("integer_division")
+		if TerrainScatter.plan_height_at(plan, float(int(tile_index) % map_width) + 0.5, float(int(tile_index) / map_width) + 0.5) != 0.0:
+			flat_over_lanes = false
+	var flat_over_build_rows := true
+	for rows in reserved:
+		for tile_z in range(rows.x, rows.y + 1):
+			for tile_x in map_width:
+				if TerrainScatter.plan_height_at(plan, float(tile_x) + 0.5, float(tile_z) + 0.5) != 0.0:
+					flat_over_build_rows = false
+	_check("the ground stays flat over every lane", flat_over_lanes, true)
+	_check("the ground stays flat over both build zones", flat_over_build_rows, true)
+	var mound := 0.0
+	for entry in plan:
+		mound = maxf(mound, TerrainScatter.plan_height_at(plan, float(entry.x), float(entry.z)))
+	_check("the ground rises under the props", mound > 0.0, true)
+	_check("the ground falls back to zero over the middle lane", TerrainScatter.plan_height_at(plan, 48.0, 56.0), 0.0)
