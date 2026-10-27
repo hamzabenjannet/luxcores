@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { KIND, SPEC_VERSION } from '../src/sim/index.js';
-import { creepGroupLabels, entityText, entropyFromText, entropyText, isDay, tickCapFromText, tickCapText } from '../src/client/entity-text.js';
-import { abilityStates, actionsFor, autoSpawnToggle, canAfford, endsBuildMode, groupActions, heroLuxChoices, heroPickState, immediateCast, immediateUse, itemStates, mixFor, pendingKept, pendingLine, placement, queueLines, resolveTap, secondsText, shopStates } from '../src/client/ui/controls.js';
+import { creepCapFromText, creepGroupLabels, entityText, entropyFromText, entropyText, isDay, tickCapFromText, tickCapText } from '../src/client/entity-text.js';
+import { abilityStates, actionsFor, autoSpawnToggle, canAfford, cancelAction, endsBuildMode, groupActions, heroLuxChoices, heroPickState, immediateCast, immediateUse, itemStates, mixFor, pendingKept, pendingLine, placement, queueLines, resolveTap, secondsText, shopStates } from '../src/client/ui/controls.js';
 import { HOLD_AIM_PX, clampZoom, holdAimPhase, holdAimRelease, pinchZoom } from '../src/client/input/gestures.js';
 import { leaveCall, leaveNeedsConfirm } from '../src/client/ui/leave.js';
 import { joinCall } from '../src/client/ui/rejoin.js';
@@ -59,6 +59,10 @@ test('tick limit cases', () => {
   for (const c of fixture.tickCapText) assert.equal(tickCapText(c.maxTicks), c.expect, JSON.stringify(c.maxTicks));
 });
 
+test('creep cap cases', () => {
+  for (const c of fixture.creepCapFromText) assert.equal(creepCapFromText(c.text), c.expect, JSON.stringify(c.text));
+});
+
 test('seconds text cases', () => {
   for (const c of fixture.secondsText) assert.equal(secondsText(c.ticks, c.tickHz), c.expect, JSON.stringify(c));
 });
@@ -93,6 +97,10 @@ test('panel action cases', () => {
 
 test('creep auto spawn toggle cases', () => {
   for (const c of fixture.autoSpawnToggle) assert.deepEqual(autoSpawnToggle(c.entity), c.expect, JSON.stringify(c.entity));
+});
+
+test('right click cancel cases', () => {
+  for (const c of fixture.cancelAction) assert.deepEqual(cancelAction(c.state), c.expect, JSON.stringify(c.state));
 });
 
 test('creep order mix cases', () => {

@@ -5,7 +5,7 @@
  * functions, so the web labels, the selection panel and the tests share them.
  */
 
-import { KIND, MILLI } from '../sim/index.js';
+import { CREEP_CAP_MAX, KIND, MILLI } from '../sim/index.js';
 
 /** Display names by KIND code. */
 export const KIND_NAMES = /** @type {Record<number, string>} */ ({
@@ -135,6 +135,17 @@ export function tickCapFromText(text) {
   if (!/^\d{1,7}$/.test(text.trim())) return -1;
   const ticks = Number(text.trim());
   return ticks >= 1 && ticks <= MAX_TICK_CAP ? ticks : -1;
+}
+
+/**
+ * A creep cap typed in the menu, as a whole number of creeps per player, or -1 when the text is no cap
+ * from 1 to `CREEP_CAP_MAX`. An empty field keeps the default, so the caller checks that first.
+ * @param {string} text
+ */
+export function creepCapFromText(text) {
+  if (!/^\d{1,4}$/.test(text.trim())) return -1;
+  const creeps = Number(text.trim());
+  return creeps >= 1 && creeps <= CREEP_CAP_MAX ? creeps : -1;
 }
 
 /**

@@ -457,6 +457,21 @@ export function autoSpawnToggle(e) {
 }
 
 /**
+ * Whether a cancel (a right click, GDD 11.1) has anything to clear: a building picked in the palette or
+ * its ghost, an ability or an item waiting for a target, the path or merge mode, or a selected building
+ * or creep group. A client passes -1 or null for what is off.
+ * @param {{ building?: string | null, ghost?: boolean, ability?: number | null, item?: number | null,
+ *   mode?: string | null, selected?: number | null, selectedGroup?: number | null }} state
+ * @returns {{ cancelled: boolean }}
+ */
+export function cancelAction(state) {
+  const cancelled = Boolean(state.building) || state.ghost === true
+    || (state.ability ?? -1) >= 0 || (state.item ?? -1) >= 0 || Boolean(state.mode)
+    || (state.selected ?? -1) >= 0 || (state.selectedGroup ?? -1) >= 0;
+  return { cancelled };
+}
+
+/**
  * Builds the controls inside `root` and returns the hooks the page calls.
  * @param {{
  *   root: HTMLElement,
@@ -1371,6 +1386,22 @@ export function createControls({ root, view, viewerTeam, spectator, tickHz, data
         selected = result.select;
         selectedGroup = null;
       }
+      render();
+    },
+    /** A right click on the map cancels the current action (GDD 11.1) and leaves nothing selected. */
+    cancel() {
+      if (spectator) return;
+      if (!cancelAction({ building, ghost: ghost !== null, ability, item: itemAim, mode, selected, selectedGroup }).cancelled) return;
+      building = null;
+      ghost = null;
+      ability = null;
+      itemAim = null;
+      mode = null;
+      pathTarget = null;
+      pathPoints = [];
+      selected = null;
+      selectedGroup = null;
+      say('Cancelled.');
       render();
     },
     /** Selects a creep group by id, as a tap on one of its creeps does. @param {number} id */

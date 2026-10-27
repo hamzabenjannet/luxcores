@@ -64,12 +64,13 @@ import { joinCall } from '../ui/rejoin.js';
  *   seed?: number,           // with 'new': map and RNG seed
  *   maxTicks?: number,       // with 'new': tick limit of the match, 0 for unlimited; the server's limit applies when omitted
  *   entropyPermillePerSecond?: number, // with 'new': entropy rate of the match in tenths of a percent per second, 0 to 1000; the host's choice
+ *   creepCapPerPlayer?: number, // with 'new': creeps alive per player, 1 to 1000; the host's choice
  *   specVersion: string,     // SPEC_VERSION of this client's sim
  *   recoveryCode?: string,   // move a profile to this device instead of signing in
  * }} opts
  * @returns {Promise<ServerSession>}
  */
-export async function joinServerMatch({ server, name, matchId, vsBot = false, botVsBot = false, seed, entropyPermillePerSecond, maxTicks, specVersion, recoveryCode }) {
+export async function joinServerMatch({ server, name, matchId, vsBot = false, botVsBot = false, seed, entropyPermillePerSecond, creepCapPerPlayer, maxTicks, specVersion, recoveryCode }) {
   const base = server.replace(/\/$/, '');
   const spec = await request(`${base}/api/game/spec`);
   if (spec.specVersion !== specVersion) {
@@ -82,7 +83,7 @@ export async function joinServerMatch({ server, name, matchId, vsBot = false, bo
   const existing = matchId === 'new' ? null : await request(`${base}/api/matches/${matchId}`, { token });
   let match =
     matchId === 'new'
-      ? await request(`${base}/api/matches`, { token, body: { name: `${name}'s match`, vsBot, botVsBot, ...(seed === undefined ? {} : { seed }), ...(entropyPermillePerSecond === undefined ? {} : { entropyPermillePerSecond }), ...(maxTicks === undefined ? {} : { maxTicks }) } })
+      ? await request(`${base}/api/matches`, { token, body: { name: `${name}'s match`, vsBot, botVsBot, ...(seed === undefined ? {} : { seed }), ...(entropyPermillePerSecond === undefined ? {} : { entropyPermillePerSecond }), ...(creepCapPerPlayer === undefined ? {} : { creepCapPerPlayer }), ...(maxTicks === undefined ? {} : { maxTicks }) } })
       : joinCall({ botVsBot: Boolean(existing.botVsBot), mine: existing.players.some((/** @type {any} */ p) => p.playerId === auth.player.id) }) === 'none'
         ? existing // a bot match is watched, and a match the player is already in is rejoined: no seat to take
         : await request(`${base}/api/matches/${matchId}/join`, { token, method: 'POST' });

@@ -21,11 +21,12 @@ const WHEEL_ZOOM_RATE = 0.0015;
  *   groundAt: (clientX: number, clientY: number) => { x: number, z: number } | null,  // ground point in tiles under a screen point
  *   pan: (dxTiles: number, dzTiles: number) => void,
  *   onTap: (ground: { x: number, z: number }) => void,
+ *   onCancel?: () => void,  // the right mouse button, which cancels the current action (GDD 11.1)
  *   getZoom?: () => number,
  *   setZoom?: (zoom: number) => void,
  * }} hooks
  */
-export function attachPointer(el, { groundAt, pan, onTap, getZoom, setZoom }) {
+export function attachPointer(el, { groundAt, pan, onTap, onCancel, getZoom, setZoom }) {
   /** @type {{ id: number, x: number, y: number, at: number, anchor: { x: number, z: number } | null, dragging: boolean } | null} */
   let press = null;
   /** Every finger or mouse button that is down, by pointer id, at its latest position. @type {Map<number, { x: number, y: number }>} */
@@ -39,7 +40,14 @@ export function attachPointer(el, { groundAt, pan, onTap, getZoom, setZoom }) {
     return Math.hypot(a.x - b.x, a.y - b.y);
   }
 
+  // The right button never pans or taps: it cancels whatever the player picked.
+  el.addEventListener('contextmenu', (e) => e.preventDefault());
+
   el.addEventListener('pointerdown', (e) => {
+    if (e.button === 2) {
+      onCancel?.();
+      return;
+    }
     down.set(e.pointerId, { x: e.clientX, y: e.clientY });
     try {
       el.setPointerCapture(e.pointerId);

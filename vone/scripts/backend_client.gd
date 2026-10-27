@@ -94,6 +94,9 @@ func connect_match(options: Dictionary) -> Dictionary:
 		var entropy_tenths := GameLogic.entropy_from_text(entropy_text)
 		if entropy_tenths >= 0:
 			create_body["entropyPermillePerSecond"] = entropy_tenths
+		var creep_cap := GameLogic.creep_cap_from_text(str(options.get("creep_cap", "")))
+		if creep_cap >= 0:
+			create_body["creepCapPerPlayer"] = creep_cap
 		create_body["maxTicks"] = int(options.get("max_ticks", 0))
 		match_response = await _request("/api/matches", HTTPClient.METHOD_POST, create_body, true)
 	else:

@@ -134,12 +134,23 @@ export class SimService {
     return this.api.validOptions(options);
   }
 
+  /** The default creep cap of `data/balance.json`, in creeps alive per player. */
+  get defaultCreepCap(): number {
+    return (this.config.balance as { creep: { capPerPlayer: number } }).creep.capPerPlayer;
+  }
+
   /** The rules of a match: the data files with the match's own settings on top. */
   configFor(options?: SimMatchOptions): ReturnType<SimApi['normalizeData']> {
-    if (options?.entropyPermillePerSecond === undefined || options.entropyPermillePerSecond === this.defaultEntropyPct) return this.config;
-    const key = JSON.stringify({ entropyPermillePerSecond: options.entropyPermillePerSecond });
+    const entropy = options?.entropyPermillePerSecond === this.defaultEntropyPct ? undefined : options?.entropyPermillePerSecond;
+    const creepCap = options?.creepCapPerPlayer === this.defaultCreepCap ? undefined : options?.creepCapPerPlayer;
+    if (entropy === undefined && creepCap === undefined) return this.config;
+    const own: SimMatchOptions = {
+      ...(entropy === undefined ? {} : { entropyPermillePerSecond: entropy }),
+      ...(creepCap === undefined ? {} : { creepCapPerPlayer: creepCap }),
+    };
+    const key = JSON.stringify(own);
     let config = this.variants.get(key);
-    if (!config) this.variants.set(key, (config = this.api.normalizeData(this.raw, { entropyPermillePerSecond: options.entropyPermillePerSecond })));
+    if (!config) this.variants.set(key, (config = this.api.normalizeData(this.raw, own)));
     return config;
   }
 

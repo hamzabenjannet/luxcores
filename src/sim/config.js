@@ -19,22 +19,30 @@ import { MILLI, UNITS_PER_TILE } from './fixed.js';
 /** The highest entropy rate a match may set, in tenths of a percent of the maximum HP per second (1000 is 100 percent). */
 export const ENTROPY_MAX_PERMILLE = 1000;
 
+/** The highest creep cap a match may set, in creeps alive per player (GDD 9). */
+export const CREEP_CAP_MAX = 1000;
+
 /**
- * Settings a match may change at its start, on top of the data files. Both are optional.
+ * Settings a match may change at its start, on top of the data files. Each one is optional.
  * @typedef {Object} MatchOptions
  * @property {number} [entropyPermillePerSecond] tenths of a percent of maximum HP that buildings, creeps and heroes lose per second (GDD 3.7); 0 turns entropy off
+ * @property {number} [creepCapPerPlayer] creeps a player may have alive at once (GDD 9), 1 to `CREEP_CAP_MAX`
  */
 
 /**
- * Whether the options are valid: a whole entropy rate, in tenths of a percent per second, from 0 to `ENTROPY_MAX_PERMILLE`.
+ * Whether the options are valid: a whole entropy rate, in tenths of a percent per second, from 0 to
+ * `ENTROPY_MAX_PERMILLE`, and a whole creep cap from 1 to `CREEP_CAP_MAX`.
  * @param {unknown} options
  * @returns {options is MatchOptions}
  */
 export function validOptions(options) {
   if (options === null || typeof options !== 'object') return false;
-  const { entropyPermillePerSecond } = /** @type {MatchOptions} */ (options);
-  return entropyPermillePerSecond === undefined
+  const { entropyPermillePerSecond, creepCapPerPlayer } = /** @type {MatchOptions} */ (options);
+  const entropyOk = entropyPermillePerSecond === undefined
     || (Number.isSafeInteger(entropyPermillePerSecond) && entropyPermillePerSecond >= 0 && entropyPermillePerSecond <= ENTROPY_MAX_PERMILLE);
+  const capOk = creepCapPerPlayer === undefined
+    || (Number.isSafeInteger(creepCapPerPlayer) && creepCapPerPlayer >= 1 && creepCapPerPlayer <= CREEP_CAP_MAX);
+  return entropyOk && capOk;
 }
 
 /**
@@ -89,9 +97,13 @@ function convert(value, path) {
  */
 export function normalizeData(raw, options = {}) {
   if (!validOptions(options)) throw new RangeError('normalizeData: invalid match options');
-  const balance = options.entropyPermillePerSecond === undefined
-    ? raw.balance
-    : { ...raw.balance, economy: { ...raw.balance.economy, entropyPermillePerSecond: options.entropyPermillePerSecond } };
+  let balance = raw.balance;
+  if (options.entropyPermillePerSecond !== undefined) {
+    balance = { ...balance, economy: { ...balance.economy, entropyPermillePerSecond: options.entropyPermillePerSecond } };
+  }
+  if (options.creepCapPerPlayer !== undefined) {
+    balance = { ...balance, creep: { ...balance.creep, capPerPlayer: options.creepCapPerPlayer } };
+  }
   const out = {
     balance: convert(balance, 'balance'),
     buildings: convert(raw.buildings, 'buildings'),

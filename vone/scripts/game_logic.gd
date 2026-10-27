@@ -683,6 +683,31 @@ static func resolve_tap(ctx: Dictionary) -> Dictionary:
 		return {"command": {"t": "heroMove", "x": roundi(ground.x * UNITS_PER_TILE), "z": roundi(ground.y * UNITS_PER_TILE)}, "deselect": true}
 	return {"select": null}
 
+## The highest creep cap a match may set, the same as CREEP_CAP_MAX in src/sim/config.js.
+const CREEP_CAP_MAX := 1000
+
+## A creep cap typed in the menu, as a whole number of creeps per player, or -1 when the text is no cap
+## from 1 to CREEP_CAP_MAX. The same rule as creepCapFromText in src/client/entity-text.js.
+static func creep_cap_from_text(text: String) -> int:
+	var trimmed := text.strip_edges()
+	if not trimmed.is_valid_int() or trimmed.length() > 4 or trimmed.begins_with("-") or trimmed.begins_with("+"):
+		return -1
+	var creeps := int(trimmed)
+	return creeps if creeps >= 1 and creeps <= CREEP_CAP_MAX else -1
+
+## Whether a cancel (a right click, GDD 11.1) has anything to clear, the same rule as cancelAction in
+## src/client/ui/controls.js: a building picked in the palette or its ghost, an ability or an item waiting
+## for a target, the path or merge mode, or a selected building or creep group. Off is -1 or an empty string.
+static func cancel_action(state: Dictionary) -> Dictionary:
+	var cancelled := not String(state.get("building", "")).is_empty() \
+		or bool(state.get("ghost", false)) \
+		or int(state.get("ability", -1)) >= 0 \
+		or int(state.get("item", -1)) >= 0 \
+		or not String(state.get("mode", "")).is_empty() \
+		or int(state.get("selected", -1)) >= 0 \
+		or int(state.get("selectedGroup", -1)) >= 0
+	return {"cancelled": cancelled}
+
 ## The creep auto spawn toggle of a barracks panel (GDD 9.4), the same rule as autoSpawnToggle in
 ## src/client/ui/controls.js. The label never changes, `on` says whether the barracks repeats its creep
 ## orders, and `command` sends the opposite state.

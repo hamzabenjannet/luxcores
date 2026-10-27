@@ -83,6 +83,14 @@ export class MatchDto {
   })
   entropyPermillePerSecond?: number;
   @ApiPropertyOptional({
+    example: 120,
+    minimum: 1,
+    maximum: 1000,
+    description:
+      'Creeps a player may have alive at once in this match (GDD 9). The host sets it when the match is created, and the lobby shows it to the other player. The default of data/balance.json applies when it is absent.',
+  })
+  creepCapPerPlayer?: number;
+  @ApiPropertyOptional({
     example: 0,
     minimum: 0,
     description:

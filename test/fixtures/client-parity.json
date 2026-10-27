@@ -1,5 +1,5 @@
 {
-  "_doc": "Cases that the web client (src/client) and the Godot client (vone/scripts/game_logic.gd) must answer identically. test/client-parity.test.js runs them through JavaScript, vone/tests/run_tests.gd through GDScript. Kind codes follow KIND in src/sim/state.js. Tap cases use the real data files and the map of seed 1234567; ids 1 and 2 are the Cores, the entity lists below are small on purpose. M4 adds mixFor, queueLines, groupActions and the path and merge modes of resolveTap. The auto spawn toggle of a barracks panel is autoSpawnToggle (GDD 9.4).",
+  "_doc": "Cases that the web client (src/client) and the Godot client (vone/scripts/game_logic.gd) must answer identically. test/client-parity.test.js runs them through JavaScript, vone/tests/run_tests.gd through GDScript. Kind codes follow KIND in src/sim/state.js. Tap cases use the real data files and the map of seed 1234567; ids 1 and 2 are the Cores, the entity lists below are small on purpose. M4 adds mixFor, queueLines, groupActions and the path and merge modes of resolveTap. The auto spawn toggle of a barracks panel is autoSpawnToggle (GDD 9.4). A right click clears the current action through cancelAction (GDD 11.1). The creep cap a host types in the menu goes through creepCapFromText (GDD 9).",
   "kinds": {
     "CORE": 1,
     "SOLAR": 2,
@@ -369,6 +369,134 @@
           "barracksId": 11,
           "on": false
         }
+      }
+    }
+  ],
+  "cancelAction": [
+    {
+      "state": {
+        "building": "",
+        "ghost": false,
+        "ability": -1,
+        "item": -1,
+        "mode": "",
+        "selected": -1,
+        "selectedGroup": -1
+      },
+      "expect": {
+        "cancelled": false
+      }
+    },
+    {
+      "state": {
+        "building": "tower",
+        "ghost": false,
+        "ability": -1,
+        "item": -1,
+        "mode": "",
+        "selected": -1,
+        "selectedGroup": -1
+      },
+      "expect": {
+        "cancelled": true
+      }
+    },
+    {
+      "state": {
+        "building": "",
+        "ghost": true,
+        "ability": -1,
+        "item": -1,
+        "mode": "",
+        "selected": -1,
+        "selectedGroup": -1
+      },
+      "expect": {
+        "cancelled": true
+      }
+    },
+    {
+      "state": {
+        "building": "",
+        "ghost": false,
+        "ability": 2,
+        "item": -1,
+        "mode": "",
+        "selected": -1,
+        "selectedGroup": -1
+      },
+      "expect": {
+        "cancelled": true
+      }
+    },
+    {
+      "state": {
+        "building": "",
+        "ghost": false,
+        "ability": -1,
+        "item": 0,
+        "mode": "",
+        "selected": -1,
+        "selectedGroup": -1
+      },
+      "expect": {
+        "cancelled": true
+      }
+    },
+    {
+      "state": {
+        "building": "",
+        "ghost": false,
+        "ability": -1,
+        "item": -1,
+        "mode": "merge",
+        "selected": -1,
+        "selectedGroup": -1
+      },
+      "expect": {
+        "cancelled": true
+      }
+    },
+    {
+      "state": {
+        "building": "",
+        "ghost": false,
+        "ability": -1,
+        "item": -1,
+        "mode": "path",
+        "selected": -1,
+        "selectedGroup": -1
+      },
+      "expect": {
+        "cancelled": true
+      }
+    },
+    {
+      "state": {
+        "building": "",
+        "ghost": false,
+        "ability": -1,
+        "item": -1,
+        "mode": "",
+        "selected": 40,
+        "selectedGroup": -1
+      },
+      "expect": {
+        "cancelled": true
+      }
+    },
+    {
+      "state": {
+        "building": "",
+        "ghost": false,
+        "ability": -1,
+        "item": -1,
+        "mode": "",
+        "selected": -1,
+        "selectedGroup": 7
+      },
+      "expect": {
+        "cancelled": true
       }
     }
   ],
@@ -4083,6 +4211,48 @@
     {
       "maxTicks": 1,
       "expect": "Capped at 1 ticks"
+    }
+  ],
+  "creepCapFromText": [
+    {
+      "text": "120",
+      "expect": 120
+    },
+    {
+      "text": " 30 ",
+      "expect": 30
+    },
+    {
+      "text": "1",
+      "expect": 1
+    },
+    {
+      "text": "1000",
+      "expect": 1000
+    },
+    {
+      "text": "1001",
+      "expect": -1
+    },
+    {
+      "text": "0",
+      "expect": -1
+    },
+    {
+      "text": "",
+      "expect": -1
+    },
+    {
+      "text": "12.5",
+      "expect": -1
+    },
+    {
+      "text": "-5",
+      "expect": -1
+    },
+    {
+      "text": "many",
+      "expect": -1
     }
   ],
   "pendingLine": [

@@ -26,7 +26,7 @@ export const REPLAY_VERSION = 1;
  * @property {number} ticks         total ticks simulated
  * @property {import('./commands.js').CommandEnvelope[]} commands
  * @property {Record<string, string>} hashes  tick -> state hash
- * @property {import('./config.js').MatchOptions} [options]  settings of this match, such as the entropy rate; absent for a default match
+ * @property {import('./config.js').MatchOptions} [options]  settings of this match, such as the entropy rate or the creep cap; absent for a default match
  */
 
 export class Recorder {
@@ -46,7 +46,15 @@ export class Recorder {
       commands: [],
       hashes: {},
     };
-    if (meta.options?.entropyPermillePerSecond !== undefined) this.replay.options = { entropyPermillePerSecond: meta.options.entropyPermillePerSecond };
+    // Only the settings the sim knows travel, so an unknown field of a caller never reaches a replay.
+    const entropy = meta.options?.entropyPermillePerSecond;
+    const creepCap = meta.options?.creepCapPerPlayer;
+    if (entropy !== undefined || creepCap !== undefined) {
+      this.replay.options = {
+        ...(entropy === undefined ? {} : { entropyPermillePerSecond: entropy }),
+        ...(creepCap === undefined ? {} : { creepCapPerPlayer: creepCap }),
+      };
+    }
   }
 
   /**

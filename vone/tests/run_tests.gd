@@ -93,6 +93,8 @@ func _init() -> void:
 		_check("tick cap from text %s" % JSON.stringify(c.text), GameLogic.tick_cap_from_text(String(c.text)), int(c.expect))
 	for c in fixture.tickCapText:
 		_check("tick cap text %s" % JSON.stringify(c.maxTicks), GameLogic.tick_cap_text(int(c.maxTicks)), String(c.expect))
+	for c in fixture.creepCapFromText:
+		_check("creep cap from text %s" % JSON.stringify(c.text), GameLogic.creep_cap_from_text(String(c.text)), int(c.expect))
 	for c in fixture.secondsText:
 		_check("seconds text %s" % JSON.stringify(c), GameLogic.seconds_text(int(c.ticks), int(c.tickHz)), String(c.expect))
 	for c in fixture.abilityStates:
@@ -127,6 +129,8 @@ func _init() -> void:
 		_check("actions for %s" % JSON.stringify(c.entity), _normalize(GameLogic.actions_for(c.entity, data.buildings.tower)), _normalize(c.expect))
 	for c in fixture.autoSpawnToggle:
 		_check("auto spawn toggle %s" % JSON.stringify(c.entity), _normalize(GameLogic.auto_spawn_toggle(c.entity)), _normalize(c.expect))
+	for c in fixture.cancelAction:
+		_check("cancel action %s" % JSON.stringify(c.state), _normalize(GameLogic.cancel_action(c.state)), _normalize(c.expect))
 	for c in fixture.mixFor:
 		_check("order mix %s" % JSON.stringify(c), _normalize(GameLogic.mix_for(int(c.count), String(c.type))), _normalize(c.expect))
 	for c in fixture.queueLines:

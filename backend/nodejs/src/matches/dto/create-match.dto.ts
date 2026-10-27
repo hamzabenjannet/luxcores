@@ -57,6 +57,19 @@ export class CreateMatchDto {
   entropyPermillePerSecond?: number;
 
   @ApiPropertyOptional({
+    example: 120,
+    minimum: 1,
+    maximum: 1000,
+    description:
+      'Creeps a player may have alive at once (GDD 9). A high cap costs frame rate. The default of data/balance.json applies when omitted.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  creepCapPerPlayer?: number;
+
+  @ApiPropertyOptional({
     example: 0,
     minimum: 0,
     maximum: MAX_MATCH_TICKS,

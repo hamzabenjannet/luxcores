@@ -213,6 +213,8 @@ export interface WorldViewApi {
 export interface SimMatchOptions {
   /** Tenths of a percent of the maximum HP that buildings, creeps and heroes lose per second. 0 turns entropy off. */
   entropyPermillePerSecond?: number;
+  /** Creeps a player may have alive at once (GDD 9). */
+  creepCapPerPlayer?: number;
 }
 
 export interface SimApi {

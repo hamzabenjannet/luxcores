@@ -53,7 +53,7 @@
     "attackSpeed": 100,
     "moveMilliTilesPerSecond": 2000,
     "sightTiles": 6,
-    "capPerPlayer": 30,
+    "capPerPlayer": 120,
     "maxWaypoints": 10
   },
   "attackSpeed": {

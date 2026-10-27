@@ -230,6 +230,17 @@ Hamza asked for a toggle that keeps the waves coming, so one order feeds a lane 
 
 Open for the owners: Hama has not reviewed the button, and the GDD rule of section 9.4 waits for their approval, because both owners approve a game rule.
 
+## Creep Cap, Right-Click Cancel and the Tower Markers (2026-10-27)
+
+Hamza asked for three changes in one pass: a larger creep cap that the host can set, a right click that cancels the current action, and the removal of the spheres that mocked the tower models in Godot.
+
+- **The creep cap is 120 per player, and a match option.** `data/balance.json` carries `capPerPlayer: 120` (GDD 9), and `creepCapPerPlayer` joins `entropyPermillePerSecond` as a match option: a whole number from 1 to `CREEP_CAP_MAX` (1000) in `src/sim/config.js`. It travels from the menu of either client through `POST /api/matches`, the match record, `SimService.configFor` and the recorder into the replay, so a replay plays back under the cap of its match. The URL parameter is `creepCap`, and the test hub lists it with a ready-made link. Hamza accepted the frame-rate cost of 120 creeps a side.
+- **Right click cancels.** A right click clears a chosen building, a ghost, an aimed ability, an aimed inventory item, a path mode and any selected unit or group, and the status line reads "Cancelled.". The pure decision is `cancelAction` in `src/client/ui/controls.js` and `cancel_action` in `vone/scripts/game_logic.gd`, with nine parity cases. The web client cancels the browser context menu on the canvas, and Godot handles the click in `_unhandled_input`, so a spectator keeps the default behaviour.
+- **The tower markers are gone (Godot only).** `_add_tower_marker` and `ATTACK_COLORS` left `vone/scripts/main3d.gd` with the blue and orange spheres they drew over the melee and ranged tower models. The 2D arena (`vone/scripts/arena.gd`) keeps its attack-type dot, which is the only mark of an attack type in that view.
+- **Checks.** `npm test` passed 267 tests, and `npm run headless -- 1234567 2400` printed hash `09109170`. The Godot parity, main-scene and live-match tests passed 272, 120 and 138 checks. The backend passed 96 unit tests and 91 end-to-end tests, including the new `backend/nodejs/test/creep-cap.e2e-spec.ts`. `SPEC_VERSION` stays 0.10.0 under the owners' exception, and the cap change moved every hash, so all 7 golden replays were recorded again in the same commit.
+
+Open for the owners: the cap of 120 and the right-click gesture are game rules (GDD 9 and 11.1), so they wait for Hama's approval as well.
+
 ## Next Milestone: M10 (Cross-Browser Determinism and the Performance Pass)
 
 From `docs/TECH_ARCHITECTURE.md` section 14. Done when Node, Chrome on Android and Safari on iOS print identical hashes, and the performance numbers of the reference device are recorded here. Hamza's answers of 2026-10-19: the reference device is a Galaxy Wide class phone or a similar wide device, and the web client already plays comfortably on a Galaxy Tab Active3 (a wide tablet), so no tuning is due before the first numbers. The portrait lock is optional: the prompt in landscape now has a Play anyway button. The Godot UI adapts to wide screens later, when its interface gets its next pass.

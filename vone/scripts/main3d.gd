@@ -140,11 +140,6 @@ const HERO_MODEL_SCALE := 0.8
 
 const TEAM_BLUE := Color("#3d8bff")
 const TEAM_RED := Color("#ff4d4d")
-const ATTACK_COLORS := {
-	1: Color("#ff9f43"),
-	2: Color("#2de2e6"),
-	3: Color("#b26bff"),
-}
 const TEMPLATE_NAMES := [
 	"Solar", "CreepRanged", "CreepArea", "CreepMeleeModelAsset", "LumenCore",
 	"Wind", "Geothermal", "Nuclear", "TowerArea", "TowerMelee",
@@ -734,8 +729,6 @@ func _make_entity(entity: Dictionary) -> Node3D:
 			model.mesh = _fallback_mesh(kind)
 			model.scale = Vector3.ONE * (1.6 if kind == GameLogic.KIND_CORE else 0.7)
 		anchor.add_child(model)
-	if kind == GameLogic.KIND_TOWER:
-		_add_tower_marker(anchor, entity)
 	if id == _selected_entity_id:
 		_add_selection_marker(anchor, tint)
 	var label_text := GameLogic.entity_text(entity, _hp_factor, _hero_names, _item_names) if kind != GameLogic.KIND_CREEP else ""
@@ -824,16 +817,6 @@ func _fallback_mesh(kind: int) -> Mesh:
 	default_mesh.bottom_radius = 0.65
 	default_mesh.height = 1.2
 	return default_mesh
-
-func _add_tower_marker(parent: Node3D, entity: Dictionary) -> void:
-	var marker := MeshInstance3D.new()
-	var cap := SphereMesh.new()
-	cap.radius = 0.22
-	cap.height = 0.44
-	marker.mesh = cap
-	marker.position = Vector3(0.0, 0.82, 0.0)
-	marker.material_override = _flat_material(ATTACK_COLORS.get(int(entity.get("attack", 0)), Color.WHITE))
-	parent.add_child(marker)
 
 func _add_selection_marker(parent: Node3D, tint: Color) -> void:
 	var marker := MeshInstance3D.new()

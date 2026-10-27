@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createState, step, hashState, KIND, normalizeData, validOptions, Recorder, playReplay, ENTROPY_MAX_PERMILLE } from '../src/sim/index.js';
+import { createState, step, hashState, KIND, normalizeData, validOptions, Recorder, playReplay, CREEP_CAP_MAX, ENTROPY_MAX_PERMILLE } from '../src/sim/index.js';
 import { loadData } from './helpers/load-data.js';
 
 const { raw, config, dataHash } = loadData();
@@ -24,10 +24,31 @@ test('the entropy rate is a match option: 0 keeps every HP, more drains faster, 
   assert.equal(hashState(createState({ seed: 5, players, config: normalizeData(raw, {}) })), hashState(createState({ seed: 5, players, config })), 'no option, the same rules');
 });
 
+test('the creep cap is a match option: a group over the cap waits, and the default of the data applies', () => {
+  const build = config.balance.creep.productionTicksPerGroup;
+  /** Plays one order of 5 creeps under `cfg` and returns the creeps alive and the orders left. */
+  const play = (cfg) => {
+    const s = createState({ seed: 1234567, players, config: cfg });
+    s.teams[0].coreLux = 1_000_000;
+    step(s, [{ tick: 0, playerId: 0, seq: 0, cmd: { t: 'build', building: 'barracks', tileX: 30, tileZ: 90 } }]);
+    const barracks = s.entities.find((e) => e.kind === KIND.BARRACKS);
+    step(s, [{ tick: s.tick, playerId: 0, seq: 1, cmd: { t: 'orderCreeps', barracksId: barracks.id, mix: ['melee', 'melee', 'melee', 'melee', 'melee'] } }]);
+    for (let i = 0; i < build; i++) step(s, []);
+    return { creeps: s.entities.filter((e) => e.kind === KIND.CREEP).length, held: s.orders.filter((o) => o.held === 1).length };
+  };
+  assert.deepEqual(play(config), { creeps: 5, held: 0 }, 'the data cap of 120 takes a group of 5');
+  assert.deepEqual(play(normalizeData(raw, { creepCapPerPlayer: 3 })), { creeps: 0, held: 1 }, 'a cap of 3 holds a group of 5');
+  assert.equal(normalizeData(raw, { creepCapPerPlayer: 7 }).balance.creep.capPerPlayer, 7);
+  assert.equal(config.balance.creep.capPerPlayer, 120, 'the data files cap a player at 120 creeps (GDD 9)');
+});
+
 test('the options are validated: whole tenths of a percent per second, from 0 to the maximum', () => {
   for (const ok of [{}, { entropyPermillePerSecond: 0 }, { entropyPermillePerSecond: 1 }, { entropyPermillePerSecond: ENTROPY_MAX_PERMILLE }]) assert.equal(validOptions(ok), true, JSON.stringify(ok));
   for (const bad of [{ entropyPermillePerSecond: -1 }, { entropyPermillePerSecond: 1.5 }, { entropyPermillePerSecond: ENTROPY_MAX_PERMILLE + 1 }, { entropyPermillePerSecond: '5' }, null, 'x']) assert.equal(validOptions(bad), false, JSON.stringify(bad));
   assert.throws(() => normalizeData(raw, { entropyPermillePerSecond: -3 }), /invalid match options/);
+  for (const ok of [{ creepCapPerPlayer: 1 }, { creepCapPerPlayer: 120 }, { creepCapPerPlayer: CREEP_CAP_MAX }, { entropyPermillePerSecond: 2, creepCapPerPlayer: 60 }]) assert.equal(validOptions(ok), true, JSON.stringify(ok));
+  for (const bad of [{ creepCapPerPlayer: 0 }, { creepCapPerPlayer: -1 }, { creepCapPerPlayer: 1.5 }, { creepCapPerPlayer: CREEP_CAP_MAX + 1 }, { creepCapPerPlayer: '30' }]) assert.equal(validOptions(bad), false, JSON.stringify(bad));
+  assert.throws(() => normalizeData(raw, { creepCapPerPlayer: 0 }), /invalid match options/);
 });
 
 test('a replay keeps its options, and plays back to the same hashes under them', () => {

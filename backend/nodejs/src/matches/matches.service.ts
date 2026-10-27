@@ -43,6 +43,7 @@ export class MatchesService {
       status: MatchStatus.Lobby,
       seed: dto.seed ?? randomInt(0, MAX_SEED + 1),
       ...(dto.entropyPermillePerSecond === undefined ? {} : { entropyPermillePerSecond: dto.entropyPermillePerSecond }),
+      ...(dto.creepCapPerPlayer === undefined ? {} : { creepCapPerPlayer: dto.creepCapPerPlayer }),
       ...(dto.maxTicks === undefined ? {} : { maxTicks: dto.maxTicks }),
       vsBot: dto.vsBot,
       botVsBot: dto.botVsBot,

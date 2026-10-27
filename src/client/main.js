@@ -15,6 +15,7 @@
  *   seed         with match=new: map seed
  *   maxTicks     with match=new: tick limit of the match, 0 for unlimited (the server's own limit applies without it)
  *   entropy      with match=new: entropy rate in percent of the maximum HP per second (0 to 100, one decimal, such as 0.5)
+ *   creepCap     with match=new: creeps alive per player (1 to 1000); a high cap costs frame rate
  *   autostart=1  start the match as soon as the lobby exists
  *   recover      a recovery code that moves a profile to this device
  *   showcode=1   print a new recovery code in the debug text
@@ -34,7 +35,7 @@ import { joinServerMatch } from './net/server-session.js';
 import { createControls } from './ui/controls.js';
 import { showLobby } from './ui/lobby.js';
 import { showMenu } from './ui/menu.js';
-import { entropyFromText, isDay, tickCapFromText } from './entity-text.js';
+import { creepCapFromText, entropyFromText, isDay, tickCapFromText } from './entity-text.js';
 import { matchSummary } from './ui/summary.js';
 import { lockPortrait } from './orientation.js';
 import { createPerfMeter } from './perf.js';
@@ -87,8 +88,9 @@ while (!session) {
         seed: query.has('seed') ? Number(query.get('seed')) : undefined,
         maxTicks: query.has('maxTicks') && (query.get('maxTicks') === '0' || tickCapFromText(query.get('maxTicks') ?? '') >= 0) ? Number(query.get('maxTicks')) : undefined,
         entropy: query.has('entropy') && entropyFromText(query.get('entropy') ?? '') >= 0 ? entropyFromText(query.get('entropy') ?? '') : undefined,
+        creepCap: query.has('creepCap') && creepCapFromText(query.get('creepCap') ?? '') >= 0 ? creepCapFromText(query.get('creepCap') ?? '') : undefined,
       }
-    : await showMenu($('menu'), { server, error: problem, entropyDefault: data.balance.economy.entropyPermillePerSecond, capDefault: data.balance.match.stalemateTicks, lastMatch: recallMatch(server) });
+    : await showMenu($('menu'), { server, error: problem, entropyDefault: data.balance.economy.entropyPermillePerSecond, capDefault: data.balance.match.stalemateTicks, creepCapDefault: data.balance.creep.capPerPlayer, lastMatch: recallMatch(server) });
   $('hud-debug').textContent = `Connecting to ${server} ...`;
   try {
     session = await joinServerMatch({
@@ -99,6 +101,7 @@ while (!session) {
       botVsBot: choice.botVsBot,
       seed: choice.seed,
       entropyPermillePerSecond: choice.entropy,
+      creepCapPerPlayer: choice.creepCap,
       maxTicks: choice.maxTicks,
       specVersion: SPEC_VERSION,
       recoveryCode: query.get('recover') ?? undefined,
@@ -149,7 +152,7 @@ async function leaveMatch() {
   back.search = query.has('server') ? new URLSearchParams({ server }).toString() : '';
   location.assign(back.toString());
 }
-const lobby = showLobby($('menu'), session, { shareLink: link.toString(), entropyDefault: data.balance.economy.entropyPermillePerSecond, onLeave: leaveMatch });
+const lobby = showLobby($('menu'), session, { shareLink: link.toString(), entropyDefault: data.balance.economy.entropyPermillePerSecond, creepCapDefault: data.balance.creep.capPerPlayer, onLeave: leaveMatch });
 
 // The Leave button of the HUD. In a running match for two humans it asks for a second tap, because leaving forfeits.
 const leaveButton = $('leave');
@@ -203,8 +206,8 @@ const controls = createControls({
 const interpolator = createInterpolator({ tickMs: 1000 / TICK_HZ });
 interpolator.push(view.tick(), view.entities(), performance.now());
 session.onSnapshot((s) => interpolator.push(s.tick, s.entities, performance.now()));
-Object.assign(luxTest, { drawn: scene.stats, following: scene.isFollowing, pan: scene.pan, zoom: scene.getZoom, setZoom: scene.setZoom, ghost: controls.ghost, interpolated: () => interpolator.at(performance.now()), screenOf: scene.screenOf, selectGroup: controls.selectGroup, tap: (x, z) => controls.tap({ x, z }) });
-attachPointer(canvas, { groundAt: scene.groundAt, pan: scene.pan, onTap: (ground) => controls.tap(ground), getZoom: scene.getZoom, setZoom: scene.setZoom });
+Object.assign(luxTest, { drawn: scene.stats, following: scene.isFollowing, pan: scene.pan, zoom: scene.getZoom, setZoom: scene.setZoom, ghost: controls.ghost, interpolated: () => interpolator.at(performance.now()), screenOf: scene.screenOf, selectGroup: controls.selectGroup, tap: (x, z) => controls.tap({ x, z }), cancel: () => controls.cancel() });
+attachPointer(canvas, { groundAt: scene.groundAt, pan: scene.pan, onTap: (ground) => controls.tap(ground), onCancel: () => controls.cancel(), getZoom: scene.getZoom, setZoom: scene.setZoom });
 
 const banner = $('banner');
 const summaryCard = $('summary');

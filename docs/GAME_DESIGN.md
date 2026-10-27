@@ -8,6 +8,16 @@ Status: draft v0.9.16. Numbers marked *(default)* live in `data/balance.json` an
 
 ## 0. Changelog
 
+### v0.9.17 → v0.9.18
+
+Hamza asked on 2026-10-27 for many more creeps on the map, and for a right click that drops whatever is in hand.
+
+| Area | Change |
+|---|---|
+| Creep cap | Raised from 30 to **120** alive per player, and the host of a match may set any cap from 1 to 1000 in the start menu (sections 9 and 2.2). A high cap costs frame rate, which the owners accept |
+| Controls | A right click cancels the current action: the building in the palette, an ability or an item waiting for a target, the path or merge mode, and the selection (section 11.1) |
+| Towers (Godot) | The colored sphere that marked a tower's attack type is gone; it stood in for the tower models that now render |
+
 ### v0.9.16 → v0.9.17
 
 Hamza asked on 2026-10-27 for a way to keep the waves coming without a tap per group.
@@ -271,7 +281,7 @@ Single hero with a 5-hero rotation, funnel unit replaced by the Energy Grab item
 | Unlimited | A Lumen Core reaches 0 lux | The team whose Core survives |
 | Timed (10 min) | Core at 0, or timer reaches 10:00 | Core survivor; at the buzzer, the team with the higher **total lux value** |
 
-The host of a match chooses its tick limit when creating it: Unlimited, which runs until a Core falls, or Capped, which ends an undecided match as a draw at the chosen tick (1 to 1000000, 20 ticks per second). A running match that nobody has been connected to for 2 minutes is stopped as a draw (section 11.6). A match whose host chose nothing takes the server limit, `match.stalemateTicks` (10000, about 8 minutes) or the `MATCH_MAX_TICKS` setting that tests and test servers raise.
+The host of a match chooses its tick limit when creating it: Unlimited, which runs until a Core falls, or Capped, which ends an undecided match as a draw at the chosen tick (1 to 1000000, 20 ticks per second). The same card sets the entropy rate (section 3.7) and the creep cap per player, 1 to 1000 creeps; each field left empty keeps the value of the data files. A running match that nobody has been connected to for 2 minutes is stopped as a draw (section 11.6). A match whose host chose nothing takes the server limit, `match.stalemateTicks` (10000, about 8 minutes) or the `MATCH_MAX_TICKS` setting that tests and test servers raise.
 
 **Total lux value** = Core lux + lux value of every building, creep and hero the team owns. Items are not counted.
 
@@ -285,7 +295,7 @@ Both Cores reaching 0 on the same tick: draw.
 
 The team shares one Lumen Core and one lux pool. Every player spends from it freely, including hero HP allocation.
 
-Buildings are owned by the player who built them. A player picks heroes, orders creeps and buys items only at their own barracks. Creep caps (30) count per player. A future vote-to-limit option for an over-spending teammate is out of MVP scope.
+Buildings are owned by the player who built them. A player picks heroes, orders creeps and buys items only at their own barracks. The creep cap counts per player. A future vote-to-limit option for an over-spending teammate is out of MVP scope.
 
 ## 3. The lux economy
 
@@ -540,7 +550,7 @@ The sections above left these details open. `src/sim/items.js` and the item syst
 - Ordered at a barracks in groups of 1 to 5, with a chosen attack-type mix.
 - Cost 5 lux per creep (HP 50). Build time 2 s per group.
 - Always commanded as a group.
-- Cap: 30 alive creeps per player (enough for 2 waves of 5 on each lane). A finished group that would exceed it is **held** in its barracks until enough slots free up, then spawns. Held groups don't block the queue: later orders (items included) skip ahead.
+- Cap: 120 alive creeps per player *(default)*; the host of a match may set 1 to 1000 (section 2.2). A finished group that would exceed it is **held** in its barracks until enough slots free up, then spawns. Held groups don't block the queue: later orders (items included) skip ahead.
 - A barracks destroyed while holding groups or items loses them; no refund.
 
 ### 9.0 Groups
@@ -549,7 +559,7 @@ The sections above left these details open. `src/sim/items.js` and the item syst
 - **Split**: select a group, tap Split; it divides into two halves. With an odd count, the extra creep stays in the original group (7 → 4 + 3). A group of 1 can't split. Both halves keep the current path.
 - One group selected at a time; a path command applies to that group only.
 - Several groups can be given the same waypoints. Path mode offers **Reuse last path** to repeat the previous waypoint set in one tap.
-- No group size limit beyond the creep cap: one merged group can hold all 30.
+- No group size limit beyond the creep cap: one merged group can hold every creep the cap allows.
 
 ### 9.1 Paths
 
@@ -650,6 +660,7 @@ A hero told to attack a target walks until the target is in reach, hits it, and 
 | One-finger drag | Anywhere | Pan; stops hero follow |
 | Pinch, or the mouse wheel | Anywhere | Zoom, from 0.6 to 2.2 times the default view of 32 tiles across (on a wide window the default view is at least 28 tiles tall, so it shows more than 32 across) |
 | Tap hero portrait (the hero's name in the hero bar) | Any | Recenter and resume follow |
+| Right click, with a mouse | Anywhere | Cancel the current action: the building in the palette and its ghost, an ability or an item waiting for a target, the path or merge mode, and the selection |
 
 ### 11.2 Ability targeting
 

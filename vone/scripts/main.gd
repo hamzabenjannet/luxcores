@@ -28,6 +28,7 @@ var _name_input: LineEdit
 var _match_input: LineEdit
 var _seed_input: SpinBox
 var _entropy_input: LineEdit
+var _creep_cap_input: LineEdit
 var _limit_selector: OptionButton
 var _camera_selector: OptionButton
 var _cap_input: LineEdit
@@ -226,6 +227,12 @@ func _build_interface() -> void:
 	_entropy_input.tooltip_text = "Percent of the maximum HP that buildings, creeps and heroes lose per second, 0 to 100 with one decimal. The host of a match sets it."
 	_entropy_input.custom_minimum_size = Vector2(220, 52)
 	match_options.add_child(_entropy_input)
+	_creep_cap_input = LineEdit.new()
+	_creep_cap_input.name = "CreepCapInput"
+	_creep_cap_input.placeholder_text = "Creep cap (default)"
+	_creep_cap_input.tooltip_text = "Creeps a player may have alive at once, 1 to 1000. A high cap costs frame rate. The host of a match sets it."
+	_creep_cap_input.custom_minimum_size = Vector2(200, 52)
+	match_options.add_child(_creep_cap_input)
 	_home.add_child(match_options)
 	if _world_3d != null:
 		var camera_options := HBoxContainer.new()
@@ -755,6 +762,7 @@ func _connect_match() -> void:
 		"bot_vs_bot": _mode_selector.selected == 1,
 		"seed": int(_seed_input.value),
 		"entropy": _entropy_input.text,
+		"creep_cap": _creep_cap_input.text,
 		"max_ticks": cap_ticks if capped else 0,
 	})
 	if not result.ok:
@@ -779,8 +787,9 @@ func _connect_match() -> void:
 	_set_match_phase(str(_current_match.get("status", "lobby")))
 	_update_start_button()
 	_refresh_palette()
-	var rules_text := "Entropy %s%% per second. Tick limit: %s." % [
+	var rules_text := "Entropy %s%% per second. Creep cap %d per player. Tick limit: %s." % [
 		GameLogic.entropy_text(int(_current_match.get("entropyPermillePerSecond", _data.balance.economy.entropyPermillePerSecond))),
+		int(_current_match.get("creepCapPerPlayer", _data.balance.creep.capPerPlayer)),
 		GameLogic.tick_cap_text(int(_current_match.get("maxTicks", _backend.get_spec().get("matchMaxTicks", 0)))),
 	]
 	if _is_host:
@@ -1490,6 +1499,50 @@ func _on_ability_pressed(slot: int) -> void:
 	if Time.get_ticks_msec() < _ignore_press_until:
 		return
 	_cast_from_bar(slot)
+
+## A right click on the map cancels the current action (GDD 11.1): the building picked in the palette, an
+## ability or an item waiting for a target, the path or merge mode and the selection.
+func _unhandled_input(event: InputEvent) -> void:
+	if not event is InputEventMouseButton:
+		return
+	var mouse_event := event as InputEventMouseButton
+	if not mouse_event.pressed or mouse_event.button_index != MOUSE_BUTTON_RIGHT:
+		return
+	if not _game.visible or _role == "spectator":
+		return
+	if _cancel_action():
+		get_viewport().set_input_as_handled()
+
+## Clears whatever the player picked. Returns true when there was something to cancel.
+func _cancel_action() -> bool:
+	var cancelled := bool(GameLogic.cancel_action({
+		"building": _building,
+		"ghost": not _ghost.is_empty(),
+		"ability": _ability,
+		"item": _item_aim,
+		"mode": _mode,
+		"selected": _selected_entity,
+		"selectedGroup": _selected_group,
+	}).cancelled)
+	if not cancelled:
+		return false
+	_building = ""
+	_ghost = {}
+	_ability = -1
+	_item_aim = -1
+	_mode = ""
+	_path_target = {}
+	_path_points = []
+	_selected_entity = -1
+	_selected_group = -1
+	_tower_attack_row.visible = false
+	_build_description.visible = false
+	_arena.clear_aim()
+	_arena.set_selection(_building, _selected_entity)
+	_refresh_palette()
+	_refresh_panel()
+	_set_status("Cancelled.")
+	return true
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed or event.echo:

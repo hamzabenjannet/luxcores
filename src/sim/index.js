@@ -5,7 +5,7 @@
 
 export { createState, spawnEntity, KIND, NEUTRAL } from './state.js';
 export { step, PIPELINE } from './step.js';
-export { normalizeData, validOptions, ENTROPY_MAX_PERMILLE, SPEC_VERSION } from './config.js';
+export { normalizeData, validOptions, CREEP_CAP_MAX, ENTROPY_MAX_PERMILLE, SPEC_VERSION } from './config.js';
 export { hashState } from './hash.js';
 export { exportState, importState } from './checkpoint.js';
 export { Recorder, playReplay, HASH_INTERVAL } from './replay.js';

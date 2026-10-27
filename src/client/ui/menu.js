@@ -5,7 +5,7 @@
  * the menu (see main.js), so tests and shared links go straight in.
  */
 
-import { entropyFromText, entropyText, tickCapFromText } from '../entity-text.js';
+import { creepCapFromText, entropyFromText, entropyText, tickCapFromText } from '../entity-text.js';
 
 /**
  * @typedef {Object} MenuChoice
@@ -16,6 +16,7 @@ import { entropyFromText, entropyText, tickCapFromText } from '../entity-text.js
  * @property {number | undefined} seed
  * @property {number | undefined} maxTicks  tick limit of a match this player creates, 0 for unlimited; undefined keeps the server's limit
  * @property {number | undefined} entropy  entropy rate in tenths of a percent of the maximum HP per second, for a match this player creates; undefined keeps the default
+ * @property {number | undefined} creepCap  creeps alive per player, for a match this player creates; undefined keeps the default
  */
 
 const NAME_KEY = 'luxcores.playerName';
@@ -40,10 +41,10 @@ function remember(name) {
 
 /**
  * @param {HTMLElement} root
- * @param {{ server: string, error?: string, entropyDefault?: number, capDefault?: number, lastMatch?: string }} opts  `lastMatch` is the id of the match this browser was in last, offered as a rejoin;  `entropyDefault` is the rate of data/balance.json, in tenths of a percent per second; `capDefault` is the tick limit it suggests for a capped match
+ * @param {{ server: string, error?: string, entropyDefault?: number, capDefault?: number, creepCapDefault?: number, lastMatch?: string }} opts  `lastMatch` is the id of the match this browser was in last, offered as a rejoin;  `entropyDefault` is the rate of data/balance.json, in tenths of a percent per second; `capDefault` is the tick limit it suggests for a capped match; `creepCapDefault` is the creep cap of data/balance.json
  * @returns {Promise<MenuChoice>}
  */
-export function showMenu(root, { server, error, entropyDefault = 1, capDefault = 10000, lastMatch }) {
+export function showMenu(root, { server, error, entropyDefault = 1, capDefault = 10000, creepCapDefault = 120, lastMatch }) {
   root.hidden = false;
   root.replaceChildren();
   return new Promise((resolve) => {
@@ -62,6 +63,11 @@ export function showMenu(root, { server, error, entropyDefault = 1, capDefault =
     entropy.inputMode = 'decimal';
     entropy.placeholder = `${entropyText(entropyDefault)} (default)`;
     entropy.title = 'Percent of the maximum HP that buildings, creeps and heroes lose per second, 0 to 100 with one decimal. The host of a match sets it.';
+    const creepCap = /** @type {HTMLInputElement} */ (document.createElement('input'));
+    creepCap.inputMode = 'numeric';
+    creepCap.dataset.creepCap = '';
+    creepCap.placeholder = `${creepCapDefault} (default)`;
+    creepCap.title = 'Creeps a player may have alive at once, 1 to 1000. A high cap costs frame rate. The host of a match sets it.';
     const matchId = /** @type {HTMLInputElement} */ (document.createElement('input'));
     matchId.placeholder = 'Match id to join';
     const matchType = /** @type {HTMLSelectElement} */ (document.createElement('select'));
@@ -79,7 +85,7 @@ export function showMenu(root, { server, error, entropyDefault = 1, capDefault =
     });
     const problem = div('error');
     problem.hidden = true;
-    card.append(label('Name', name), label('Seed', seed), label('Match type', matchType), capLabel, problem, label('Entropy % per second', entropy));
+    card.append(label('Name', name), label('Seed', seed), label('Match type', matchType), capLabel, problem, label('Entropy % per second', entropy), label('Creep cap per player', creepCap));
 
     /** @param {Partial<MenuChoice>} part */
     const choose = (part) => {
@@ -89,6 +95,12 @@ export function showMenu(root, { server, error, entropyDefault = 1, capDefault =
         problem.textContent = 'The tick limit is a whole number from 1 to 1000000.';
         problem.hidden = false;
         cap.focus();
+        return;
+      }
+      if (creepCap.value.trim() !== '' && creepCapFromText(creepCap.value) < 0 && !part.matchId) {
+        problem.textContent = 'The creep cap is a whole number from 1 to 1000.';
+        problem.hidden = false;
+        creepCap.focus();
         return;
       }
       const chosen = name.value.trim() || 'Guest';
@@ -104,6 +116,7 @@ export function showMenu(root, { server, error, entropyDefault = 1, capDefault =
         seed: seed.value.trim() !== '' && Number.isSafeInteger(seedValue) ? seedValue : undefined,
         maxTicks: capped ? capValue : 0,
         entropy: entropyValue >= 0 ? entropyValue : undefined,
+        creepCap: creepCapFromText(creepCap.value) >= 0 ? creepCapFromText(creepCap.value) : undefined,
         ...part,
       });
     };

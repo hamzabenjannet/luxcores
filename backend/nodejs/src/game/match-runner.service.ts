@@ -34,6 +34,7 @@ import type {
   SimGroup,
   SimOrder,
   SimMap,
+  SimMatchOptions,
   SimPlayer,
   SimRecorder,
   SimState,
@@ -390,8 +391,12 @@ export class MatchRunnerService
     return match.maxTicks === 0 ? Infinity : match.maxTicks;
   }
 
-  private optionsOf(match: MatchDto): { entropyPermillePerSecond: number } | undefined {
-    return match.entropyPermillePerSecond === undefined ? undefined : { entropyPermillePerSecond: match.entropyPermillePerSecond };
+  private optionsOf(match: MatchDto): SimMatchOptions | undefined {
+    const options: SimMatchOptions = {
+      ...(match.entropyPermillePerSecond === undefined ? {} : { entropyPermillePerSecond: match.entropyPermillePerSecond }),
+      ...(match.creepCapPerPlayer === undefined ? {} : { creepCapPerPlayer: match.creepCapPerPlayer }),
+    };
+    return Object.keys(options).length === 0 ? undefined : options;
   }
 
   /** The sequence number a player's next command must use. 0 for a match that is not running. */

@@ -1,13 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createState, step, hashState, KIND, MILLI } from '../src/sim/index.js';
+import { createState, step, hashState, KIND, MILLI, normalizeData } from '../src/sim/index.js';
 import { loadData } from './helpers/load-data.js';
 
-const { config } = loadData();
+const { raw, config } = loadData();
+/** The cap rule reads the same at any cap, so its test plays with a small one instead of the 120 of the data files. */
+const cappedConfig = normalizeData(raw, { creepCapPerPlayer: 30 });
 
 /** A 1v1 state. Team 1 gets a huge bank so no match ends by accident, and team 0 enough lux to order freely. */
-function fresh(lux = 1_000_000) {
-  const s = createState({ seed: 1234567, players: [{ id: 0, team: 0, kind: 'human' }, { id: 1, team: 1, kind: 'human' }], config });
+function fresh(lux = 1_000_000, cfg = config) {
+  const s = createState({ seed: 1234567, players: [{ id: 0, team: 0, kind: 'human' }, { id: 1, team: 1, kind: 'human' }], config: cfg });
   s.teams[0].coreLux = lux;
   s.teams[1].coreLux = 1_000_000_000;
   s.entities.find((e) => e.kind === KIND.CORE && e.team === 1).hp = 1_000_000_000;
@@ -91,7 +93,7 @@ test('a barracks builds one group at a time and two barracks build side by side'
 });
 
 test('the creep cap holds a finished group, and a later order skips ahead of it', () => {
-  const s = fresh();
+  const s = fresh(1_000_000, cappedConfig); // a cap of 30, so the numbers below stay readable
   const b = withBarracks(s);
   for (let i = 0; i < 5; i++) order(s, b, ['melee', 'melee', 'melee', 'melee', 'melee']); // 25
   order(s, b, ['melee']); // 26

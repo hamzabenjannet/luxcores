@@ -9,9 +9,9 @@ import { entropyText, tickCapText } from '../entity-text.js';
 /**
  * @param {HTMLElement} root
  * @param {import('../net/server-session.js').ServerSession} session
- * @param {{ shareLink: string, entropyDefault?: number, onLeave?: () => void }} opts  `entropyDefault` is the rate of data/balance.json in tenths of a percent per second, shown when the host chose none; `onLeave` runs when the player taps Leave
+ * @param {{ shareLink: string, entropyDefault?: number, creepCapDefault?: number, onLeave?: () => void }} opts  `entropyDefault` is the rate of data/balance.json in tenths of a percent per second and `creepCapDefault` its creep cap, both shown when the host chose none; `onLeave` runs when the player taps Leave
  */
-export function showLobby(root, session, { shareLink, entropyDefault = 1, onLeave }) {
+export function showLobby(root, session, { shareLink, entropyDefault = 1, creepCapDefault = 120, onLeave }) {
   root.hidden = false;
   const card = document.createElement('div');
   card.className = 'card';
@@ -53,7 +53,7 @@ export function showLobby(root, session, { shareLink, entropyDefault = 1, onLeav
     const match = session.getMatch();
     const names = match.botVsBot ? ['Bot Blue', 'Bot Red'] : match.players.map((/** @type {any} */ p) => p.name);
     if (match.vsBot) names.push('Bot');
-    rules.textContent = `Entropy ${entropyText(match.entropyPermillePerSecond ?? entropyDefault)}% per second${session.isHost ? '' : ' (set by the host)'}`;
+    rules.textContent = `Entropy ${entropyText(match.entropyPermillePerSecond ?? entropyDefault)}% per second, creep cap ${match.creepCapPerPlayer ?? creepCapDefault}${session.isHost ? '' : ' (set by the host)'}`;
     limit.textContent = `Tick limit: ${tickCapText(match.maxTicks ?? session.serverMaxTicks)}${session.isHost ? '' : ' (set by the host)'}`;
     players.replaceChildren(...names.map((/** @type {string} */ n) => div('player', n)));
     const ready = match.botVsBot || match.vsBot || match.players.length >= 2;
