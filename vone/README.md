@@ -19,7 +19,8 @@ A Match ID in the field joins that match instead. An ID of a bot match joins as 
 - Checks the server's spec version against `GameLogic.SPEC_VERSION` and refuses a server on another spec.
 - Loads `data/buildings.json`, `data/balance.json` and `data/mapgen.json` from the server, so costs, upgrades and the build zone never live in two places.
 - Draws the arena on the `Terrain` mesh, with colored team zones, lanes, vents, item spawns and every entity kind in 3D.
-- Tiles the whole map with procedural terrain from one seed (`scripts/terrain_scatter.gd`), when the start menu switch **Toggle auto terrain generation** is on. It is off by default, and then the map keeps the bare plane. About 90 forest, pond and rock props land on a grid of 5 tile cells. They keep clear of the lanes, the build zones, the Cores and the markers, and per-prop gaps hold one kind out of the cell next door. The props also define the ground height. Buildings, creeps, heroes, labels, the build ghost and the aim ring sit on it.
+- Builds that mesh from noise (`scripts/procedural_terrain.gd`): hills, valleys and mountain ranges rim the map, while every lane, build zone, Core and marker keeps its flat ground at y = 0.
+- Scatters scenery over the whole map from one seed (`scripts/terrain_scatter.gd`), when the start menu switch **Toggle auto terrain generation** is on. It is off by default, and then the map keeps the bare plane. About 90 forest, pond and rock props land on a grid of 5 tile cells. They keep clear of the lanes, the build zones, the Cores and the markers, and per-prop gaps hold one kind out of the cell next door. The props also define the ground height. Buildings, creeps, heroes, labels, the build ghost and the aim ring sit on it.
 - Orbits the directional sun around the arena from dawn through sunset, following the snapshot's day/night tick with changing height, direction, brightness and shadows.
 - Shows every entity's name and lux count (GDD 13.1), tower attack types, upgrade levels (`P2 S1`), stuns, recycle progress, aim lines and projectiles.
 - Keeps server-driven game rules and controls. A tap on the 3D terrain uses `scripts/game_logic.gd` to build, select or send an order.
@@ -38,11 +39,29 @@ A Match ID in the field joins that match instead. An ID of a bot match joins as 
 
 `scripts/game_logic.gd` holds the pure decisions: label text, affordability, tap resolution and the actions of a selected building. The web client implements the same functions in `src/client/entity-text.js` and `src/client/ui/controls.js`. `test/fixtures/client-parity.json` holds the cases both must answer alike. When you change a decision, change both clients and the fixture in one commit. Both test runs fail when only one side moves.
 
+## Procedural Ground
+
+`scripts/procedural_terrain.gd` builds the `Terrain` mesh of each map, and `shaders/terrain.gdshader` colors it. The method comes from `examples/yt-example-projects/terrain`: a `PlaneMesh` gives the grid, the CPU lifts every vertex by noise, and central differences of the same height function give the normal and the tangent. A gradient in the shader then colors each fragment by its model-space height, over a tiling seamless noise normal map. This replaced the flat `pb_mesh.gd` plane the node carried before, and `main3d.gd` no longer scales the node: the mesh is built in tiles.
+
+Three noise layers stack, all seeded from the map's own `usedSeed`, so one seed always builds one terrain:
+
+- **Hills** (fractal FBM at `HILL_FREQUENCY`): the rolling base. It swings both ways, so it also cuts the valleys, which `VALLEY_SCALE` shallows.
+- **Ranges** (one low-frequency layer): where mountains may stand. `smoothstep` cuts it off below `RANGE_FLOOR`, which gathers the peaks into a few ranges instead of spreading them evenly. The last `EDGE_RANGE` tiles before the map edge always count as range, so the arena sits in a bowl.
+- **Ridges** (fractal ridged at `RIDGE_FREQUENCY`): the mountains themselves, squared to sharpen the peaks and multiplied by the range mask.
+
+The map structure stays the server's. `configure` stamps every tile the lanes, the build zones, the Cores and the markers claim into a mask. Two chamfer passes then measure each tile's distance to the nearest claimed tile. A factor built from that distance scales the noise: 0 on claimed ground, and 1 only `FLATTEN_FALLOFF` tiles away. Playable ground therefore stays flat at y = 0, and the zone and lane overlays still lie on it. The tap ray in `arena_3d.gd` meets the y = 0 plane, so it still reads the tile the player aimed at. A tap on a mountain reads the tile under the slope, and no mountain stands where a player may build.
+
+Two exports tune it in the editor. `peak_height` is the tallest peak in tiles (10 by default, and the shader gradient spans twice it), and `cells_per_tile` is the vertex density. One cell per tile builds the default map in 65 ms, as 10,961 vertices and 21,504 triangles. Two cells take 229 ms, for 43,425 vertices and 86,016 triangles. Both were measured headless on an Apple M2 Pro. The map is rebuilt only when the layout changes, so the cost is paid once per match.
+
+`tests/terrain_shot.gd` saves a screenshot of one map's ground, which is how a change to the layers or the gradient gets looked at. The script header holds the command.
+
 ## Terrain Scenery
 
 The tiling is optional and off by default. A switch in the start menu turns it on, **Toggle auto terrain generation**. `main.gd` saves it in `user://luxcores.cfg` under `terrain/auto_generation` and pushes to `main3d.gd` through `set_auto_terrain_enabled`. Off, `_scatter_terrain` plans nothing, the prop node stays empty and `_ground_height` returns 0 everywhere, so the map renders as it did before the tiling existed. The switch redraws the map at once, so it also works during a match.
 
 `scripts/terrain_scatter.gd` tiles the map with scenery and `ModelLibrary.TERRAIN_MODELS` names the six glTF files in `assets/3d/terrain/procedural/`. The script runs from `_configure_map` in `main3d.gd`, after the zone bands, the lanes and the markers, so it knows where it may not stand. It lays a grid of 5 tile cells over the map and gives one prop to every cell that gameplay does not claim. Each prop is drawn by weight from the six models, on a seed taken from the map's own `usedSeed`.
+
+The props rest on the procedural ground: `build` takes a height function from `main3d.gd` and seats every copy on it, and `_ground_height` adds the prop's own mound to the ground below it.
 
 The files are photogrammetry scans, not a height map: they share no ground plane and carry no collision shape. Each prop therefore declares a mound, a height and a radius measured by hand, and `height_at` returns the highest mound over a point. Clearance keeps every mound away from the lanes, the build zones, the Cores, the vents, the item spawns and the blockers. The ground is therefore flat at 0 wherever a building or a creep can be, and a hero that walks into the scenery is the only thing that climbs. Taps still read the flat plane at y = 0 through `arena_3d.gd`, which is why no mound passes 1 tile.
 
@@ -71,6 +90,8 @@ Godot --headless --path vone --script res://tests/live_match.gd -- --server=http
 # Both, with a throwaway backend, as part of the browser tests.
 npm run test:e2e
 ```
+
+`tests/terrain_shot.gd` saves a top-down screenshot of one map's procedural ground. It needs a window, and its header holds the command.
 
 `tests/screenshot_fixture.gd` draws a hand-made snapshot with every M3 entity and saves a PNG. It needs a window, so it runs without `--headless`. See the script header for the command.
 

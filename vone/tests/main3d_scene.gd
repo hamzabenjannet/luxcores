@@ -369,6 +369,7 @@ func _run() -> void:
 		(game_interface.get("_key_settings_overlay") as Control).visible = false
 
 	_check_terrain_toggle(scene, game_interface)
+	_check_procedural_terrain(scene)
 	_check_terrain_scatter(scene)
 
 	print("%d checks, %d failed" % [_checks, _failures])
@@ -386,6 +387,121 @@ func _advance_camera(scene: Node) -> void:
 	for _frame in range(60):
 		scene.call("_process", 1.0 / 60.0)
 
+
+## A map with one straight mid lane, two Cores and one vent, which is enough to test every clearance rule of
+## the ground and of the scenery. `reserved` holds the two build zones, as `main3d.gd` passes them.
+func _test_layout() -> Dictionary:
+	var map_width := 96
+	var lane_tiles: Array = []
+	for tile_z in range(20, 92):
+		for tile_x in range(46, 50):
+			lane_tiles.append(tile_z * map_width + tile_x)
+	return {
+		"width": map_width, "height": 112, "usedSeed": 4242,
+		"lanes": [{"team": 0, "lane": "mid", "tiles": lane_tiles}],
+		"cores": [{"team": 0, "tileX": 48, "tileZ": 96}, {"team": 1, "tileX": 48, "tileZ": 16}],
+		"vents": [{"team": 0, "tileX": 20, "tileZ": 90}], "blockers": [], "itemSpawns": [],
+	}
+
+## The same map under another seed, which both the ground and the scenery must build differently.
+func _other_seed_layout() -> Dictionary:
+	var layout := _test_layout()
+	layout.usedSeed = 99
+	return layout
+
+## The procedural ground: the noise-displaced mesh that replaced the flat plane. The checks drive the real
+## `Terrain` node of the scene, so they cover the mesh, its material and the height the game reads.
+func _check_procedural_terrain(scene: Node) -> void:
+	var terrain := scene.get_node_or_null("Terrain") as MeshInstance3D
+	_check("the terrain carries the procedural script", terrain != null \
+		and terrain.get_script() == load("res://scripts/procedural_terrain.gd"), true)
+	if terrain == null:
+		return
+	var layout := _test_layout()
+	var map_width := int(layout.width)
+	var map_height := int(layout.height)
+	var reserved := [Vector2i(32, 47), Vector2i(64, 79)]
+	terrain.call("configure", layout, reserved)
+	_check("the node carries no scale of its own", terrain.scale, Vector3.ONE)
+	var array_mesh := terrain.mesh as ArrayMesh
+	var cells_per_tile := int(terrain.get("cells_per_tile"))
+	_check("the terrain is a generated mesh", array_mesh != null and array_mesh.get_surface_count() == 1, true)
+	if array_mesh == null:
+		return
+	var vertices: PackedVector3Array = array_mesh.surface_get_arrays(0)[ArrayMesh.ARRAY_VERTEX]
+	_check("the mesh holds one vertex per terrain cell",
+		vertices.size(), (map_width * cells_per_tile + 1) * (map_height * cells_per_tile + 1))
+	var aabb := array_mesh.get_aabb()
+	_check("the mesh spans the whole map",
+		is_equal_approx(aabb.size.x, float(map_width)) and is_equal_approx(aabb.size.z, float(map_height)), true)
+	var material := terrain.material_override as ShaderMaterial
+	_check("the terrain shader colors the mesh", material != null \
+		and material.shader == load("res://shaders/terrain.gdshader"), true)
+	if material != null:
+		_check("the gradient spans twice the tallest peak",
+			float(material.get_shader_parameter("height")), float(terrain.get("peak_height")) * 2.0)
+		_check("the shader reads a height gradient", material.get_shader_parameter("color_gradient") is GradientTexture1D, true)
+		_check("the shader reads a normal map", material.get_shader_parameter("normal_map") is NoiseTexture2D, true)
+	# Gameplay ground stays flat: a lane, both build zones and the ground around a Core.
+	var flat_over_lanes := true
+	for tile_index in layout.lanes[0].tiles:
+		@warning_ignore("integer_division")
+		if terrain.call("height_at", float(int(tile_index) % map_width) + 0.5, float(int(tile_index) / map_width) + 0.5) != 0.0:
+			flat_over_lanes = false
+	var flat_over_build_rows := true
+	for rows in reserved:
+		for tile_z in range(rows.x, rows.y + 1):
+			for tile_x in map_width:
+				if terrain.call("height_at", float(tile_x) + 0.5, float(tile_z) + 0.5) != 0.0:
+					flat_over_build_rows = false
+	var flat_over_cores := true
+	for core in layout.cores:
+		if terrain.call("height_at", float(core.tileX) + 0.5, float(core.tileZ) + 0.5) != 0.0:
+			flat_over_cores = false
+	_check("the ground stays flat over every lane", flat_over_lanes, true)
+	_check("the ground stays flat over both build zones", flat_over_build_rows, true)
+	_check("the ground stays flat under both Cores", flat_over_cores, true)
+	# The open ground outside the lanes rises and falls, and no peak passes the limit.
+	var peak_height := float(terrain.get("peak_height"))
+	var highest := 0.0
+	var lowest := 0.0
+	var within_limits := true
+	for tile_z in range(0, map_height, 2):
+		for tile_x in range(0, map_width, 2):
+			var height := float(terrain.call("height_at", float(tile_x) + 0.5, float(tile_z) + 0.5))
+			highest = maxf(highest, height)
+			lowest = minf(lowest, height)
+			if absf(height) > peak_height:
+				within_limits = false
+	_check("mountains rise over the open ground", highest > peak_height * 0.4, true)
+	_check("valleys fall below the base plane", lowest < -0.5, true)
+	_check("no height passes the peak limit", within_limits, true)
+	# One seed builds one terrain, and another seed builds another.
+	var sample_points := [Vector2(8.5, 8.5), Vector2(80.5, 20.5), Vector2(16.5, 100.5), Vector2(88.5, 60.5)]
+	var first: Array = []
+	for point in sample_points:
+		first.append(float(terrain.call("height_at", point.x, point.y)))
+	terrain.call("configure", layout, reserved)
+	var repeated: Array = []
+	for point in sample_points:
+		repeated.append(float(terrain.call("height_at", point.x, point.y)))
+	_check("one seed builds one terrain", repeated, first)
+	terrain.call("configure", _other_seed_layout(), reserved)
+	var other: Array = []
+	for point in sample_points:
+		other.append(float(terrain.call("height_at", point.x, point.y)))
+	_check("another seed builds another terrain", other != first, true)
+	# The slope between the lane and the open ground is gradual, not a wall.
+	terrain.call("configure", layout, reserved)
+	var steepest := 0.0
+	for tile_z in range(0, map_height, 4):
+		var previous := float(terrain.call("height_at", 0.5, float(tile_z) + 0.5))
+		for tile_x in range(1, map_width):
+			var height := float(terrain.call("height_at", float(tile_x) + 0.5, float(tile_z) + 0.5))
+			steepest = maxf(steepest, absf(height - previous))
+			previous = height
+	_check("the ground climbs no more than a tile per tile", steepest <= 1.0, true)
+	terrain.call("configure", {}, [])
 
 ## The start-menu switch for the procedural terrain. The map here carries no layout, so the scatter stays
 ## bare whichever way the switch stands and no check loads the 165 MB of scans.
@@ -419,30 +535,17 @@ func _check_terrain_scatter(scene: Node) -> void:
 	_check("the desert rocks are gone from the library", ModelLibrary.TERRAIN_MODELS.has("rocks_in_a_desert"), false)
 	_check("the library and the tiling rules name the same props",
 		TerrainScatter.PROP_NAMES.size(), ModelLibrary.TERRAIN_MODELS.size())
-	# A map with one straight mid lane, two Cores and one vent, which is enough to test every clearance rule.
-	var map_width := 96
-	var map_height := 112
-	var lane_tiles: Array = []
-	for tile_z in range(20, 92):
-		for tile_x in range(46, 50):
-			lane_tiles.append(tile_z * map_width + tile_x)
-	var layout := {
-		"width": map_width, "height": map_height, "usedSeed": 4242,
-		"lanes": [{"team": 0, "lane": "mid", "tiles": lane_tiles}],
-		"cores": [{"team": 0, "tileX": 48, "tileZ": 96}, {"team": 1, "tileX": 48, "tileZ": 16}],
-		"vents": [{"team": 0, "tileX": 20, "tileZ": 90}], "blockers": [], "itemSpawns": [],
-	}
+	var layout := _test_layout()
+	var map_width := int(layout.width)
+	var map_height := int(layout.height)
+	var lane_tiles: Array = layout.lanes[0].tiles
 	var reserved := [Vector2i(32, 47), Vector2i(64, 79)]
 	var plan := TerrainScatter.plan(layout, reserved)
 	# A tiled map fills its open ground: a sparse scatter of a dozen props would fail this.
 	_check("the tiling fills the open ground with props", plan.size() > 40, true)
 	_check("one seed plans one tiling", JSON.stringify(TerrainScatter.plan(layout, reserved)), JSON.stringify(plan))
 	_check("another seed plans another tiling",
-		JSON.stringify(TerrainScatter.plan({
-			"width": map_width, "height": map_height, "usedSeed": 99,
-			"lanes": layout.lanes, "cores": layout.cores, "vents": layout.vents,
-			"blockers": [], "itemSpawns": [],
-		}, reserved)) != JSON.stringify(plan), true)
+		JSON.stringify(TerrainScatter.plan(_other_seed_layout(), reserved)) != JSON.stringify(plan), true)
 	var counts := {}
 	var triangles := 0
 	var clear_of_lanes := true

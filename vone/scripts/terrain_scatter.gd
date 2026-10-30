@@ -122,8 +122,9 @@ func get_plan() -> Array:
 
 ## Plans and draws the terrain of `layout` under a `ROOT_NAME` child of `parent`, replacing whatever stood
 ## there. `reserved_rows` holds inclusive tile row ranges that take no props at all, which `main3d.gd` fills
-## with the two build zones.
-func build(parent: Node3D, layout: Dictionary, reserved_rows: Array = []) -> void:
+## with the two build zones. `ground` answers the height in tiles of a point given in tiles, so a prop rests
+## on the procedural ground rather than on the base plane; without it every prop sits at y = 0.
+func build(parent: Node3D, layout: Dictionary, reserved_rows: Array = [], ground := Callable()) -> void:
 	if not is_instance_valid(parent):
 		return
 	if is_instance_valid(_root):
@@ -141,8 +142,9 @@ func build(parent: Node3D, layout: Dictionary, reserved_rows: Array = []) -> voi
 			if String(entry.prop) != prop:
 				continue
 			var basis := Basis(Vector3.UP, float(entry.yaw)).scaled(Vector3.ONE * float(entry.scale))
-			# The prop rests on the base plane: its own geometry is the hill that `height_at` reports.
-			var origin := Vector3(float(entry.x) - map_width * 0.5, 0.0, float(entry.z) - map_height * 0.5)
+			# The prop rests on the ground: its own geometry is the hill that `height_at` adds on top.
+			var base_height := float(ground.call(float(entry.x), float(entry.z))) if ground.is_valid() else 0.0
+			var origin := Vector3(float(entry.x) - map_width * 0.5, base_height, float(entry.z) - map_height * 0.5)
 			transforms.append(Transform3D(basis, origin))
 		if transforms.is_empty():
 			continue

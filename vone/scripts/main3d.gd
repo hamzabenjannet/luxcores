@@ -423,12 +423,15 @@ func _view_size_for_viewport() -> float:
 func _configure_map() -> void:
 	if not is_instance_valid(_terrain) or not is_instance_valid(_map_root):
 		return
+	# The terrain mesh is built in tiles, so the node carries no scale of its own.
 	_terrain.position = Vector3.ZERO
 	_terrain.rotation = Vector3.ZERO
-	_terrain.scale = Vector3(_map_width, 1.0, _map_height)
+	_terrain.scale = Vector3.ONE
 	for child in _map_root.get_children():
 		_map_root.remove_child(child)
 		child.queue_free()
+	# The ground comes first: the overlays, the markers and the scenery all read its height.
+	_build_terrain()
 	_add_zone_overlays()
 	_add_lane_overlays()
 	_add_map_models("vents", "Vent")
@@ -546,7 +549,11 @@ func _scatter_terrain() -> void:
 	if not _auto_terrain or _layout.is_empty() or lanes.is_empty():
 		_terrain_scatter.build(_terrain_root, {})
 		return
-	_terrain_scatter.build(_terrain_root, _layout, _reserved_rows())
+	_terrain_scatter.build(_terrain_root, _layout, _reserved_rows(), _terrain_height)
+
+## The procedural ground height in tiles at a point given in tiles, which the scenery stands on.
+func _terrain_height(tile_x: float, tile_z: float) -> float:
+	return float(_terrain.call("height_at", tile_x, tile_z)) if _terrain.has_method("height_at") else 0.0
 
 ## The inclusive tile row ranges the terrain leaves alone: both build zones, from `ZONE_BANDS`.
 func _reserved_rows() -> Array:
@@ -560,10 +567,21 @@ func _reserved_rows() -> Array:
 		z += band_height
 	return rows
 
+## Builds the procedural ground of the current map, with the two build zones as rows that stay flat.
+func _build_terrain() -> void:
+	if _terrain.has_method("configure"):
+		_terrain.call("configure", _layout, _reserved_rows())
+
 ## The height of the terrain, in tiles, under a point of the world (the centered coordinates the 3D nodes
-## use). It is 0 over every lane, build zone, Core and marker, so gameplay sits where it always sat.
+## use). It adds the mound of a scenery prop to the procedural ground. Both are 0 over every lane, build
+## zone, Core and marker, so gameplay sits where it always sat.
 func _ground_height(world_x: float, world_z: float) -> float:
-	return _terrain_scatter.height_at(world_x + float(_map_width) * 0.5, world_z + float(_map_height) * 0.5)
+	var tile_x := world_x + float(_map_width) * 0.5
+	var tile_z := world_z + float(_map_height) * 0.5
+	var height := _terrain_scatter.height_at(tile_x, tile_z)
+	if _terrain.has_method("height_at"):
+		height += float(_terrain.call("height_at", tile_x, tile_z))
+	return height
 
 ## The markers of one layout key, each with its imported model on its tile. A marker carries its tile in
 ## its name, as in Vent_40_60, so a test can find the markers of one key.
