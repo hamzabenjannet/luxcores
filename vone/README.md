@@ -19,7 +19,7 @@ A Match ID in the field joins that match instead. An ID of a bot match joins as 
 - Checks the server's spec version against `GameLogic.SPEC_VERSION` and refuses a server on another spec.
 - Loads `data/buildings.json`, `data/balance.json` and `data/mapgen.json` from the server, so costs, upgrades and the build zone never live in two places.
 - Draws the arena on the `Terrain` mesh, with colored team zones, lanes, vents, item spawns and every entity kind in 3D.
-- Builds that mesh from noise (`scripts/procedural_terrain.gd`): hills, valleys and mountain ranges rim the map, while every lane, build zone, Core and marker keeps its flat ground at y = 0.
+- Builds that mesh from noise (`scripts/procedural_terrain.gd`): hills, valleys and mountain ranges cover the whole map, and the lanes cut a road through them instead of flattening the middle.
 - Scatters scenery over the whole map from one seed (`scripts/terrain_scatter.gd`), when the start menu switch **Toggle auto terrain generation** is on. It is off by default, and then the map keeps the bare plane. About 90 forest, pond and rock props land on a grid of 5 tile cells. They keep clear of the lanes, the build zones, the Cores and the markers, and per-prop gaps hold one kind out of the cell next door. The props also define the ground height. Buildings, creeps, heroes, labels, the build ghost and the aim ring sit on it.
 - Orbits the directional sun around the arena from dawn through sunset, following the snapshot's day/night tick with changing height, direction, brightness and shadows.
 - Shows every entity's name and lux count (GDD 13.1), tower attack types, upgrade levels (`P2 S1`), stuns, recycle progress, aim lines and projectiles.
@@ -49,11 +49,13 @@ Three noise layers stack, all seeded from the map's own `usedSeed`, so one seed 
 - **Ranges** (one low-frequency layer): where mountains may stand. `smoothstep` cuts it off below `RANGE_FLOOR`, which gathers the peaks into a few ranges instead of spreading them evenly. The last `EDGE_RANGE` tiles before the map edge always count as range, so the arena sits in a bowl.
 - **Ridges** (fractal ridged at `RIDGE_FREQUENCY`): the mountains themselves, squared to sharpen the peaks and multiplied by the range mask.
 
-The map structure stays the server's. `configure` stamps every tile the lanes, the build zones, the Cores and the markers claim into a mask. Two chamfer passes then measure each tile's distance to the nearest claimed tile. A factor built from that distance scales the noise: 0 on claimed ground, and 1 only `FLATTEN_FALLOFF` tiles away. Playable ground therefore stays flat at y = 0, and the zone and lane overlays still lie on it. The tap ray in `arena_3d.gd` meets the y = 0 plane, so it still reads the tile the player aimed at. A tap on a mountain reads the tile under the slope, and no mountain stands where a player may build.
+The map structure stays the server's, and the lanes cut through the terrain rather than levelling it. `configure` stamps the lane tiles, the Cores and the markers into a mask, and two chamfer passes measure each tile's distance to it. `height_at` then blends the ground toward the **floor height** over `CUT_FALLOFF` tiles. The floor is the hill layer alone, shrunk by `FLOOR_SCALE` and carrying no ridge. A lane therefore rolls gently and never climbs a mountain: a range in its way becomes a pass, banked on each side. Nothing is stamped for the build rows or the DMZ, so the middle of the map keeps its own relief.
 
-Two exports tune it in the editor. `peak_height` is the tallest peak in tiles (10 by default, and the shader gradient spans twice it), and `cells_per_tile` is the vertex density. One cell per tile builds the default map in 65 ms, as 10,961 vertices and 21,504 triangles. Two cells take 229 ms, for 43,425 vertices and 86,016 triangles. Both were measured headless on an Apple M2 Pro. The map is rebuilt only when the layout changes, so the cost is paid once per match.
+Nothing reads y = 0 as the ground any more. `main3d.gd` seats buildings, creeps, heroes, labels, the ghost and the aim ring on `height_at`. It drapes the lane and zone overlays on the same surface, as one quad per tile with each corner on the ground. A zone tint fades out between `ZONE_FADE_START` and `ZONE_FADE_END` tiles of height. It therefore marks the low ground a player fights over, and leaves the mountains their own color. Taps go through `ground_point`. It marches the camera ray down through the height band the terrain can reach, then halves the step that crosses the surface. A tap on a slope therefore reads the tile the player sees.
 
-`tests/terrain_shot.gd` saves a screenshot of one map's ground, which is how a change to the layers or the gradient gets looked at. The script header holds the command.
+Two exports tune it in the editor. `peak_height` is the tallest peak in tiles (10 by default, and the shader gradient spans twice it), and `cells_per_tile` is the vertex density. The heights are measured once into a grid, and each vertex takes its normal from its neighbors there, so a map costs one `height_at` call per vertex. One cell per tile builds the default map in 33 ms, as 10,961 vertices. Two cells take 110 ms for 43,425, and four take 415 ms for 172,865. All three were measured headless on an Apple M2 Pro. The map is rebuilt only when the layout changes, so the cost is paid once per match.
+
+`tests/terrain_shot.gd` saves a screenshot of one map's ground, which is how a change to the layers or the gradient gets looked at. Its `--cells` argument sets the vertex density, and the script header holds the command.
 
 ## Terrain Scenery
 
@@ -91,7 +93,7 @@ Godot --headless --path vone --script res://tests/live_match.gd -- --server=http
 npm run test:e2e
 ```
 
-`tests/terrain_shot.gd` saves a top-down screenshot of one map's procedural ground. It needs a window, and its header holds the command.
+`tests/terrain_shot.gd` saves a top-down screenshot of one map's procedural ground, at the vertex density `--cells` names. It needs a window, and its header holds the command.
 
 `tests/screenshot_fixture.gd` draws a hand-made snapshot with every M3 entity and saves a PNG. It needs a window, so it runs without `--headless`. See the script header for the command.
 

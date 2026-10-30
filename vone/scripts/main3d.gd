@@ -33,6 +33,21 @@ const ZONE_BANDS := [
 ]
 const ZONE_BAND_PARTS := 7
 
+## The draped overlays: the tint of a zone band and of a lane, how far each floats over the ground, the width
+## of a lane quad, and the ground heights over which a zone tint fades out, all in tiles.
+const ZONE_TINT_ALPHA := 0.08
+const LANE_TINT_ALPHA := 0.22
+const ZONE_OVERLAY_LIFT := 0.06
+const LANE_OVERLAY_LIFT := 0.12
+const LANE_TILE_SIZE := 0.92
+const ZONE_FADE_START := 1.0
+const ZONE_FADE_END := 4.0
+
+## The tap ray: how far apart the samples of the march stand, in tiles, and how many times the step that
+## crosses the ground is halved afterwards.
+const GROUND_RAY_STEP := 1.0
+const GROUND_RAY_REFINEMENTS := 16
+
 const CAMERA_RTS := 0
 const CAMERA_DEBUG := 1
 const RTS_CAMERA_DEFAULT_DISTANCE := 25.0
@@ -478,23 +493,28 @@ func _sync_rts_camera_target() -> void:
 func _active_camera() -> Camera3D:
 	return _rtscamera if _camera_mode == CAMERA_RTS else _camera
 
+## The five team rows, as tinted sheets draped on the ground. A band fades out as the ground climbs, so the
+## tint marks the low ground a player fights over and leaves the mountains their own color.
 func _add_zone_overlays() -> void:
-	var bands := ZONE_BANDS
 	var part_height := float(_map_height) / float(ZONE_BAND_PARTS)
-	var z := -float(_map_height) * 0.5
-	for band in bands:
-		var height := part_height * float(band.parts)
+	var z := 0.0
+	for band in ZONE_BANDS:
+		var band_height := part_height * float(band.parts)
 		var team := int(band.team)
 		var tint := TEAM_BLUE if team == 0 else TEAM_RED if team == 1 else Color("#9aa7b5")
-		var overlay := MeshInstance3D.new()
-		var plane := PlaneMesh.new()
-		plane.size = Vector2(float(_map_width), height)
-		overlay.mesh = plane
-		overlay.position = Vector3(0.0, 0.015, z + height * 0.5)
-		overlay.material_override = _flat_material(Color(tint.r, tint.g, tint.b, 0.08))
-		_map_root.add_child(overlay)
-		z += height
+		var tiles: Array = []
+		for tile_z in range(int(floor(z)), mini(_map_height, int(ceil(z + band_height)))):
+			for tile_x in _map_width:
+				tiles.append(tile_z * _map_width + tile_x)
+		var overlay := _draped_sheet(tiles, Color(tint.r, tint.g, tint.b, ZONE_TINT_ALPHA),
+			ZONE_OVERLAY_LIFT, 1.0, true)
+		if overlay != null:
+			overlay.name = "ZoneBand_%d" % int(z)
+			_map_root.add_child(overlay)
+		z += band_height
 
+## The lanes, as tinted sheets draped on the ground. A lane runs along the cut the terrain makes for it, so
+## its sheet follows the road up and down.
 func _add_lane_overlays() -> void:
 	for lane in _layout.get("lanes", []):
 		if not lane is Dictionary:
@@ -504,27 +524,65 @@ func _add_lane_overlays() -> void:
 			continue
 		var team := int(lane.get("team", -1))
 		var tint := TEAM_BLUE if team == 0 else TEAM_RED
-		var mesh := PlaneMesh.new()
-		mesh.size = Vector2(0.92, 0.92)
-		var multi_mesh := MultiMesh.new()
-		multi_mesh.transform_format = MultiMesh.TRANSFORM_3D
-		multi_mesh.mesh = mesh
-		multi_mesh.instance_count = tiles.size()
-		for index in tiles.size():
-			var tile_index := int(tiles[index])
-			var tile_x := tile_index % _map_width
-			@warning_ignore("integer_division")
-			var tile_z := tile_index / _map_width
-			var tile_center := Vector3(
-				float(tile_x) + 0.5 - float(_map_width) * 0.5,
-				0.035,
-				float(tile_z) + 0.5 - float(_map_height) * 0.5
-			)
-			multi_mesh.set_instance_transform(index, Transform3D(Basis.IDENTITY, tile_center))
-		var lane_mesh := MultiMeshInstance3D.new()
-		lane_mesh.multimesh = multi_mesh
-		lane_mesh.material_override = _flat_material(Color(tint.r, tint.g, tint.b, 0.22))
-		_map_root.add_child(lane_mesh)
+		var overlay := _draped_sheet(tiles, Color(tint.r, tint.g, tint.b, LANE_TINT_ALPHA),
+			LANE_OVERLAY_LIFT, LANE_TILE_SIZE, false)
+		if overlay != null:
+			overlay.name = "Lane_%d_%s" % [team, String(lane.get("lane", ""))]
+			_map_root.add_child(overlay)
+
+## One tinted quad per tile, each corner seated on the ground and lifted clear of it, as a single mesh.
+## `tile_size` is the width of a quad in tiles, and `fade_with_height` thins the tint as the ground climbs.
+func _draped_sheet(tiles: Array, color: Color, lift: float, tile_size: float, fade_with_height: bool) -> MeshInstance3D:
+	if tiles.is_empty():
+		return null
+	var vertices := PackedVector3Array()
+	var colors := PackedColorArray()
+	var indices := PackedInt32Array()
+	var half := tile_size * 0.5
+	var corners := [Vector2(-half, -half), Vector2(half, -half), Vector2(half, half), Vector2(-half, half)]
+	for tile_index in tiles:
+		var index := int(tile_index)
+		if index < 0 or index >= _map_width * _map_height:
+			continue
+		var tile_x := float(index % _map_width) + 0.5
+		@warning_ignore("integer_division")
+		var tile_z := float(index / _map_width) + 0.5
+		var first := vertices.size()
+		for corner in corners:
+			var corner_x: float = tile_x + corner.x
+			var corner_z: float = tile_z + corner.y
+			var height := _ground_height(corner_x - float(_map_width) * 0.5, corner_z - float(_map_height) * 0.5)
+			vertices.append(Vector3(corner_x - float(_map_width) * 0.5, height + lift,
+				corner_z - float(_map_height) * 0.5))
+			var alpha := color.a
+			if fade_with_height:
+				alpha *= 1.0 - smoothstep(ZONE_FADE_START, ZONE_FADE_END, height)
+			colors.append(Color(color.r, color.g, color.b, alpha))
+		for offset in [0, 1, 2, 0, 2, 3]:
+			indices.append(first + offset)
+	if indices.is_empty():
+		return null
+	var arrays := []
+	arrays.resize(ArrayMesh.ARRAY_MAX)
+	arrays[ArrayMesh.ARRAY_VERTEX] = vertices
+	arrays[ArrayMesh.ARRAY_COLOR] = colors
+	arrays[ArrayMesh.ARRAY_INDEX] = indices
+	var array_mesh := ArrayMesh.new()
+	array_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var overlay := MeshInstance3D.new()
+	overlay.mesh = array_mesh
+	overlay.material_override = _vertex_color_material()
+	overlay.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return overlay
+
+## The material of a draped sheet: unshaded, translucent and colored per vertex.
+func _vertex_color_material() -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.vertex_color_use_as_albedo = true
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	return material
 
 ## Turns the terrain tiling on or off and redraws the map at once, so the switch in the start menu shows its
 ## effect without a new match. Off clears every prop and levels the ground, which is the map as it was before.
@@ -551,11 +609,56 @@ func _scatter_terrain() -> void:
 		return
 	_terrain_scatter.build(_terrain_root, _layout, _reserved_rows(), _terrain_height)
 
+## The ground point of a camera ray, in tiles from the map's top-left corner, or null when the ray never
+## meets the ground. It marches the ray down through the height band the terrain can occupy and bisects the
+## step that crosses the surface, so a tap on a slope reads the tile the player sees. `arena_3d.gd` asks for
+## this instead of meeting the flat y = 0 plane, which a raised or sunken tile would answer wrongly.
+func ground_point(ray_origin: Vector3, ray_direction: Vector3) -> Variant:
+	if ray_direction.y >= -0.0001:
+		return null
+	var reach := _terrain_reach()
+	# Where the ray drops below the highest ground, and where it passes under the lowest.
+	var near := maxf(0.0, (reach - ray_origin.y) / ray_direction.y)
+	var far := (-reach - ray_origin.y) / ray_direction.y
+	if far <= near:
+		return null
+	var distance := near
+	var above := _height_above_ground(ray_origin, ray_direction, distance)
+	while distance < far:
+		var next := minf(distance + GROUND_RAY_STEP, far)
+		var next_above := _height_above_ground(ray_origin, ray_direction, next)
+		if next_above <= 0.0:
+			# The surface lies between the two samples; halving the step finds it to within a few millitiles.
+			for _step in GROUND_RAY_REFINEMENTS:
+				var middle := (distance + next) * 0.5
+				if _height_above_ground(ray_origin, ray_direction, middle) <= 0.0:
+					next = middle
+				else:
+					distance = middle
+			var hit := ray_origin + ray_direction * next
+			return Vector2(hit.x + float(_map_width) * 0.5, hit.z + float(_map_height) * 0.5)
+		distance = next
+		above = next_above
+	return null
+
+## How far the ray stands over the ground at one distance along it.
+func _height_above_ground(ray_origin: Vector3, ray_direction: Vector3, distance: float) -> float:
+	var point := ray_origin + ray_direction * distance
+	return point.y - _ground_height(point.x, point.z)
+
+## The height band the ground can reach, which bounds the march. The scenery mounds ride on top of it.
+func _terrain_reach() -> float:
+	var reach := 1.0
+	if _terrain.has_method("height_at"):
+		reach += float(_terrain.get("peak_height"))
+	return reach
+
 ## The procedural ground height in tiles at a point given in tiles, which the scenery stands on.
 func _terrain_height(tile_x: float, tile_z: float) -> float:
 	return float(_terrain.call("height_at", tile_x, tile_z)) if _terrain.has_method("height_at") else 0.0
 
-## The inclusive tile row ranges the terrain leaves alone: both build zones, from `ZONE_BANDS`.
+## The inclusive tile row ranges the scenery leaves alone: both build zones, from `ZONE_BANDS`. The ground
+## itself takes no rows: only the lanes, the Cores and the markers shape it.
 func _reserved_rows() -> Array:
 	var rows: Array = []
 	var part_height := float(_map_height) / float(ZONE_BAND_PARTS)
@@ -567,10 +670,10 @@ func _reserved_rows() -> Array:
 		z += band_height
 	return rows
 
-## Builds the procedural ground of the current map, with the two build zones as rows that stay flat.
+## Builds the procedural ground of the current map. The lanes, the Cores and the markers cut through it.
 func _build_terrain() -> void:
 	if _terrain.has_method("configure"):
-		_terrain.call("configure", _layout, _reserved_rows())
+		_terrain.call("configure", _layout)
 
 ## The height of the terrain, in tiles, under a point of the world (the centered coordinates the 3D nodes
 ## use). It adds the mound of a scenery prop to the procedural ground. Both are 0 over every lane, build

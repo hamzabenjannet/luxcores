@@ -3,6 +3,7 @@ extends SceneTree
 
 const ModelLibrary = preload("res://scripts/model_library.gd")
 const TerrainScatter = preload("res://scripts/terrain_scatter.gd")
+const ProceduralTerrain = preload("res://scripts/procedural_terrain.gd")
 
 var _checks := 0
 var _failures := 0
@@ -195,12 +196,14 @@ func _run() -> void:
 		var taps: Array[Vector2] = []
 		touch_overlay.tapped.connect(func(ground: Vector2) -> void: taps.append(ground))
 		var camera := scene.get_node("RTScamera") as Camera3D
-		var viewport_position := camera.unproject_position(Vector3(0.5, 0.0, 24.5))
+		# The tile stands on the terrain, not on the y = 0 plane, so the point to aim at takes its height.
+		var tap_target := Vector3(0.5, float(scene.call("_ground_height", 0.5, 24.5)), 24.5)
+		var viewport_position := camera.unproject_position(tap_target)
 		var local_position := touch_overlay.get_global_transform_with_canvas().affine_inverse() * viewport_position
 		touch_overlay.call("_handle_map_tap", local_position)
 		_check("3D touch maps back to tile coordinates", taps.size() == 1, true)
 		if not taps.is_empty():
-			_check("3D touch preserves tile position", is_equal_approx(taps[0].x, 48.5) and is_equal_approx(taps[0].y, 80.5), true)
+			_check("3D touch preserves tile position", absf(taps[0].x - 48.5) < 0.05 and absf(taps[0].y - 80.5) < 0.05, true)
 
 	var initial_size := float(scene.call("get_camera_size"))
 	scene.call("zoom_by", 0.8)
@@ -414,14 +417,14 @@ func _other_seed_layout() -> Dictionary:
 func _check_procedural_terrain(scene: Node) -> void:
 	var terrain := scene.get_node_or_null("Terrain") as MeshInstance3D
 	_check("the terrain carries the procedural script", terrain != null \
-		and terrain.get_script() == load("res://scripts/procedural_terrain.gd"), true)
+		and terrain.get_script() == ProceduralTerrain, true)
 	if terrain == null:
 		return
 	var layout := _test_layout()
 	var map_width := int(layout.width)
 	var map_height := int(layout.height)
 	var reserved := [Vector2i(32, 47), Vector2i(64, 79)]
-	terrain.call("configure", layout, reserved)
+	terrain.call("configure", layout)
 	_check("the node carries no scale of its own", terrain.scale, Vector3.ONE)
 	var array_mesh := terrain.mesh as ArrayMesh
 	var cells_per_tile := int(terrain.get("cells_per_tile"))
@@ -442,27 +445,39 @@ func _check_procedural_terrain(scene: Node) -> void:
 			float(material.get_shader_parameter("height")), float(terrain.get("peak_height")) * 2.0)
 		_check("the shader reads a height gradient", material.get_shader_parameter("color_gradient") is GradientTexture1D, true)
 		_check("the shader reads a normal map", material.get_shader_parameter("normal_map") is NoiseTexture2D, true)
-	# Gameplay ground stays flat: a lane, both build zones and the ground around a Core.
-	var flat_over_lanes := true
-	for tile_index in layout.lanes[0].tiles:
+	# The lanes cut through the terrain instead of flattening it: a lane follows the gentle floor, which no
+	# ridge reaches, and the ground it crosses rolls rather than steps.
+	var peak_height := float(terrain.get("peak_height"))
+	var lane_tiles: Array = layout.lanes[0].tiles
+	var floor_limit := peak_height * ProceduralTerrain.HILL_FRACTION * ProceduralTerrain.FLOOR_SCALE
+	var lane_on_the_floor := true
+	var lane_relief := 0.0
+	var lane_step := 0.0
+	var previous := INF
+	for tile_index in lane_tiles:
+		var tile_x := float(int(tile_index) % map_width) + 0.5
 		@warning_ignore("integer_division")
-		if terrain.call("height_at", float(int(tile_index) % map_width) + 0.5, float(int(tile_index) / map_width) + 0.5) != 0.0:
-			flat_over_lanes = false
-	var flat_over_build_rows := true
+		var tile_z := float(int(tile_index) / map_width) + 0.5
+		var height := float(terrain.call("height_at", tile_x, tile_z))
+		if absf(height) > floor_limit + 0.001:
+			lane_on_the_floor = false
+		lane_relief = maxf(lane_relief, absf(height))
+		if previous != INF:
+			lane_step = maxf(lane_step, absf(height - previous))
+		previous = height
+	_check("no lane tile climbs above the lane floor", lane_on_the_floor, true)
+	_check("a lane rolls with the ground instead of lying flat", lane_relief > 0.1, true)
+	_check("a lane never steps more than half a tile between its tiles", lane_step < 0.5, true)
+	_check("the ground under a Core follows the lane floor",
+		absf(float(terrain.call("height_at", float(layout.cores[0].tileX) + 0.5, float(layout.cores[0].tileZ) + 0.5))) <= floor_limit + 0.001, true)
+	# The middle of the map keeps its terrain: the build zones and the DMZ are no longer levelled.
+	var build_relief := 0.0
 	for rows in reserved:
 		for tile_z in range(rows.x, rows.y + 1):
 			for tile_x in map_width:
-				if terrain.call("height_at", float(tile_x) + 0.5, float(tile_z) + 0.5) != 0.0:
-					flat_over_build_rows = false
-	var flat_over_cores := true
-	for core in layout.cores:
-		if terrain.call("height_at", float(core.tileX) + 0.5, float(core.tileZ) + 0.5) != 0.0:
-			flat_over_cores = false
-	_check("the ground stays flat over every lane", flat_over_lanes, true)
-	_check("the ground stays flat over both build zones", flat_over_build_rows, true)
-	_check("the ground stays flat under both Cores", flat_over_cores, true)
+				build_relief = maxf(build_relief, absf(float(terrain.call("height_at", float(tile_x) + 0.5, float(tile_z) + 0.5))))
+	_check("the build zones keep their own relief", build_relief > 1.0, true)
 	# The open ground outside the lanes rises and falls, and no peak passes the limit.
-	var peak_height := float(terrain.get("peak_height"))
 	var highest := 0.0
 	var lowest := 0.0
 	var within_limits := true
@@ -481,27 +496,37 @@ func _check_procedural_terrain(scene: Node) -> void:
 	var first: Array = []
 	for point in sample_points:
 		first.append(float(terrain.call("height_at", point.x, point.y)))
-	terrain.call("configure", layout, reserved)
+	terrain.call("configure", layout)
 	var repeated: Array = []
 	for point in sample_points:
 		repeated.append(float(terrain.call("height_at", point.x, point.y)))
 	_check("one seed builds one terrain", repeated, first)
-	terrain.call("configure", _other_seed_layout(), reserved)
+	terrain.call("configure", _other_seed_layout())
 	var other: Array = []
 	for point in sample_points:
 		other.append(float(terrain.call("height_at", point.x, point.y)))
 	_check("another seed builds another terrain", other != first, true)
-	# The slope between the lane and the open ground is gradual, not a wall.
-	terrain.call("configure", layout, reserved)
+	# The bank between a cut lane and the open ground is a slope, not a wall.
+	terrain.call("configure", layout)
 	var steepest := 0.0
 	for tile_z in range(0, map_height, 4):
-		var previous := float(terrain.call("height_at", 0.5, float(tile_z) + 0.5))
+		var left := float(terrain.call("height_at", 0.5, float(tile_z) + 0.5))
 		for tile_x in range(1, map_width):
 			var height := float(terrain.call("height_at", float(tile_x) + 0.5, float(tile_z) + 0.5))
-			steepest = maxf(steepest, absf(height - previous))
-			previous = height
-	_check("the ground climbs no more than a tile per tile", steepest <= 1.0, true)
-	terrain.call("configure", {}, [])
+			steepest = maxf(steepest, absf(height - left))
+			left = height
+	_check("the ground climbs no more than two tiles per tile", steepest <= 2.0, true)
+	# A camera ray answers the tile the player sees, on a raised tile as on a sunken one.
+	var ray_hits := true
+	for point in sample_points:
+		var ground := float(terrain.call("height_at", point.x, point.y))
+		var origin := Vector3(point.x - float(map_width) * 0.5 + 6.0, ground + 12.0, point.y - float(map_height) * 0.5 + 8.0)
+		var target := Vector3(point.x - float(map_width) * 0.5, ground, point.y - float(map_height) * 0.5)
+		var hit = scene.call("ground_point", origin, (target - origin).normalized())
+		if hit == null or absf(hit.x - point.x) > 0.1 or absf(hit.y - point.y) > 0.1:
+			ray_hits = false
+	_check("a camera ray lands on the tile it points at", ray_hits, true)
+	terrain.call("configure", {})
 
 ## The start-menu switch for the procedural terrain. The map here carries no layout, so the scatter stays
 ## bare whichever way the switch stands and no check loads the 165 MB of scans.

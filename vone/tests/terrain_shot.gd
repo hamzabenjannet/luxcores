@@ -7,7 +7,8 @@ extends SceneTree
 ##       JSON.parse(fs.readFileSync('data/mapgen.json', 'utf8'))))); })"
 ##   Godot --path vone --script res://tests/terrain_shot.gd -- --map=/tmp/map.json --out=/tmp/terrain.png
 ##
-## --map takes the JSON of a map layout, which is also what GET /api/game/maps/<seed> answers.
+## --map takes the JSON of a map layout, which is also what GET /api/game/maps/<seed> answers, and --cells
+## sets the vertex density of the terrain, as `cells_per_tile` does in the editor.
 
 ## Where the camera stands and how much of the map it takes in, which frames the whole 96 by 112 tile map.
 const CAMERA_POSITION := Vector3(0.0, 110.0, 120.0)
@@ -22,6 +23,8 @@ func _run() -> void:
 	root.add_child(scene)
 	root.size = Vector2i(1280, 960)
 	await process_frame
+	(scene.get_node("Terrain") as MeshInstance3D).set("cells_per_tile",
+		int(_argument("cells", "1")))
 	scene.call("set_world", layout, {"tick": 100, "entities": []}, 0)
 	# The debug camera, placed by hand above the middle of the map, and no interface over it.
 	scene.call("set_camera_mode", 1)

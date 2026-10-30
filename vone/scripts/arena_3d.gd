@@ -252,6 +252,9 @@ func _ground_at(local_point: Vector2) -> Variant:
 	var viewport_position := get_global_transform_with_canvas() * local_point
 	var ray_origin: Vector3 = _world_root.call("camera_ray_origin", viewport_position)
 	var ray_direction: Vector3 = _world_root.call("camera_ray_direction", viewport_position)
+	# The world answers against its own terrain, so a tap on a slope reads the tile the player sees.
+	if _world_root.has_method("ground_point"):
+		return _world_root.call("ground_point", ray_origin, ray_direction)
 	if is_zero_approx(ray_direction.y):
 		return null
 	var distance := -ray_origin.y / ray_direction.y

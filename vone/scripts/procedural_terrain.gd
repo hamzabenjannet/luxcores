@@ -8,15 +8,19 @@ extends MeshInstance3D
 ## slope lights from the shape the game reads. `shaders/terrain.gdshader` then colors the result by height
 ## through a gradient, over a tiling noise normal map that breaks up its large faces.
 ##
-## ## What the Map Keeps
+## ## How the Lanes Cross It
 ##
-## The lanes, the build zones, the Cores and the markers are the map, and the server owns them. The terrain
-## never touches them: `configure` stamps every tile those claim into a mask, measures how far each tile sits
-## from the nearest claimed tile, and multiplies the noise by a factor that is 0 on claimed ground and
-## reaches 1 only `FLATTEN_FALLOFF` tiles away. Playable ground therefore stays flat at y = 0, the zone and
-## lane overlays still lie on it, and the tap ray in `arena_3d.gd`, which meets the y = 0 plane, still reads
-## the tile the player aimed at. The terrain rises in the space between: the Core bands outside the Core
-## clearance, and the open ground beside the lanes.
+## The noise covers the whole map, the middle included. The lanes do not flatten it: they cut through it like
+## a road. `configure` stamps the lane tiles, the Cores and the markers into a mask and measures how far each
+## tile sits from it, and `height_at` blends the ground toward the **floor height** over `CUT_FALLOFF` tiles.
+## The floor is the hill layer alone, shrunk by `FLOOR_SCALE` and carrying no ridge, so a lane rolls gently
+## and never climbs a mountain: a range in its way becomes a pass. Everything else, the build rows and the
+## DMZ among them, takes the full terrain.
+##
+## Nothing in the game reads y = 0 as the ground any more. `main3d.gd` seats buildings, creeps, heroes,
+## labels, the ghost and the aim ring on `height_at`, drapes the lane and zone overlays on it, and answers a
+## tap by marching the camera ray against it (`ground_point`), so a tap on a slope reads the tile the player
+## sees rather than the tile under the slope.
 ##
 ## ## The Noise Layers
 ##
@@ -65,13 +69,16 @@ const RANGE_SALT := 0x2f90d5
 const RIDGE_SALT := 0x6c13b9
 const NORMAL_MAP_SALT := 0x1d4e77
 
-## Clearance in tiles: how far the flat ground reaches past each thing the map claims.
-const LANE_MARGIN := 2
-const CORE_MARGIN := 6
-const MARKER_MARGIN := 3
-## How far from the claimed ground the noise reaches its full height. A low number makes a wall, a high one
-## flattens the map, and 8 tiles gives a slope a hero can be seen to climb.
-const FLATTEN_FALLOFF := 8.0
+## The cut: how far past each thing the map owns the ground still follows the lane floor, in tiles.
+const LANE_MARGIN := 1
+const CORE_MARGIN := 4
+const MARKER_MARGIN := 2
+## How far from the cut the ground climbs back to the full terrain. A low number walls the lane in, a high
+## one flattens the map around it, and 6 tiles gives a bank a hero can be seen to climb.
+const CUT_FALLOFF := 6.0
+## The floor a lane follows: the hill layer alone, at this share of its height. It keeps a lane rolling
+## instead of flat, and small enough that no slope on it hides a creep.
+const FLOOR_SCALE := 0.45
 
 ## Vertices per tile along each axis. One is 97 by 113 vertices on the default map, which is the mobile
 ## budget; raise it on a desktop for a smoother skyline.
@@ -91,50 +98,56 @@ var _map_height := 112
 var _hills := FastNoiseLite.new()
 var _ranges := FastNoiseLite.new()
 var _ridges := FastNoiseLite.new()
-## One float per tile: the distance in tiles to the nearest tile the map claims, 0 on a claimed tile.
-var _claimed_distance := PackedFloat32Array()
+## One float per tile: the distance in tiles to the nearest tile the lanes, the Cores or the markers own,
+## and 0 on such a tile. Empty while no map is configured, which leaves the terrain uncut.
+var _cut_distance := PackedFloat32Array()
 
 func _ready() -> void:
 	_seed_noise(0)
 	rebuild()
 
-## Builds the terrain of one map. `layout` is the server's map layout and `reserved_rows` holds inclusive
-## tile row ranges that stay flat whole, which `main3d.gd` fills with the two build zones. An empty layout is
-## the map between matches: it takes the noise with no flat ground, as a backdrop for the start menu.
-func configure(layout: Dictionary, reserved_rows: Array = []) -> void:
+## Builds the terrain of one map. `layout` is the server's map layout: its lanes, Cores and markers cut the
+## road through the noise. An empty layout is the map between matches, which takes the uncut terrain as a
+## backdrop for the start menu.
+func configure(layout: Dictionary) -> void:
 	_map_width = maxi(1, int(layout.get("width", 96)))
 	_map_height = maxi(1, int(layout.get("height", 112)))
 	_seed_noise(int(layout.get("usedSeed", 0)))
-	_claimed_distance = _distance_field(_claimed_grid(layout, reserved_rows, _map_width, _map_height),
-		_map_width, _map_height)
+	_cut_distance = _distance_field(_cut_grid(layout, _map_width, _map_height), _map_width, _map_height)
 	rebuild()
 
-## The ground height in tiles at a point given in tiles from the map's top-left corner. It is 0 over every
-## lane, build zone, Core and marker, so a building, a creep or a tap lands where it always did.
+## The ground height in tiles at a point given in tiles from the map's top-left corner. Everything the game
+## draws sits on this, and `main3d.gd` answers a tap against it.
 func height_at(tile_x: float, tile_z: float) -> float:
-	var flatten := flatten_at(tile_x, tile_z)
-	if flatten <= 0.0:
+	var hills := _hills.get_noise_2d(tile_x, tile_z) * peak_height * HILL_FRACTION
+	var cut := cut_at(tile_x, tile_z)
+	if cut >= 1.0:
+		return _sink(hills * FLOOR_SCALE)
+	var open_ground := _open_height(tile_x, tile_z, hills)
+	if cut <= 0.0:
+		return open_ground
+	return lerpf(open_ground, _sink(hills * FLOOR_SCALE), cut)
+
+## How much of the lane floor a point takes: 1 on a tile the lanes, the Cores or the markers own, falling to
+## 0 over `CUT_FALLOFF` tiles.
+func cut_at(tile_x: float, tile_z: float) -> float:
+	if _cut_distance.is_empty():
 		return 0.0
-	return flatten * _noise_height(tile_x, tile_z)
+	return 1.0 - smoothstep(0.0, CUT_FALLOFF, _distance_at(tile_x, tile_z))
 
-## How much of the noise a point takes: 0 on ground the map claims, 1 once `FLATTEN_FALLOFF` tiles away.
-func flatten_at(tile_x: float, tile_z: float) -> float:
-	if _claimed_distance.is_empty():
-		return 1.0
-	return smoothstep(0.0, FLATTEN_FALLOFF, _distance_at(tile_x, tile_z))
-
-## The three noise layers at a point, in tiles, before the flattening.
-func _noise_height(tile_x: float, tile_z: float) -> float:
-	var hill_height := peak_height * HILL_FRACTION
-	var height := _hills.get_noise_2d(tile_x, tile_z) * hill_height
+## The open ground: the hills, plus the ridges wherever the range mask lets a mountain stand.
+func _open_height(tile_x: float, tile_z: float, hills: float) -> float:
+	var height := hills
 	var mask := smoothstep(RANGE_FLOOR, 1.0, (_ranges.get_noise_2d(tile_x, tile_z) + 1.0) * 0.5)
 	mask = maxf(mask, _edge_bias(tile_x, tile_z))
 	if mask > 0.0:
 		var ridge := clampf((_ridges.get_noise_2d(tile_x, tile_z) + 1.0) * 0.5, 0.0, 1.0)
-		height += ridge * ridge * mask * (peak_height - hill_height)
-	if height < 0.0:
-		height *= VALLEY_SCALE
-	return height
+		height += ridge * ridge * mask * (peak_height - peak_height * HILL_FRACTION)
+	return _sink(height)
+
+## Shallows a dip below the base plane, so a valley reads as a valley and not as a hole.
+func _sink(height: float) -> float:
+	return height * VALLEY_SCALE if height < 0.0 else height
 
 ## How much the rim of the map counts as mountain range: 0 more than `EDGE_RANGE` tiles inside the map and 1
 ## at the edge itself.
@@ -144,15 +157,18 @@ func _edge_bias(tile_x: float, tile_z: float) -> float:
 		minf(tile_z, float(_map_height) - tile_z))
 	return smoothstep(EDGE_RANGE, 0.0, inset)
 
-## Rebuilds the mesh over the current map size. Every vertex takes its height, its normal and its tangent
-## from `height_at`, so the lighting follows the same surface the game places its units on.
+## Rebuilds the mesh over the current map size. The heights are measured once into a grid, and the normal
+## and the tangent of a vertex come from the heights of its neighbors in that grid, so the lighting follows
+## the same surface the game places its units on at one `height_at` call per vertex.
 func rebuild() -> void:
 	if not is_inside_tree():
 		return
+	var columns := _map_width * cells_per_tile
+	var rows := _map_height * cells_per_tile
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(float(_map_width), float(_map_height))
-	plane.subdivide_width = maxi(0, _map_width * cells_per_tile - 1)
-	plane.subdivide_depth = maxi(0, _map_height * cells_per_tile - 1)
+	plane.subdivide_width = maxi(0, columns - 1)
+	plane.subdivide_depth = maxi(0, rows - 1)
 	var arrays := plane.get_mesh_arrays()
 	var vertices: PackedVector3Array = arrays[ArrayMesh.ARRAY_VERTEX]
 	var normals: PackedVector3Array = arrays[ArrayMesh.ARRAY_NORMAL]
@@ -160,17 +176,24 @@ func rebuild() -> void:
 	# The plane is centered on the node, and the map counts its tiles from the top-left corner.
 	var half_width := float(_map_width) * 0.5
 	var half_height := float(_map_height) * 0.5
-	var epsilon := 1.0 / float(cells_per_tile)
+	var spacing := 1.0 / float(cells_per_tile)
+	var heights := PackedFloat32Array()
+	heights.resize((columns + 1) * (rows + 1))
+	for row in rows + 1:
+		for column in columns + 1:
+			heights[row * (columns + 1) + column] = height_at(float(column) * spacing, float(row) * spacing)
 	for index in vertices.size():
 		var vertex := vertices[index]
 		var tile_x := vertex.x + half_width
 		var tile_z := vertex.z + half_height
-		vertex.y = height_at(tile_x, tile_z)
+		var column := clampi(int(round(tile_x / spacing)), 0, columns)
+		var row := clampi(int(round(tile_z / spacing)), 0, rows)
+		vertex.y = heights[row * (columns + 1) + column]
 		vertices[index] = vertex
-		# The slope in each direction, from a central difference of the same height function. The normal
-		# negates it, which the example leaves out and which keeps a slope lit from the correct side.
-		var slope_x := (height_at(tile_x + epsilon, tile_z) - height_at(tile_x - epsilon, tile_z)) / (2.0 * epsilon)
-		var slope_z := (height_at(tile_x, tile_z + epsilon) - height_at(tile_x, tile_z - epsilon)) / (2.0 * epsilon)
+		# The slope in each direction, from a central difference over the grid. The normal negates it, which
+		# the example leaves out and which keeps a slope lit from the correct side.
+		var slope_x := _grid_slope(heights, columns, rows, column, row, 1, 0, spacing)
+		var slope_z := _grid_slope(heights, columns, rows, column, row, 0, 1, spacing)
 		normals[index] = Vector3(-slope_x, 1.0, -slope_z).normalized()
 		var tangent := Vector3(1.0, slope_x, 0.0).normalized()
 		tangents[4 * index] = tangent.x
@@ -183,6 +206,19 @@ func rebuild() -> void:
 	array_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	mesh = array_mesh
 	_apply_material()
+
+## The slope of the height grid at one node, along one axis. A node on the border of the grid has no
+## neighbor on one side and takes the one-sided difference instead.
+func _grid_slope(heights: PackedFloat32Array, columns: int, rows: int, column: int, row: int,
+		step_x: int, step_z: int, spacing: float) -> float:
+	var low_column := maxi(0, column - step_x)
+	var low_row := maxi(0, row - step_z)
+	var high_column := mini(columns, column + step_x)
+	var high_row := mini(rows, row + step_z)
+	var span := float((high_column - low_column) + (high_row - low_row)) * spacing
+	if span <= 0.0:
+		return 0.0
+	return (heights[high_row * (columns + 1) + high_column] - heights[low_row * (columns + 1) + low_column]) / span
 
 ## The terrain material, built once and kept. The gradient spans twice `peak_height`, so the model y of a
 ## peak reads the last stop and a valley the first.
@@ -246,7 +282,8 @@ func _seed_noise(map_seed: int) -> void:
 	_ridges.fractal_lacunarity = RIDGE_LACUNARITY
 	_ridges.fractal_gain = RIDGE_GAIN
 
-## The distance field at a point, bilinear between the four nearest tile centers, so the slope has no steps.
+## The distance to the road at a point, bilinear between the four nearest tile centers, so a bank has no
+## steps.
 func _distance_at(tile_x: float, tile_z: float) -> float:
 	var x := clampf(tile_x - 0.5, 0.0, float(_map_width - 1))
 	var z := clampf(tile_z - 0.5, 0.0, float(_map_height - 1))
@@ -256,22 +293,18 @@ func _distance_at(tile_x: float, tile_z: float) -> float:
 	var z1 := mini(z0 + 1, _map_height - 1)
 	var fx := x - float(x0)
 	var fz := z - float(z0)
-	var top := lerpf(_claimed_distance[z0 * _map_width + x0], _claimed_distance[z0 * _map_width + x1], fx)
-	var bottom := lerpf(_claimed_distance[z1 * _map_width + x0], _claimed_distance[z1 * _map_width + x1], fx)
+	var top := lerpf(_cut_distance[z0 * _map_width + x0], _cut_distance[z0 * _map_width + x1], fx)
+	var bottom := lerpf(_cut_distance[z1 * _map_width + x0], _cut_distance[z1 * _map_width + x1], fx)
 	return lerpf(top, bottom, fz)
 
-## One byte per tile: 1 where the map claims the ground and the terrain stays flat. The lanes, the Cores, the
-## markers and the reserved rows each stamp their own clearance.
-static func _claimed_grid(layout: Dictionary, reserved_rows: Array, map_width: int, map_height: int) -> PackedByteArray:
+## One byte per tile: 1 where the road runs and the ground follows the lane floor. The lanes, the Cores and
+## the markers each stamp their own margin; the build rows and the DMZ stamp nothing, so they keep their
+## hills.
+static func _cut_grid(layout: Dictionary, map_width: int, map_height: int) -> PackedByteArray:
 	var claimed := PackedByteArray()
 	claimed.resize(map_width * map_height)
 	if layout.is_empty():
 		return claimed
-	for rows in reserved_rows:
-		var row_range := rows as Vector2i
-		for tile_z in range(maxi(0, row_range.x), mini(map_height - 1, row_range.y) + 1):
-			for tile_x in map_width:
-				claimed[tile_z * map_width + tile_x] = 1
 	for lane in layout.get("lanes", []):
 		if not lane is Dictionary:
 			continue
@@ -297,7 +330,8 @@ static func _stamp(claimed: PackedByteArray, map_width: int, map_height: int, ti
 			if x >= 0 and x < map_width:
 				claimed[z * map_width + x] = 1
 
-## The distance in tiles from every tile to the nearest claimed tile, by two chamfer passes over the grid.
+## The distance in tiles from every tile to the nearest tile of the road, by two chamfer passes over the
+## grid.
 ## The result is within a few percent of the true Euclidean distance, which a slope does not show.
 static func _distance_field(claimed: PackedByteArray, map_width: int, map_height: int) -> PackedFloat32Array:
 	var far := float(map_width + map_height)
