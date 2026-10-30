@@ -19,7 +19,7 @@ A Match ID in the field joins that match instead. An ID of a bot match joins as 
 - Checks the server's spec version against `GameLogic.SPEC_VERSION` and refuses a server on another spec.
 - Loads `data/buildings.json`, `data/balance.json` and `data/mapgen.json` from the server, so costs, upgrades and the build zone never live in two places.
 - Draws the arena on the `Terrain` mesh, with colored team zones, lanes, vents, item spawns and every entity kind in 3D.
-- Tiles the whole map with procedural terrain from one seed (`scripts/terrain_scatter.gd`). About 90 forest, pond and rock props land on a grid of 5 tile cells. They keep clear of the lanes, the build zones, the Cores and the markers, and per-prop gaps hold one kind out of the cell next door. The props also define the ground height. Buildings, creeps, heroes, labels, the build ghost and the aim ring sit on it.
+- Tiles the whole map with procedural terrain from one seed (`scripts/terrain_scatter.gd`), when the start menu switch **Toggle auto terrain generation** is on. It is off by default, and then the map keeps the bare plane. About 90 forest, pond and rock props land on a grid of 5 tile cells. They keep clear of the lanes, the build zones, the Cores and the markers, and per-prop gaps hold one kind out of the cell next door. The props also define the ground height. Buildings, creeps, heroes, labels, the build ghost and the aim ring sit on it.
 - Orbits the directional sun around the arena from dawn through sunset, following the snapshot's day/night tick with changing height, direction, brightness and shadows.
 - Shows every entity's name and lux count (GDD 13.1), tower attack types, upgrade levels (`P2 S1`), stuns, recycle progress, aim lines and projectiles.
 - Keeps server-driven game rules and controls. A tap on the 3D terrain uses `scripts/game_logic.gd` to build, select or send an order.
@@ -39,6 +39,8 @@ A Match ID in the field joins that match instead. An ID of a bot match joins as 
 `scripts/game_logic.gd` holds the pure decisions: label text, affordability, tap resolution and the actions of a selected building. The web client implements the same functions in `src/client/entity-text.js` and `src/client/ui/controls.js`. `test/fixtures/client-parity.json` holds the cases both must answer alike. When you change a decision, change both clients and the fixture in one commit. Both test runs fail when only one side moves.
 
 ## Terrain Scenery
+
+The tiling is optional and off by default. A switch in the start menu turns it on, **Toggle auto terrain generation**. `main.gd` saves it in `user://luxcores.cfg` under `terrain/auto_generation` and pushes to `main3d.gd` through `set_auto_terrain_enabled`. Off, `_scatter_terrain` plans nothing, the prop node stays empty and `_ground_height` returns 0 everywhere, so the map renders as it did before the tiling existed. The switch redraws the map at once, so it also works during a match.
 
 `scripts/terrain_scatter.gd` tiles the map with scenery and `ModelLibrary.TERRAIN_MODELS` names the six glTF files in `assets/3d/terrain/procedural/`. The script runs from `_configure_map` in `main3d.gd`, after the zone bands, the lanes and the markers, so it knows where it may not stand. It lays a grid of 5 tile cells over the map and gives one prop to every cell that gameplay does not claim. Each prop is drawn by weight from the six models, on a seed taken from the map's own `usedSeed`.
 

@@ -58,6 +58,9 @@ var _selected_entity_id := -1
 var _map_width := 96
 var _map_height := 112
 var _terrain_scatter := TerrainScatter.new()
+## While false the map keeps the bare plane it had before the terrain tiling existed. The start menu owns
+## the switch (`AUTO TERRAIN GENERATION` in `main.gd`) and pushes it here through `set_auto_terrain_enabled`.
+var _auto_terrain := false
 var _camera_target := Vector3.ZERO
 var _camera_yaw := 0.0
 var _camera_pitch := atan(1.0 / 0.8)
@@ -520,13 +523,27 @@ func _add_lane_overlays() -> void:
 		lane_mesh.material_override = _flat_material(Color(tint.r, tint.g, tint.b, 0.22))
 		_map_root.add_child(lane_mesh)
 
+## Turns the terrain tiling on or off and redraws the map at once, so the switch in the start menu shows its
+## effect without a new match. Off clears every prop and levels the ground, which is the map as it was before.
+func set_auto_terrain_enabled(enabled: bool) -> void:
+	if enabled == _auto_terrain:
+		return
+	_auto_terrain = enabled
+	_scatter_terrain()
+	# The props carry the ground height, so every entity needs its height read again.
+	_render_entities()
+
+func is_auto_terrain_enabled() -> bool:
+	return _auto_terrain
+
 ## Scatters the terrain scenery of the current map. A layout with no lane is the empty map between matches,
-## which stays bare. The two build rows go in as reserved rows, so no prop lands where a player may build.
+## which stays bare, and so is every map while the switch in the start menu is off. The two build rows go in
+## as reserved rows, so no prop lands where a player may build.
 func _scatter_terrain() -> void:
 	if not is_instance_valid(_terrain_root):
 		return
 	var lanes: Array = _layout.get("lanes", [])
-	if _layout.is_empty() or lanes.is_empty():
+	if not _auto_terrain or _layout.is_empty() or lanes.is_empty():
 		_terrain_scatter.build(_terrain_root, {})
 		return
 	_terrain_scatter.build(_terrain_root, _layout, _reserved_rows())

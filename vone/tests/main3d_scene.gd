@@ -368,6 +368,7 @@ func _run() -> void:
 		game_interface.call("_refresh_key_binding_buttons")
 		(game_interface.get("_key_settings_overlay") as Control).visible = false
 
+	_check_terrain_toggle(scene, game_interface)
 	_check_terrain_scatter(scene)
 
 	print("%d checks, %d failed" % [_checks, _failures])
@@ -385,6 +386,25 @@ func _advance_camera(scene: Node) -> void:
 	for _frame in range(60):
 		scene.call("_process", 1.0 / 60.0)
 
+
+## The start-menu switch for the procedural terrain. The map here carries no layout, so the scatter stays
+## bare whichever way the switch stands and no check loads the 165 MB of scans.
+func _check_terrain_toggle(scene: Node, game_interface: Control) -> void:
+	if game_interface == null:
+		return
+	var toggle := game_interface.get("_terrain_toggle") as CheckButton
+	_check("the start menu offers the terrain switch", toggle != null, true)
+	if toggle == null:
+		return
+	_check("the terrain switch names the feature", toggle.text, "Toggle auto terrain generation")
+	_check("the terrain switch starts off", toggle.button_pressed, false)
+	_check("the world starts with the terrain off", scene.call("is_auto_terrain_enabled"), false)
+	toggle.button_pressed = true
+	_check("the switch turns the terrain on", scene.call("is_auto_terrain_enabled"), true)
+	var scatter_root := scene.get_node_or_null("Terrain3D/%s" % TerrainScatter.ROOT_NAME) as Node3D
+	_check("a map with no layout stays bare with the terrain on", scatter_root != null and scatter_root.get_child_count() == 0, true)
+	toggle.button_pressed = false
+	_check("the switch turns the terrain off again", scene.call("is_auto_terrain_enabled"), false)
 
 ## The procedural terrain. The checks run on `TerrainScatter.plan`, which is pure, so none of them loads the
 ## 165 MB of scans; the scene check below only asks that the node the props go under exists.

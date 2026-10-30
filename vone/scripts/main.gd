@@ -31,6 +31,10 @@ var _entropy_input: LineEdit
 var _creep_cap_input: LineEdit
 var _limit_selector: OptionButton
 var _camera_selector: OptionButton
+## The start-menu switch for the procedural terrain, and the setting it holds. Off is the default: the map
+## keeps the bare plane. The setting lives in `user://luxcores.cfg`, beside the key assignments.
+var _terrain_toggle: CheckButton
+var _auto_terrain := false
 var _cap_input: LineEdit
 var _mode_selector: OptionButton
 var _status_label: Label
@@ -139,6 +143,7 @@ var _tick_hz := 20
 
 func _ready() -> void:
 	_load_key_bindings()
+	_load_auto_terrain()
 	_backend = BackendClientScript.new()
 	add_child(_backend)
 	_backend.snapshot_received.connect(_on_snapshot)
@@ -146,6 +151,7 @@ func _ready() -> void:
 	_backend.match_ended.connect(_on_match_ended)
 	_backend.message_received.connect(_set_status)
 	_build_interface()
+	_apply_auto_terrain()
 	_maximize_window()
 
 func configure_3d_world(world: Node3D) -> void:
@@ -154,6 +160,38 @@ func configure_3d_world(world: Node3D) -> void:
 func _on_camera_selected(index: int) -> void:
 	if is_instance_valid(_world_3d) and _world_3d.has_method("set_camera_mode"):
 		_world_3d.call("set_camera_mode", index)
+
+## The switch for the procedural terrain. On tiles the map with scenery, off leaves the bare plane, and the
+## 3D world redraws the map at once either way.
+func _on_auto_terrain_toggled(enabled: bool) -> void:
+	_auto_terrain = enabled
+	_save_auto_terrain()
+	_apply_auto_terrain()
+	_set_status("Auto terrain generation is %s." % ("on" if enabled else "off"))
+
+func _apply_auto_terrain() -> void:
+	if is_instance_valid(_world_3d) and _world_3d.has_method("set_auto_terrain_enabled"):
+		_world_3d.call("set_auto_terrain_enabled", _auto_terrain)
+
+func _load_auto_terrain() -> void:
+	var config := ConfigFile.new()
+	var error := config.load("user://luxcores.cfg")
+	if error != OK:
+		if error != ERR_FILE_NOT_FOUND:
+			push_warning("Could not load local settings: %s." % error_string(error))
+		return
+	_auto_terrain = bool(config.get_value("terrain", "auto_generation", false))
+
+func _save_auto_terrain() -> void:
+	var config := ConfigFile.new()
+	var error := config.load("user://luxcores.cfg")
+	if error != OK and error != ERR_FILE_NOT_FOUND:
+		_set_status("Could not load local settings: %s." % error_string(error))
+		return
+	config.set_value("terrain", "auto_generation", _auto_terrain)
+	var save_error := config.save("user://luxcores.cfg")
+	if save_error != OK:
+		_set_status("Could not save the terrain setting: %s." % error_string(save_error))
 
 func _build_interface() -> void:
 	_set_dark_theme()
@@ -251,6 +289,17 @@ func _build_interface() -> void:
 		_camera_selector.item_selected.connect(_on_camera_selected)
 		camera_options.add_child(_camera_selector)
 		_home.add_child(camera_options)
+		var terrain_options := HBoxContainer.new()
+		_terrain_toggle = CheckButton.new()
+		_terrain_toggle.name = "AutoTerrainToggle"
+		_terrain_toggle.text = "Toggle auto terrain generation"
+		_terrain_toggle.tooltip_text = "On scatters the procedural forests, ponds and rocks over the open ground. Off leaves the map bare, as it was before."
+		_terrain_toggle.button_pressed = _auto_terrain
+		_terrain_toggle.custom_minimum_size = Vector2(0, 52)
+		_terrain_toggle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_terrain_toggle.toggled.connect(_on_auto_terrain_toggled)
+		terrain_options.add_child(_terrain_toggle)
+		_home.add_child(terrain_options)
 	var limit_options := HBoxContainer.new()
 	_limit_selector = OptionButton.new()
 	_limit_selector.add_item("Unlimited")
