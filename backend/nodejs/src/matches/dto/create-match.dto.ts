@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
@@ -7,11 +7,49 @@ import {
   IsOptional,
   IsString,
   Length,
+  Matches,
   Max,
+  MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { MAX_SEED } from '../../common/pipes/parse-seed.pipe.js';
+import { MODEL_NAME, MAX_ENDPOINT_LENGTH } from '../../llm/llm-endpoint.js';
 import { MatchMode } from './match.dto.js';
+
+/**
+ * Asks for a language model to drive the bot of this match. The shape and the
+ * length are checked here; whether the server may call that endpoint at all is
+ * `LlmService.settingsFor`, which answers from `LLM_ALLOWED_HOSTS`.
+ */
+export class CreateMatchLlmDto {
+  @ApiPropertyOptional({
+    example: 'http://localhost:11434',
+    maxLength: MAX_ENDPOINT_LENGTH,
+    description: 'Ollama server, without a path. `LLM_ENDPOINT` of the server applies when omitted.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(MAX_ENDPOINT_LENGTH)
+  endpoint?: string;
+
+  @ApiPropertyOptional({
+    example: 'qwen2.5:3b',
+    description: 'Model as Ollama names it. `LLM_MODEL` of the server applies when omitted.',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(MODEL_NAME, { message: 'model must be a name such as qwen2.5:3b' })
+  model?: string;
+
+  @ApiPropertyOptional({
+    default: false,
+    description: 'In a bot-versus-bot match: drive both bots with the model instead of only the second one',
+  })
+  @IsOptional()
+  @IsBoolean()
+  bothSides?: boolean;
+}
 
 /** The largest tick limit a host can choose: 1 000 000 ticks, about 14 hours at 20 Hz. 0 means unlimited. */
 export const MAX_MATCH_TICKS = 1_000_000;
@@ -98,4 +136,14 @@ export class CreateMatchDto {
   @IsOptional()
   @IsBoolean()
   botVsBot: boolean = false;
+
+  @ApiPropertyOptional({
+    type: CreateMatchLlmDto,
+    description:
+      'Let a language model drive the bot of this match (`vsBot` or `botVsBot` as well). Omit it for the scripted bot, which every match plays without this field.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateMatchLlmDto)
+  llm?: CreateMatchLlmDto;
 }

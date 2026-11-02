@@ -51,8 +51,12 @@ export function showLobby(root, session, { shareLink, entropyDefault = 1, creepC
 
   function update() {
     const match = session.getMatch();
-    const names = match.botVsBot ? ['Bot Blue', 'Bot Red'] : match.players.map((/** @type {any} */ p) => p.name);
-    if (match.vsBot) names.push('Bot');
+    // A bot a language model drives says so by its name, so both players see which bot they face.
+    const botName = match.llm ? `Bot (${match.llm.model})` : 'Bot';
+    const names = match.botVsBot
+      ? [match.llm?.bothSides ? `Bot Blue (${match.llm.model})` : 'Bot Blue', match.llm ? `Bot Red (${match.llm.model})` : 'Bot Red']
+      : match.players.map((/** @type {any} */ p) => p.name);
+    if (match.vsBot) names.push(botName);
     rules.textContent = `Entropy ${entropyText(match.entropyPermillePerSecond ?? entropyDefault)}% per second, creep cap ${match.creepCapPerPlayer ?? creepCapDefault}${session.isHost ? '' : ' (set by the host)'}`;
     limit.textContent = `Tick limit: ${tickCapText(match.maxTicks ?? session.serverMaxTicks)}${session.isHost ? '' : ' (set by the host)'}`;
     players.replaceChildren(...names.map((/** @type {string} */ n) => div('player', n)));

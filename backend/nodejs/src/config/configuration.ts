@@ -65,6 +65,24 @@ export interface AppConfig {
     retentionDays: number;
   };
   static: { publicDir: string };
+  /**
+   * The language model that may drive a bot (`src/llm/` in the repo). Off in production by default,
+   * because the server, and not the player, makes the request to the model.
+   */
+  llm: {
+    enabled: boolean;
+    /** Hosts an endpoint may name. `*` allows any host, which lets a client choose where the server sends requests. */
+    allowedHosts: string[];
+    /** What the clients prefill in the start menu. */
+    defaultEndpoint: string;
+    defaultModel: string;
+    /** Milliseconds one question may take before the scripted bot takes the turn back. */
+    timeoutMs: number;
+    /** Ticks between two questions to the model. */
+    thinkEveryTicks: number;
+    maxTokens: number;
+    temperature: number;
+  };
   /** Whether `/tests` and `GET /api/dev/links` answer. They list the addresses of the server, so production turns them off by default. */
   testHub: boolean;
   rateLimit: { perMinute: number; authPerMinute: number };
@@ -141,6 +159,19 @@ export default (): AppConfig => {
       retentionDays: int(env.EVENT_LOG_RETENTION_DAYS, 14),
     },
     static: { publicDir: resolve(env.PUBLIC_DIR ?? 'public') },
+    llm: {
+      enabled: env.LLM_BOT === undefined ? !isProd : env.LLM_BOT === 'on',
+      allowedHosts: (env.LLM_ALLOWED_HOSTS ?? 'localhost,127.0.0.1,::1')
+        .split(',')
+        .map((host) => host.trim().toLowerCase())
+        .filter((host) => host !== ''),
+      defaultEndpoint: env.LLM_ENDPOINT ?? 'http://localhost:11434',
+      defaultModel: env.LLM_MODEL ?? 'qwen2.5:3b',
+      timeoutMs: int(env.LLM_TIMEOUT_MS, 20_000),
+      thinkEveryTicks: int(env.LLM_THINK_EVERY_TICKS, 40),
+      maxTokens: int(env.LLM_MAX_TOKENS, 512),
+      temperature: Number(env.LLM_TEMPERATURE ?? 0),
+    },
     testHub: env.TEST_HUB === undefined ? !isProd : env.TEST_HUB === 'true',
     rateLimit: {
       perMinute: int(env.RATE_LIMIT_PER_MINUTE, 300),

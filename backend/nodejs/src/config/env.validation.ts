@@ -95,6 +95,14 @@ class EnvironmentVariables {
   @IsOptional() @IsInt() @Min(20) MATCH_MAX_TICKS?: number;
   @IsOptional() @IsInt() @Min(0) @Max(86400) MATCH_ABANDON_SECONDS?: number;
   @IsOptional() @IsIn(['resume', 'end']) MATCH_ON_SHUTDOWN?: string;
+
+  @IsOptional() @IsIn(['on', 'off']) LLM_BOT?: string;
+  @IsOptional() @IsString() LLM_ALLOWED_HOSTS?: string;
+  @IsOptional() @IsString() LLM_ENDPOINT?: string;
+  @IsOptional() @IsString() LLM_MODEL?: string;
+  @IsOptional() @IsInt() @Min(1000) @Max(120000) LLM_TIMEOUT_MS?: number;
+  @IsOptional() @IsInt() @Min(5) @Max(1200) LLM_THINK_EVERY_TICKS?: number;
+  @IsOptional() @IsInt() @Min(32) @Max(4096) LLM_MAX_TOKENS?: number;
   @IsOptional() @IsString() EVENT_LOG_DIR?: string;
   @IsOptional() @IsInt() @Min(10) @Max(5000) EVENT_LOG_FLUSH_MS?: number;
   @IsOptional() @IsIn(['true', 'false']) EVENT_LOG_KEEP_FINISHED?: string;

@@ -11,6 +11,7 @@ This repo is **phase 1**: an HTML and JavaScript MVP. Its simulation doubles as 
 - `docs/GAME_DESIGN.md`: rules and every number.
 - `docs/TECH_ARCHITECTURE.md`: sim design, determinism rules, netcode plan, milestones.
 - `docs/HANDOVER.md`: current status and the next tasks with acceptance criteria. Start there.
+- `docs/LLM_BOT.md`: the bot a language model drives, and the rules that keep it out of the sim's determinism.
 
 When code disagrees with the GDD, the GDD wins. To change a rule, edit the GDD in the same commit and add a changelog row.
 
@@ -21,6 +22,7 @@ npm test                             # node --test, nothing to install; includes
 npm run test:e2e                     # Chromium tests against the Playwright container and a throwaway backend (needs the backend built)
 npm run headless -- <seed> <ticks>   # headless sim run, prints the final hash
 node tools/run-bots.js [seed] [ticks]  # two bots play headless (5000 ticks by default); `--soak <seeds> <ticks>` runs the bot soak on worker threads (1000 seeds of 5000 ticks take about 11 minutes)
+node tools/run-llm-bot.js            # an Ollama model plays the bot headless against the scripted bot (see docs/LLM_BOT.md)
 npm run lint:prose -- <file>         # writing-rules checker on one file (see Writing Rules)
 npm run lint:prose:all               # every Markdown file and every JavaScript comment
 npm run gen:sin                      # regenerate src/sim/sin-table.js (rarely)
@@ -63,9 +65,19 @@ Values marked *(default)* in the GDD are tuning points. Change them in data and 
 - Every player action becomes a `CommandEnvelope` (`src/sim/commands.js`). The UI may pre-validate for instant feedback; the sim result is final.
 - Three.js world units are tiles. Team 0 (player, bottom) is blue `#3d8bff`; team 1 (top) is red `#ff4d4d`.
 - The game shows no HP bars and no glow-as-health. Each unit and building shows a small lux count beside it (GDD 13.1); glow is decoration only.
-- The page is served by the backend and always plays through it: the server owns the sim, and the page signs in, sends commands and renders snapshots through `networkWorldView`. It never steps the sim. The start menu offers a bot match, a bot-versus-bot match to watch and a match for two humans. URL parameters skip the menu: `server` (the page's own origin by default), `name`, `match` (`new` or an id), `vsBot=1`, `botVsBot=1`, `seed`, `entropy` (the match's entropy rate, 0 to 100 percent of max HP per second, one decimal), `maxTicks` (the match's tick limit, 0 for unlimited; the menu offers Unlimited and Capped) and `autostart=1`. `determinism.html` plays the sim in the browser and prints its hash, for the cross-engine check (`?suite=1` plays every golden replay). The test hub at `/tests` lists every page, its URL parameters and ready-made links; add a new URL parameter or test page to `backend/nodejs/src/testhub/test-catalog.ts` in the same commit, and a unit test fails when a ready-made link uses a parameter its page does not document. `npm run test:e2e` covers play through the controls, two browsers on one match, a spectator and that hash check.
+- The page is served by the backend and always plays through it: the server owns the sim, and the page signs in, sends commands and renders snapshots through `networkWorldView`. It never steps the sim. The start menu offers a bot match, a bot-versus-bot match to watch and a match for two humans. URL parameters skip the menu: `server` (the page's own origin by default), `name`, `match` (`new` or an id), `vsBot=1`, `botVsBot=1`, `seed`, `entropy` (the match's entropy rate, 0 to 100 percent of max HP per second, one decimal), `maxTicks` (the match's tick limit, 0 for unlimited; the menu offers Unlimited and Capped), `llm=1` with `llmEndpoint` and `llmModel` (a language model drives the bot, off without them) and `autostart=1`. `determinism.html` plays the sim in the browser and prints its hash, for the cross-engine check (`?suite=1` plays every golden replay). The test hub at `/tests` lists every page, its URL parameters and ready-made links; add a new URL parameter or test page to `backend/nodejs/src/testhub/test-catalog.ts` in the same commit, and a unit test fails when a ready-made link uses a parameter its page does not document. `npm run test:e2e` covers play through the controls, two browsers on one match, a spectator and that hash check.
 - Mobile comes first: portrait layout, touch input, bloom at half resolution, instancing for crowds. The canvas fills the window and follows every resize. It renders at the full `devicePixelRatio` on a desktop and caps it at 2 on a touch device (`render/pixel-ratio.js`).
 - The `index.html` import map pins `three` to 0.170.0. Change that version only on purpose, then test on a phone.
+
+## LLM Bot (`src/llm/`)
+
+An optional driver that asks an Ollama model what the bot should do. It is its own compartment: the sim never imports it, and it imports no sim internals. `docs/LLM_BOT.md` holds the design; three rules matter here.
+
+- A tick never waits for a model. The driver asks in the background and spends the answer over the ticks that follow, and the scripted bot of `src/bot/bot.js` plays every turn the model loses.
+- The model's commands are ordinary `CommandEnvelope`s, so the sim validates them like a human's. `src/llm/actions.js` is a filter, never an authority.
+- A match a model played cannot be replayed from its seed. Such a bot carries `deterministic: false`, a rebuild takes its commands from the log instead of asking it to think, and the replay is stored with `reproducible: false`. The sim, the hashes and `SPEC_VERSION` stay untouched.
+
+The switch is off by default in both clients, and the server calls only the hosts of `LLM_ALLOWED_HOSTS` (the loopback names). It needs no dependency, because it uses the global `fetch`.
 
 ## Testing Expectations
 

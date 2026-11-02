@@ -95,6 +95,12 @@ func _init() -> void:
 		_check("tick cap text %s" % JSON.stringify(c.maxTicks), GameLogic.tick_cap_text(int(c.maxTicks)), String(c.expect))
 	for c in fixture.creepCapFromText:
 		_check("creep cap from text %s" % JSON.stringify(c.text), GameLogic.creep_cap_from_text(String(c.text)), int(c.expect))
+	for c in fixture.llmEndpointFromText:
+		_check("model endpoint from text %s" % JSON.stringify(c.text), GameLogic.llm_endpoint_from_text(String(c.text)), String(c.expect))
+	for c in fixture.llmModelFromText:
+		_check("model name from text %s" % JSON.stringify(c.text), GameLogic.llm_model_from_text(String(c.text)), String(c.expect))
+	for c in fixture.llmBotState:
+		_check("language model switch: %s" % String(c.name), _normalize(GameLogic.llm_bot_state(c.ctx)), _normalize(c.expect))
 	for c in fixture.secondsText:
 		_check("seconds text %s" % JSON.stringify(c), GameLogic.seconds_text(int(c.ticks), int(c.tickHz)), String(c.expect))
 	for c in fixture.abilityStates:

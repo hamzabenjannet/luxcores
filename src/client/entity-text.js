@@ -165,3 +165,57 @@ export function tickCapText(maxTicks) {
 export function isDay(tick, dayNight) {
   return tick % (dayNight.dayTicks + dayNight.nightTicks) < dayNight.dayTicks;
 }
+
+/** What a model name may hold: the characters Ollama tags use (`MODEL_NAME` in the backend's `llm/llm-endpoint.ts`). */
+const MODEL_NAME = /^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,79}$/;
+
+/**
+ * The Ollama address a player typed, as the server takes it: scheme, host and
+ * port, with a trailing slash or a pasted `/api` cut away. Anything else gives
+ * an empty string, which the menu reads as "not an address".
+ * Examples: "http://localhost:11434/" gives "http://localhost:11434",
+ * "http://10.0.0.5:11434/api" gives "http://10.0.0.5:11434", "localhost:11434" gives "".
+ * @param {string} text
+ * @returns {string}
+ */
+export function llmEndpointFromText(text) {
+  const trimmed = text.trim().replace(/\/+$/, '').replace(/\/api$/, '');
+  if (trimmed.length === 0 || trimmed.length > 200) return '';
+  const m = /^(https?):\/\/(\[[0-9a-fA-F:]+\]|[a-zA-Z0-9.-]+)(:\d{1,5})?$/.exec(trimmed);
+  if (!m) return '';
+  const port = m[3] ? Number(m[3].slice(1)) : -1;
+  if (m[3] && (port < 1 || port > 65535)) return '';
+  return trimmed;
+}
+
+/**
+ * The model name a player typed, or an empty string when it is no Ollama name.
+ * Examples: " qwen2.5:3b " gives "qwen2.5:3b", "not a model" gives "".
+ * @param {string} text
+ * @returns {string}
+ */
+export function llmModelFromText(text) {
+  const model = text.trim();
+  return MODEL_NAME.test(model) ? model : '';
+}
+
+/**
+ * The state of the language model switch in the start menu, which both clients
+ * show the same way. `available` comes from `GET /api/game/spec`: a server that
+ * runs no model hides the switch, so a player never configures what cannot work.
+ * `on` is the player's switch, which is off until they turn it on.
+ *
+ * `problem` is empty while the fields can be sent, and `note` is the line the
+ * menu shows under the switch.
+ * @param {{ available: boolean, on: boolean, endpoint: string, model: string }} ctx
+ * @returns {{ show: boolean, on: boolean, endpoint: string, model: string, problem: string, note: string }}
+ */
+export function llmBotState({ available, on, endpoint, model }) {
+  const cleanEndpoint = llmEndpointFromText(endpoint);
+  const cleanModel = llmModelFromText(model);
+  const off = { show: available, on: false, endpoint: cleanEndpoint, model: cleanModel, problem: '', note: 'The bot plays the scripted rotation.' };
+  if (!available || !on) return off;
+  if (cleanEndpoint === '') return { ...off, on: true, problem: 'The model endpoint is an address such as http://localhost:11434.' };
+  if (cleanModel === '') return { ...off, on: true, problem: 'The model is a name such as qwen2.5:3b.' };
+  return { show: true, on: true, endpoint: cleanEndpoint, model: cleanModel, problem: '', note: `${cleanModel} at ${cleanEndpoint} drives the bot.` };
+}

@@ -40,6 +40,11 @@ export interface StartedEvent extends Base {
     mapgenVersion: number;
     /** Settings of this match, such as the entropy rate. Absent in older logs and for a default match. */
     options?: { entropyPermillePerSecond?: number; creepCapPerPlayer?: number };
+    /**
+     * The language model that drove a bot of this match, so a second server resumes it the
+     * same way. Absent for the scripted bot, which every match plays without this field.
+     */
+    llm?: { endpoint: string; model: string; bothSides?: boolean };
   };
 }
 

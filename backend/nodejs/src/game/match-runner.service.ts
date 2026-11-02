@@ -12,6 +12,8 @@ import { CommandBus } from '../cluster/command-bus.js';
 import { MatchOwnership } from '../cluster/match-ownership.js';
 import type { AppConfig } from '../config/configuration.js';
 import { EventBus } from '../events/event-bus.js';
+import type { LlmBotSettings } from '../llm/llm.service.js';
+import { LlmService } from '../llm/llm.service.js';
 import {
   MatchEndReason,
   type MatchDto,
@@ -171,6 +173,7 @@ export class MatchRunnerService
     private readonly log: EventLog,
     private readonly ownership: MatchOwnership,
     private readonly commands: CommandBus,
+    private readonly llm: LlmService,
     config: ConfigService<AppConfig, true>,
   ) {
     const game = config.get('game', { infer: true });
@@ -251,21 +254,22 @@ export class MatchRunnerService
       throw new ConflictException('Another server runs this match');
     }
     const options = this.optionsOf(match);
+    const llm = this.llmOf(match);
     const { state, recorder } = this.sim.createMatch(match.seed, simPlayers, options);
+    const bots = this.makeBots(match.id, players, match.seed, options, llm);
     const run: Run = {
       matchId: match.id,
       players,
       state,
       recorder,
       inbox: [],
-      bots: players
-        .filter((p) => p.kind === 'bot')
-        .map((p) => this.sim.createBot(p.simId, p.team, match.seed, options)),
+      bots,
       lastSeq: new Map(),
       startedAt: Date.now(),
       lastSeenAt: Date.now(),
       ending: false,
-      reproducible: true,
+      // A model's commands cannot be worked out again from the seed, so this replay never verifies from it.
+      reproducible: bots.every((bot) => bot.deterministic !== false),
       maxTicks: this.limitOf(match),
     };
     this.runs.set(match.id, run);
@@ -290,6 +294,7 @@ export class MatchRunnerService
         ...this.sim.fingerprint,
         mapgenVersion: this.sim.mapgenVersion,
         ...(options ? { options } : {}),
+        ...(llm && !run.reproducible ? { llm: { endpoint: llm.endpoint, model: llm.model, ...(llm.bothSides ? { bothSides: true } : {}) } } : {}),
       },
     });
     await this.publish('match.started', {
@@ -385,6 +390,47 @@ export class MatchRunnerService
   }
 
   /** The settings the host chose for a match, or undefined for the defaults. */
+  /**
+   * The language model settings of a match, or undefined. A server that no longer offers a model,
+   * or one whose allowlist changed, keeps the match running with the scripted bot instead of
+   * refusing to start or to resume it.
+   */
+  private llmOf(match: { llm?: { endpoint: string; model: string; bothSides?: boolean }; vsBot?: boolean; botVsBot?: boolean }): LlmBotSettings | undefined {
+    try {
+      return this.llm.settingsFor(match.llm, match);
+    } catch (err) {
+      this.logger.warn(`A language model bot was asked for and refused, so the scripted bot plays: ${(err as Error).message}`);
+      return undefined;
+    }
+  }
+
+  /**
+   * One bot per bot player: the language model drives the teams `LlmService` names, and the
+   * scripted bot of `src/bot/bot.js` plays the rest.
+   */
+  private makeBots(
+    matchId: string,
+    players: readonly { simId: number; team: number; kind: 'human' | 'bot' }[],
+    seed: number,
+    options: SimMatchOptions | undefined,
+    llm: LlmBotSettings | undefined,
+  ): SimBot[] {
+    const botPlayers = players.filter((p) => p.kind === 'bot');
+    const teams = this.llm.teamsFor(llm, botPlayers.map((p) => p.team));
+    if (llm && teams.length > 0) this.llm.logStart(matchId, llm, teams);
+    return botPlayers.map((p) =>
+      llm && teams.includes(p.team)
+        ? this.sim.createLlmBot(p.simId, p.team, seed, llm, options, (event) => {
+            if (event.type === 'failure') {
+              this.logger.warn(`Match ${matchId}, team ${p.team}: the scripted bot takes the turn at tick ${event.tick}: ${event.error}`);
+            } else if (event.type === 'plan') {
+              this.logger.debug(`Match ${matchId}, team ${p.team}: ${event.commands} commands at tick ${event.tick} in ${event.ms} ms (${event.note ?? ''})`);
+            }
+          })
+        : this.sim.createBot(p.simId, p.team, seed, options),
+    );
+  }
+
   /** A match's own limit wins (0 is unlimited); without one the server default applies. */
   private limitOf(match: MatchDto): number {
     if (match.maxTicks === undefined) return this.maxTicks;
@@ -545,13 +591,15 @@ export class MatchRunnerService
     const { seed, players } = plan;
     const options = plan.started.data.options;
     const simPlayers = players.map((p) => ({ id: p.simId, team: p.team, kind: p.kind }));
+    // The log says whether a model drove a bot, so a second server resumes the match the same way.
+    const llm = this.llmOf({ ...(plan.started.data.llm ? { llm: plan.started.data.llm } : {}), vsBot: true });
 
     let rebuilt: Awaited<ReturnType<SimService['rebuild']>> | undefined;
     let used: ResumeAttempt | undefined;
     let bots: SimBot[] = [];
     const failures: string[] = [];
     for (const attempt of plan.attempts) {
-      bots = players.filter((p) => p.kind === 'bot').map((p) => this.sim.createBot(p.simId, p.team, seed, options));
+      bots = this.makeBots(match.id, players, seed, options, llm);
       try {
         rebuilt = await this.sim.rebuild({
           seed,
@@ -595,7 +643,9 @@ export class MatchRunnerService
       lastSeenAt: Date.now(),
       ending: false,
       loggedEnd: finishedEvent !== undefined,
-      reproducible: plan.reproducible,
+      // A match a model has played never verifies from its seed again, even when this server now
+      // runs it with the scripted bot, because the commands it already logged came from the model.
+      reproducible: plan.reproducible && plan.started.data.llm === undefined && bots.every((bot) => bot.deterministic !== false),
       maxTicks: this.limitOf(match),
     };
     this.runs.set(match.id, run);

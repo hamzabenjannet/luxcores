@@ -6555,5 +6555,180 @@
         "wait": "0.0s"
       }
     }
+  ],
+  "llmEndpointFromText": [
+    {
+      "text": "http://localhost:11434",
+      "expect": "http://localhost:11434"
+    },
+    {
+      "text": " http://localhost:11434/ ",
+      "expect": "http://localhost:11434"
+    },
+    {
+      "text": "http://localhost:11434/api",
+      "expect": "http://localhost:11434"
+    },
+    {
+      "text": "http://127.0.0.1:11434",
+      "expect": "http://127.0.0.1:11434"
+    },
+    {
+      "text": "http://[::1]:11434",
+      "expect": "http://[::1]:11434"
+    },
+    {
+      "text": "https://models.example.com",
+      "expect": "https://models.example.com"
+    },
+    {
+      "text": "http://ollama:11434",
+      "expect": "http://ollama:11434"
+    },
+    {
+      "text": "",
+      "expect": ""
+    },
+    {
+      "text": "localhost:11434",
+      "expect": ""
+    },
+    {
+      "text": "ftp://localhost:11434",
+      "expect": ""
+    },
+    {
+      "text": "http://localhost:11434/api/chat",
+      "expect": ""
+    },
+    {
+      "text": "http://localhost:999999",
+      "expect": ""
+    },
+    {
+      "text": "http://localhost:0",
+      "expect": ""
+    },
+    {
+      "text": "http://user:secret@localhost:11434",
+      "expect": ""
+    }
+  ],
+  "llmModelFromText": [
+    {
+      "text": "qwen2.5:3b",
+      "expect": "qwen2.5:3b"
+    },
+    {
+      "text": " llama3.1 ",
+      "expect": "llama3.1"
+    },
+    {
+      "text": "library/mistral:7b-instruct",
+      "expect": "library/mistral:7b-instruct"
+    },
+    {
+      "text": "",
+      "expect": ""
+    },
+    {
+      "text": ":3b",
+      "expect": ""
+    },
+    {
+      "text": "not a model",
+      "expect": ""
+    },
+    {
+      "text": "qwen;rm -rf /",
+      "expect": ""
+    }
+  ],
+  "llmBotState": [
+    {
+      "name": "a server without a model hides the switch",
+      "ctx": {
+        "available": false,
+        "on": true,
+        "endpoint": "http://localhost:11434",
+        "model": "qwen2.5:3b"
+      },
+      "expect": {
+        "show": false,
+        "on": false,
+        "endpoint": "http://localhost:11434",
+        "model": "qwen2.5:3b",
+        "problem": "",
+        "note": "The bot plays the scripted rotation."
+      }
+    },
+    {
+      "name": "the switch is off until the player turns it on",
+      "ctx": {
+        "available": true,
+        "on": false,
+        "endpoint": "http://localhost:11434",
+        "model": "qwen2.5:3b"
+      },
+      "expect": {
+        "show": true,
+        "on": false,
+        "endpoint": "http://localhost:11434",
+        "model": "qwen2.5:3b",
+        "problem": "",
+        "note": "The bot plays the scripted rotation."
+      }
+    },
+    {
+      "name": "a switch that is on names the model and the endpoint",
+      "ctx": {
+        "available": true,
+        "on": true,
+        "endpoint": "http://localhost:11434/",
+        "model": " qwen2.5:3b "
+      },
+      "expect": {
+        "show": true,
+        "on": true,
+        "endpoint": "http://localhost:11434",
+        "model": "qwen2.5:3b",
+        "problem": "",
+        "note": "qwen2.5:3b at http://localhost:11434 drives the bot."
+      }
+    },
+    {
+      "name": "an endpoint that is no address states the problem",
+      "ctx": {
+        "available": true,
+        "on": true,
+        "endpoint": "localhost:11434",
+        "model": "qwen2.5:3b"
+      },
+      "expect": {
+        "show": true,
+        "on": true,
+        "endpoint": "",
+        "model": "qwen2.5:3b",
+        "problem": "The model endpoint is an address such as http://localhost:11434.",
+        "note": "The bot plays the scripted rotation."
+      }
+    },
+    {
+      "name": "a model name that is no name states the problem",
+      "ctx": {
+        "available": true,
+        "on": true,
+        "endpoint": "http://localhost:11434",
+        "model": "not a model"
+      },
+      "expect": {
+        "show": true,
+        "on": true,
+        "endpoint": "http://localhost:11434",
+        "model": "",
+        "problem": "The model is a name such as qwen2.5:3b.",
+        "note": "The bot plays the scripted rotation."
+      }
+    }
   ]
 }

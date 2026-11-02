@@ -21,6 +21,7 @@ A Match ID in the field joins that match instead. An ID of a bot match joins as 
 - Draws the arena on the `Terrain` mesh, with colored team zones, lanes, vents, item spawns and every entity kind in 3D.
 - Builds that mesh from noise (`scripts/procedural_terrain.gd`): hills, valleys and mountain ranges cover the whole map, and the lanes cut a road through them instead of flattening the middle.
 - Scatters scenery over the whole map from one seed (`scripts/terrain_scatter.gd`), when the start menu switch **Toggle auto terrain generation** is on. It is off by default, and then the map keeps the bare plane. About 90 forest, pond and rock props land on a grid of 5 tile cells. They keep clear of the lanes, the build zones, the Cores and the markers, and per-prop gaps hold one kind out of the cell next door. The props also define the ground height. Buildings, creeps, heroes, labels, the build ghost and the aim ring sit on it.
+- Offers the start menu switch **Let a language model drive the bot** (off by default). On, the two fields beside it name an Ollama server and a model, and the match asks that model what its bot should do (`docs/LLM_BOT.md`). A refused endpoint lands in the status line with the backend's reason, because the backend makes the request. The device remembers the switch and the fields in `user://luxcores.cfg`.
 - Orbits the directional sun around the arena from dawn through sunset, following the snapshot's day/night tick with changing height, direction, brightness and shadows.
 - Shows every entity's name and lux count (GDD 13.1), tower attack types, upgrade levels (`P2 S1`), stuns, recycle progress, aim lines and projectiles.
 - Keeps server-driven game rules and controls. A tap on the 3D terrain uses `scripts/game_logic.gd` to build, select or send an order.
@@ -80,7 +81,7 @@ Tune the tiling in two places. `PROP_RULES` in `terrain_scatter.gd` holds the fo
 Run these from the repo root. Each needs Godot 4.6 (`GODOT_BIN`, `godot` on the PATH, or the macOS app).
 
 ```bash
-# Pure game logic against the shared fixtures: 141 checks, no server needed.
+# Pure game logic against the shared fixtures: 298 checks, no server needed.
 Godot --headless --path vone --script res://tests/run_tests.gd
 
 # Main 3D scene, detailed melee creep rendering and camera controls, no server needed.

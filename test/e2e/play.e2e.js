@@ -5,6 +5,7 @@
 //    builds a solar plant and a tower, upgrades the tower from the selection
 //    panel and recycles the plant.
 // 2. Two bots play while a spectator watches: no controls, a result banner.
+// 3. The menu and the lobby by hand, the language model switch included.
 //
 // Run: (cd backend/nodejs && npm install && npm run build)   once
 //      npm run test:e2e
@@ -510,6 +511,38 @@ test('a spectator watches two bots play to the end', { timeout: 180_000, skip },
   }, { MATCH_MAX_TICKS: '600' });
 });
 
+test('the language model switch is off, shows its fields when turned on, and names the model in the lobby', { timeout: 120_000, skip }, async () => {
+  await withBackend(async ({ errors, plain }) => {
+    const page = await plain('/');
+    // The server offers a model, so the switch is there, unticked, with its fields put away.
+    await page.waitForSelector('#menu input[data-llm]');
+    assert.equal(await page.isChecked('#menu input[data-llm]'), false, 'the switch starts off');
+    assert.equal(await page.isVisible('#menu input[data-llm-endpoint]'), false, 'the fields appear with the switch');
+    assert.match((await page.textContent('#menu .llm .subtitle')) ?? '', /scripted rotation/);
+
+    await page.check('#menu input[data-llm]');
+    assert.equal(await page.inputValue('#menu input[data-llm-endpoint]'), 'http://localhost:11434', 'the endpoint of the server');
+    assert.equal(await page.inputValue('#menu input[data-llm-model]'), 'qwen2.5:3b', 'the model of the server');
+    assert.match((await page.textContent('#menu .llm .subtitle')) ?? '', /qwen2\.5:3b at http:\/\/localhost:11434 drives the bot/);
+
+    // An address the server could not call keeps the player on the menu with the reason.
+    await page.fill('#menu input[data-llm-endpoint]', 'localhost:11434');
+    assert.match((await page.textContent('#menu .llm .subtitle')) ?? '', /endpoint is an address/);
+    await page.click('#menu button:has-text("Play Against Bot")');
+    await page.waitForSelector('#menu .error:not([hidden])');
+    assert.match((await page.textContent('#menu .error:not([hidden])')) ?? '', /endpoint is an address/);
+
+    // With an address it accepts, the lobby names the model beside the bot. Nothing needs to answer at
+    // that address: a bot whose model is silent plays the scripted rotation.
+    await page.fill('#menu input[data-llm-endpoint]', 'http://localhost:11434');
+    await page.fill('#menu input[placeholder="Your name"]', 'Halo');
+    await page.click('#menu button:has-text("Play Against Bot")');
+    await page.waitForSelector('#menu .card .title:has-text("Lobby")');
+    assert.deepEqual(await page.$$eval('#menu .player', (n) => n.map((x) => x.textContent)), ['Halo', 'Bot (qwen2.5:3b)']);
+    assert.deepEqual(errors, [], 'the page must log no console or page errors');
+  });
+});
+
 test('the menu and lobby work by hand: a bot match, then a match for two humans', { timeout: 180_000, skip }, async () => {
   await withBackend(async ({ errors, newContext, plain }) => {
     // Play Against Bot: type a name, press the button, press Start Match.
@@ -518,7 +551,7 @@ test('the menu and lobby work by hand: a bot match, then a match for two humans'
     await solo.click('#menu button:has-text("Play Against Bot")');
     await solo.waitForSelector('#menu .card .title:has-text("Lobby")');
     assert.deepEqual(await solo.$$eval('#menu .player', (n) => n.map((x) => x.textContent)), ['Halo', 'Bot']);
-    assert.ok((await solo.$$eval('#menu .subtitle', (n) => n.map((x) => x.textContent))).includes('Entropy 0.1% per second'), 'the lobby shows the default entropy rate');
+    assert.ok((await solo.$$eval('#menu .subtitle', (n) => n.map((x) => x.textContent))).some((t) => t?.startsWith('Entropy 0.1% per second')), 'the lobby shows the default entropy rate');
     assert.ok((await solo.$$eval('#menu .subtitle', (n) => n.map((x) => x.textContent))).includes('Tick limit: Unlimited'), 'a match from the menu is unlimited unless the host caps it');
     await solo.click('#menu button:has-text("Start Match")');
     await solo.waitForSelector('.palette:not([hidden])', { timeout: 30_000 });
@@ -549,8 +582,8 @@ test('the menu and lobby work by hand: a bot match, then a match for two humans'
     await guest.click('#menu button:has-text("Join Match")');
     await guest.waitForSelector('#menu .card .title:has-text("Lobby")');
     assert.equal(await guest.isHidden('#menu button:has-text("Start Match")'), true, 'only the host starts');
-    assert.ok((await guest.$$eval('#menu .subtitle', (n) => n.map((x) => x.textContent))).includes('Entropy 0.7% per second (set by the host)'), 'the guest sees the host\'s entropy rate');
-    assert.ok((await host.$$eval('#menu .subtitle', (n) => n.map((x) => x.textContent))).includes('Entropy 0.7% per second'));
+    assert.ok((await guest.$$eval('#menu .subtitle', (n) => n.map((x) => x.textContent))).some((t) => t?.startsWith('Entropy 0.7% per second') && t.endsWith('(set by the host)')), 'the guest sees the host\'s entropy rate');
+    assert.ok((await host.$$eval('#menu .subtitle', (n) => n.map((x) => x.textContent))).some((t) => t?.startsWith('Entropy 0.7% per second')));
     assert.ok((await guest.$$eval('#menu .subtitle', (n) => n.map((x) => x.textContent))).includes('Tick limit: Capped at 900 ticks (set by the host)'), 'the guest sees the host\'s tick limit');
     assert.ok((await host.$$eval('#menu .subtitle', (n) => n.map((x) => x.textContent))).includes('Tick limit: Capped at 900 ticks'));
     await host.waitForFunction(() => [...document.querySelectorAll('#menu button')].some((b) => b.textContent === 'Start Match' && !(/** @type {HTMLButtonElement} */ (b)).disabled));

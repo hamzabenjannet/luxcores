@@ -523,6 +523,69 @@ static func tick_cap_from_text(text: String) -> int:
 static func tick_cap_text(max_ticks: int) -> String:
 	return "Unlimited" if max_ticks == 0 else "Capped at %d ticks" % max_ticks
 
+## The longest model endpoint the server reads.
+const MAX_ENDPOINT_LENGTH := 200
+
+## The Ollama address a player typed, as the server takes it: scheme, host and port, with a trailing
+## slash or a pasted /api cut away. Anything else gives an empty string.
+## Examples: "http://localhost:11434/" gives "http://localhost:11434", "localhost:11434" gives "".
+static func llm_endpoint_from_text(text: String) -> String:
+	var trimmed := text.strip_edges()
+	while trimmed.ends_with("/"):
+		trimmed = trimmed.substr(0, trimmed.length() - 1)
+	if trimmed.ends_with("/api"):
+		trimmed = trimmed.substr(0, trimmed.length() - 4)
+	if trimmed.is_empty() or trimmed.length() > MAX_ENDPOINT_LENGTH:
+		return ""
+	var re := RegEx.new()
+	re.compile("^(https?)://(\\[[0-9a-fA-F:]+\\]|[a-zA-Z0-9.-]+)(:\\d{1,5})?$")
+	var m := re.search(trimmed)
+	if m == null:
+		return ""
+	var port_text := m.get_string(3)
+	if not port_text.is_empty():
+		var port := int(port_text.substr(1))
+		if port < 1 or port > 65535:
+			return ""
+	return trimmed
+
+## The model name a player typed, or an empty string when it is no Ollama name.
+## Examples: " qwen2.5:3b " gives "qwen2.5:3b", "not a model" gives "".
+static func llm_model_from_text(text: String) -> String:
+	var model := text.strip_edges()
+	var re := RegEx.new()
+	re.compile("^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,79}$")
+	return model if re.search(model) != null else ""
+
+## The state of the language model switch in the start menu, which the web client decides the same way
+## in src/client/entity-text.js. available comes from GET /api/game/spec, and on is the player's switch,
+## which stays off until they turn it on.
+static func llm_bot_state(ctx: Dictionary) -> Dictionary:
+	var available := bool(ctx.get("available", false))
+	var on := bool(ctx.get("on", false))
+	var clean_endpoint := llm_endpoint_from_text(String(ctx.get("endpoint", "")))
+	var clean_model := llm_model_from_text(String(ctx.get("model", "")))
+	var off := {
+		"show": available, "on": false, "endpoint": clean_endpoint, "model": clean_model,
+		"problem": "", "note": "The bot plays the scripted rotation.",
+	}
+	if not available or not on:
+		return off
+	if clean_endpoint.is_empty():
+		var bad_endpoint := off.duplicate()
+		bad_endpoint["on"] = true
+		bad_endpoint["problem"] = "The model endpoint is an address such as http://localhost:11434."
+		return bad_endpoint
+	if clean_model.is_empty():
+		var bad_model := off.duplicate()
+		bad_model["on"] = true
+		bad_model["problem"] = "The model is a name such as qwen2.5:3b."
+		return bad_model
+	return {
+		"show": true, "on": true, "endpoint": clean_endpoint, "model": clean_model, "problem": "",
+		"note": "%s at %s drives the bot." % [clean_model, clean_endpoint],
+	}
+
 ## Whether the day half of the cycle is on (GDD 4.1). The match starts at dawn.
 static func is_day(tick: int, day_night: Dictionary) -> bool:
 	var day := int(day_night.get("dayTicks", 800))

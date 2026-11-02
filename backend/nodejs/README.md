@@ -63,6 +63,10 @@ To play against the server from a browser, open `http://localhost:3000/?server=&
 | `MATCH_MAX_TICKS` | `match.stalemateTicks` in `data/balance.json` (10000) | An undecided match ends as a draw after this many ticks (about 8 minutes at 20 Hz), unless its host chose a limit with `maxTicks`. Set it higher for long test runs. The repo's own tests and tools stop at 5000 ticks |
 | `TEST_HUB` | `true`, `false` in production | Whether `/tests` and `GET /api/dev/links` answer. They list the addresses of the server |
 | `SNAPSHOT_EVERY_TICKS` | `2` | Ticks between snapshots (10 per second) |
+| `LLM_BOT` | `on`, `off` in production | Whether a match may ask an Ollama model to drive its bot (see The Language Model Bot). `GET /api/game/spec` reports it, and both clients hide the switch when it is off |
+| `LLM_ALLOWED_HOSTS` | `localhost,127.0.0.1,::1` | Hosts a match may name as its model endpoint. A single `*` allows every host, which lets a client choose where this server sends requests |
+| `LLM_ENDPOINT`, `LLM_MODEL` | `http://localhost:11434`, `qwen2.5:3b` | What the start menus of both clients prefill |
+| `LLM_TIMEOUT_MS`, `LLM_THINK_EVERY_TICKS`, `LLM_MAX_TOKENS`, `LLM_TEMPERATURE` | `20000`, `40`, `512`, `0` | Milliseconds one question may take, ticks between two questions, tokens one answer may hold, and the temperature |
 
 ## Architecture
 
@@ -132,6 +136,7 @@ All routes live under `/api`. A route needs `Authorization: Bearer <token>` unle
 | `GET /players/me`, `PATCH /players/me`, `GET /players/:id` | token | Profiles |
 | `POST /matches`, `GET /matches`, `GET /matches/:id` | token | Open and browse lobbies. The body of `POST /matches` may set `entropyPermillePerSecond` (0 to 1000, tenths of a percent of max HP per second; the default of `data/balance.json` when absent), which the match record, the lobby, the log and the replay keep. It may also set `maxTicks` (0 for unlimited, or 1 to 1000000; the server limit applies when absent), which the match record and the lobby keep and the runner applies at the end of each tick |
 | `POST /matches/:id/join`, `POST /matches/:id/leave` | token | Lobby membership |
+| `POST /matches` with `llm` | token | `llm: { endpoint, model, bothSides? }` asks an Ollama model to drive the bot of a `vsBot` or `botVsBot` match. The call fails with the reason when this server runs no model or may not call that host. Omit the field for the scripted bot |
 | `POST /matches/:id/quit` | token | Leave a running match. In a match for two humans the leaver forfeits (the other team wins, reason `forfeit`); against a bot, or alone, the match stops as a draw. The host of a bot-versus-bot match may quit it too |
 | `POST /matches/:id/start`, `POST /matches/:id/stop` | token, host | Start or stop the simulation |
 | `GET /game/spec` | public | Spec version, data hash, tick rate and the socket reference |
@@ -254,6 +259,16 @@ The server never needs a database to start. `ResilientStore` wraps MongoDB or Po
 PostgreSQL is not used for anything else yet. With another database as the main one, the server only checks at start-up whether `POSTGRES_URL` answers and reports it as `postgres.reachable`.
 
 Several servers cannot share one JSON file, because each keeps its copy in memory. A fallback run is therefore per server: put `{hostname}` in `JSON_DB_PATH` when servers share a volume.
+
+## The Language Model Bot
+
+A match may ask an Ollama model what its bot should do. `docs/LLM_BOT.md` holds the design; what matters for this server:
+
+- The driver lives in the repo's `src/llm/`, which `SimService` loads beside the sim and the scripted bot. `src/llm/` in this folder holds the policy only: whether this server offers a model, and which endpoint and model a match may name.
+- A client sends `llm: { endpoint, model }` with `POST /matches`. `MatchesService` checks it at once, so a host reads the reason instead of watching a silent bot. Checked are the scheme, the absence of credentials and of a path, the host against `LLM_ALLOWED_HOSTS`, and the model name.
+- The model drives the bot of a `vsBot` match and team 1 of a `botVsBot` match. `bothSides` gives it both bots of a bot match.
+- A tick never waits for a model, because the driver asks in the background. Every turn the model loses, the scripted bot plays: a timeout, an unreachable server, an answer with no usable action. The server logs each one.
+- A match a model played cannot be replayed from its seed, so the runner marks it `reproducible: false`. Its log keeps the endpoint and the model in the `started` event. A resume then replays its logged commands instead of asking the model again, so a second server rebuilds such a match the same way.
 
 ## Match Log and Resume
 

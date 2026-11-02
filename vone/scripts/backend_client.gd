@@ -98,6 +98,11 @@ func connect_match(options: Dictionary) -> Dictionary:
 		if creep_cap >= 0:
 			create_body["creepCapPerPlayer"] = creep_cap
 		create_body["maxTicks"] = int(options.get("max_ticks", 0))
+		# A match may ask a language model to drive its bot. The server refuses an endpoint it may not call,
+		# and its reason reaches the player as the status line.
+		var llm: Dictionary = options.get("llm", {})
+		if not llm.is_empty():
+			create_body["llm"] = {"endpoint": String(llm.get("endpoint", "")), "model": String(llm.get("model", ""))}
 		match_response = await _request("/api/matches", HTTPClient.METHOD_POST, create_body, true)
 	else:
 		# A bot match has no slot to take, so an existing one is watched instead of joined.

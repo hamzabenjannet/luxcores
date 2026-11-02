@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { KIND, SPEC_VERSION } from '../src/sim/index.js';
-import { creepCapFromText, creepGroupLabels, entityText, entropyFromText, entropyText, isDay, tickCapFromText, tickCapText } from '../src/client/entity-text.js';
+import { creepCapFromText, creepGroupLabels, entityText, entropyFromText, entropyText, isDay, llmBotState, llmEndpointFromText, llmModelFromText, tickCapFromText, tickCapText } from '../src/client/entity-text.js';
 import { abilityStates, actionsFor, autoSpawnToggle, canAfford, cancelAction, endsBuildMode, groupActions, heroLuxChoices, heroPickState, immediateCast, immediateUse, itemStates, mixFor, pendingKept, pendingLine, placement, queueLines, resolveTap, secondsText, shopStates } from '../src/client/ui/controls.js';
 import { HOLD_AIM_PX, clampZoom, holdAimPhase, holdAimRelease, pinchZoom } from '../src/client/input/gestures.js';
 import { leaveCall, leaveNeedsConfirm } from '../src/client/ui/leave.js';
@@ -61,6 +61,12 @@ test('tick limit cases', () => {
 
 test('creep cap cases', () => {
   for (const c of fixture.creepCapFromText) assert.equal(creepCapFromText(c.text), c.expect, JSON.stringify(c.text));
+});
+
+test('language model bot cases: the endpoint, the model and the switch in the start menu', () => {
+  for (const c of fixture.llmEndpointFromText) assert.equal(llmEndpointFromText(c.text), c.expect, JSON.stringify(c.text));
+  for (const c of fixture.llmModelFromText) assert.equal(llmModelFromText(c.text), c.expect, JSON.stringify(c.text));
+  for (const c of fixture.llmBotState) assert.deepEqual(llmBotState(c.ctx), c.expect, c.name);
 });
 
 test('seconds text cases', () => {

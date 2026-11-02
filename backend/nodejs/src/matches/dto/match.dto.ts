@@ -20,6 +20,30 @@ export enum MatchEndReason {
   Forfeit = 'forfeit',
 }
 
+/**
+ * The language model that drives the bot of a match (`src/llm/` in the repo). Its
+ * presence turns the driver on; a match without it plays the scripted bot, which
+ * is the default everywhere.
+ */
+export class MatchLlmDto {
+  @ApiProperty({
+    example: 'http://localhost:11434',
+    maxLength: 200,
+    description:
+      'Ollama server the backend asks, without a path. The server calls `POST {endpoint}/api/chat`, and it accepts only the hosts of `LLM_ALLOWED_HOSTS` (the loopback names by default).',
+  })
+  endpoint!: string;
+
+  @ApiProperty({ example: 'qwen2.5:3b', maxLength: 80, description: 'Model the server asks for, as Ollama names it' })
+  model!: string;
+
+  @ApiPropertyOptional({
+    default: false,
+    description: 'In a bot-versus-bot match: the model drives both bots instead of only the second one',
+  })
+  bothSides?: boolean;
+}
+
 export class MatchPlayerDto {
   @ApiPropertyOptional({ format: 'uuid', description: 'Absent for the bot' })
   playerId?: string;
@@ -97,6 +121,12 @@ export class MatchDto {
       'Tick limit of this match; an undecided match ends as a draw at this tick. 0 means unlimited. The server default applies when it is absent.',
   })
   maxTicks?: number;
+  @ApiPropertyOptional({
+    type: MatchLlmDto,
+    description:
+      'The language model that drives the bot of this match. Absent for the scripted bot, which is the default.',
+  })
+  llm?: MatchLlmDto;
   @ApiProperty({ format: 'uuid' }) hostId!: string;
   @ApiProperty({ type: [MatchPlayerDto] }) players!: MatchPlayerDto[];
   @ApiProperty({ format: 'date-time' }) createdAt!: string;

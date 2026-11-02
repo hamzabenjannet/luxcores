@@ -5,7 +5,7 @@
  * the menu (see main.js), so tests and shared links go straight in.
  */
 
-import { creepCapFromText, entropyFromText, entropyText, tickCapFromText } from '../entity-text.js';
+import { creepCapFromText, entropyFromText, entropyText, llmBotState, tickCapFromText } from '../entity-text.js';
 
 /**
  * @typedef {Object} MenuChoice
@@ -17,9 +17,12 @@ import { creepCapFromText, entropyFromText, entropyText, tickCapFromText } from 
  * @property {number | undefined} maxTicks  tick limit of a match this player creates, 0 for unlimited; undefined keeps the server's limit
  * @property {number | undefined} entropy  entropy rate in tenths of a percent of the maximum HP per second, for a match this player creates; undefined keeps the default
  * @property {number | undefined} creepCap  creeps alive per player, for a match this player creates; undefined keeps the default
+ * @property {{ endpoint: string, model: string } | undefined} llm  the Ollama model that drives the bot of this match; undefined leaves the scripted bot, which is the default
  */
 
 const NAME_KEY = 'luxcores.playerName';
+/** The language model switch and its fields, remembered per browser. */
+const LLM_KEY = 'luxcores.llmBot';
 
 /** localStorage can be missing or blocked, so every access is guarded. */
 function remembered() {
@@ -40,11 +43,37 @@ function remember(name) {
 }
 
 /**
+ * The language model switch as this browser last left it. It starts off, so a
+ * player who never turned it on plays the scripted bot.
+ * @param {{ defaultEndpoint: string, defaultModel: string }} defaults
+ * @returns {{ on: boolean, endpoint: string, model: string }}
+ */
+function rememberedLlm(defaults) {
+  const blank = { on: false, endpoint: defaults.defaultEndpoint, model: defaults.defaultModel };
+  try {
+    const saved = JSON.parse(localStorage.getItem(LLM_KEY) ?? 'null');
+    if (!saved || typeof saved !== 'object') return blank;
+    return { on: saved.on === true, endpoint: typeof saved.endpoint === 'string' && saved.endpoint !== '' ? saved.endpoint : blank.endpoint, model: typeof saved.model === 'string' && saved.model !== '' ? saved.model : blank.model };
+  } catch {
+    return blank;
+  }
+}
+
+/** @param {{ on: boolean, endpoint: string, model: string }} settings */
+function rememberLlm(settings) {
+  try {
+    localStorage.setItem(LLM_KEY, JSON.stringify(settings));
+  } catch {
+    // The switch simply starts off next time.
+  }
+}
+
+/**
  * @param {HTMLElement} root
- * @param {{ server: string, error?: string, entropyDefault?: number, capDefault?: number, creepCapDefault?: number, lastMatch?: string }} opts  `lastMatch` is the id of the match this browser was in last, offered as a rejoin;  `entropyDefault` is the rate of data/balance.json, in tenths of a percent per second; `capDefault` is the tick limit it suggests for a capped match; `creepCapDefault` is the creep cap of data/balance.json
+ * @param {{ server: string, error?: string, entropyDefault?: number, capDefault?: number, creepCapDefault?: number, lastMatch?: string, llm?: { available: boolean, defaultEndpoint: string, defaultModel: string, allowedHosts?: string[] } }} opts  `lastMatch` is the id of the match this browser was in last, offered as a rejoin;  `entropyDefault` is the rate of data/balance.json, in tenths of a percent per second; `capDefault` is the tick limit it suggests for a capped match; `creepCapDefault` is the creep cap of data/balance.json; `llm` is the language model block of `GET /api/game/spec`
  * @returns {Promise<MenuChoice>}
  */
-export function showMenu(root, { server, error, entropyDefault = 1, capDefault = 10000, creepCapDefault = 120, lastMatch }) {
+export function showMenu(root, { server, error, entropyDefault = 1, capDefault = 10000, creepCapDefault = 120, lastMatch, llm }) {
   root.hidden = false;
   root.replaceChildren();
   return new Promise((resolve) => {
@@ -83,9 +112,43 @@ export function showMenu(root, { server, error, entropyDefault = 1, capDefault =
       capLabel.hidden = matchType.value !== 'capped';
       if (!capLabel.hidden) cap.focus();
     });
+    // The language model bot: off until the player turns it on, and hidden on a server that runs none.
+    const llmDefaults = { defaultEndpoint: llm?.defaultEndpoint ?? 'http://localhost:11434', defaultModel: llm?.defaultModel ?? 'qwen2.5:3b' };
+    const savedLlm = rememberedLlm(llmDefaults);
+    const llmSwitch = /** @type {HTMLInputElement} */ (document.createElement('input'));
+    llmSwitch.type = 'checkbox';
+    llmSwitch.dataset.llm = '';
+    llmSwitch.checked = savedLlm.on;
+    const llmEndpoint = /** @type {HTMLInputElement} */ (document.createElement('input'));
+    llmEndpoint.dataset.llmEndpoint = '';
+    llmEndpoint.placeholder = llmDefaults.defaultEndpoint;
+    llmEndpoint.value = savedLlm.endpoint;
+    llmEndpoint.title = `The Ollama server the backend asks, such as ${llmDefaults.defaultEndpoint}. This server calls the hosts ${(llm?.allowedHosts ?? ['localhost']).join(', ')} only.`;
+    const llmModel = /** @type {HTMLInputElement} */ (document.createElement('input'));
+    llmModel.dataset.llmModel = '';
+    llmModel.placeholder = llmDefaults.defaultModel;
+    llmModel.value = savedLlm.model;
+    llmModel.title = 'The model as Ollama names it, such as qwen2.5:3b.';
+    const llmNote = div('subtitle');
+    const llmBox = div('llm');
+    llmBox.append(label('Let a language model drive the bot', llmSwitch), label('Model endpoint', llmEndpoint), label('Model', llmModel), llmNote);
+    const refreshLlm = () => {
+      const state = llmBotState({ available: Boolean(llm?.available), on: llmSwitch.checked, endpoint: llmEndpoint.value, model: llmModel.value });
+      llmEndpoint.hidden = !state.on;
+      llmModel.hidden = !state.on;
+      /** @type {HTMLElement} */ (llmEndpoint.parentElement).hidden = !state.on;
+      /** @type {HTMLElement} */ (llmModel.parentElement).hidden = !state.on;
+      llmNote.textContent = state.problem || state.note;
+    };
+    llmBox.hidden = !llm?.available;
+    for (const control of [llmSwitch, llmEndpoint, llmModel]) control.addEventListener('change', refreshLlm);
+    llmEndpoint.addEventListener('input', refreshLlm);
+    llmModel.addEventListener('input', refreshLlm);
+    refreshLlm();
+
     const problem = div('error');
     problem.hidden = true;
-    card.append(label('Name', name), label('Seed', seed), label('Match type', matchType), capLabel, problem, label('Entropy % per second', entropy), label('Creep cap per player', creepCap));
+    card.append(label('Name', name), label('Seed', seed), label('Match type', matchType), capLabel, problem, label('Entropy % per second', entropy), label('Creep cap per player', creepCap), llmBox);
 
     /** @param {Partial<MenuChoice>} part */
     const choose = (part) => {
@@ -103,6 +166,16 @@ export function showMenu(root, { server, error, entropyDefault = 1, capDefault =
         creepCap.focus();
         return;
       }
+      // A match against a bot may ask a model to drive it. The server refuses an endpoint it may not call.
+      const llmState = llmBotState({ available: Boolean(llm?.available), on: llmSwitch.checked, endpoint: llmEndpoint.value, model: llmModel.value });
+      const wantsBot = part.vsBot === true || part.botVsBot === true;
+      if (llmState.on && llmState.problem !== '' && wantsBot) {
+        problem.textContent = llmState.problem;
+        problem.hidden = false;
+        llmEndpoint.focus();
+        return;
+      }
+      rememberLlm({ on: llmSwitch.checked, endpoint: llmEndpoint.value.trim(), model: llmModel.value.trim() });
       const chosen = name.value.trim() || 'Guest';
       remember(chosen);
       const seedValue = Number(seed.value);
@@ -117,6 +190,7 @@ export function showMenu(root, { server, error, entropyDefault = 1, capDefault =
         maxTicks: capped ? capValue : 0,
         entropy: entropyValue >= 0 ? entropyValue : undefined,
         creepCap: creepCapFromText(creepCap.value) >= 0 ? creepCapFromText(creepCap.value) : undefined,
+        llm: llmState.on && llmState.problem === '' && wantsBot ? { endpoint: llmState.endpoint, model: llmState.model } : undefined,
         ...part,
       });
     };

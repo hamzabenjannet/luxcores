@@ -9,6 +9,7 @@ import type { Fingerprint } from '../matchlog/match-event.js';
 import type { ResumeAttempt } from '../matchlog/match-resume.js';
 import type {
   BotApi,
+  LlmApi,
   SimCommandEnvelope,
   SimApi,
   SimBot,
@@ -37,6 +38,7 @@ export class SimService {
   private readonly logger = new Logger(SimService.name);
   private api!: SimApi;
   private botApi!: BotApi;
+  private llmApi!: LlmApi;
   private worldViewApi!: WorldViewApi;
   private config!: ReturnType<SimApi['normalizeData']>;
   private mapgenRaw!: unknown;
@@ -70,6 +72,11 @@ export class SimService {
     this.worldViewApi = (await import(
       pathToFileURL(join(root, 'src', 'shared', 'world-view.js')).href
     )) as WorldViewApi;
+    // The language model bot driver. It stays out of `codeHash`: a model's commands cannot be
+    // worked out again from the seed, so a match it plays never verifies from the seed anyway.
+    this.llmApi = (await import(
+      pathToFileURL(join(root, 'src', 'llm', 'index.js')).href
+    )) as LlmApi;
     const { DATA_FILES } = (await import(
       pathToFileURL(join(root, 'src', 'shared', 'data-files.js')).href
     )) as {
@@ -189,6 +196,44 @@ export class SimService {
     };
   }
 
+  /**
+   * A bot one language model drives (`src/llm/`). It answers like `createBot`, and it keeps
+   * playing the scripted rotation whenever the model is unreachable or answers nothing usable.
+   * Its commands are ordinary envelopes, so the sim and the log treat them like a human's.
+   */
+  createLlmBot(
+    playerId: number,
+    team: number,
+    seed: number,
+    llm: {
+      endpoint: string;
+      model: string;
+      thinkEveryTicks: number;
+      timeoutMs: number;
+      maxTokens: number;
+      temperature: number;
+    },
+    options?: SimMatchOptions,
+    onEvent?: Parameters<LlmApi['createLlmBot']>[0]['onEvent'],
+  ): SimBot & { stats: () => Record<string, unknown> } {
+    const bot = this.llmApi.createLlmBot({
+      playerId,
+      team,
+      config: this.configFor(options),
+      seed,
+      ...llm,
+      ...(onEvent ? { onEvent } : {}),
+    });
+    return {
+      playerId,
+      deterministic: false,
+      think: (state) => bot.think(this.worldViewApi.localWorldView(state, team)),
+      stats: () => bot.stats(),
+      save: () => bot.saveState(),
+      load: (memory) => bot.loadState(memory),
+    };
+  }
+
   /** The state and the bots' memory as plain data. The runner logs it as a checkpoint. */
   exportState(state: SimState, bots: SimBot[]): { state: Record<string, unknown>; bots: { playerId: number; memory: unknown }[] } {
     return {
@@ -255,7 +300,10 @@ export class SimService {
       if (list) list.push(e);
       else byTick.set(e.tick, [e]);
     }
-    const botIds = new Set(opts.bots.map((bot) => bot.playerId));
+    // A bot a language model drives cannot be asked to think again, so a rebuild takes its
+    // commands from the log like a human's and compares nothing.
+    const thinkers = opts.bots.filter((bot) => bot.deterministic !== false);
+    const botIds = new Set(thinkers.map((bot) => bot.playerId));
     const brief = (list: SimCommandEnvelope[]): string =>
       JSON.stringify(
         list
@@ -265,7 +313,7 @@ export class SimService {
     let sinceYield = 0;
     while (state.tick < opts.targetTick && !state.outcome) {
       const logged = byTick.get(state.tick) ?? [];
-      const regenerated = opts.bots.flatMap((bot) => bot.think(state));
+      const regenerated = thinkers.flatMap((bot) => bot.think(state));
       if (attempt.strict) {
         const loggedBots = logged.filter((e) => botIds.has(e.playerId));
         if (brief(regenerated) !== brief(loggedBots)) {

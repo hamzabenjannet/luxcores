@@ -40,6 +40,30 @@ export class WebSocketDocDto {
   events!: string;
 }
 
+/**
+ * Whether this server offers a bot that a language model drives, and what the
+ * clients prefill in the start menu. A client hides the switch when `available`
+ * is false.
+ */
+export class GameLlmDto {
+  @ApiProperty({ example: true, description: 'A match may ask a language model to drive its bot (`LLM_BOT`)' })
+  available!: boolean;
+  @ApiProperty({ example: 'http://localhost:11434', description: 'Endpoint the menu starts from' })
+  defaultEndpoint!: string;
+  @ApiProperty({ example: 'qwen2.5:3b', description: 'Model the menu starts from' })
+  defaultModel!: string;
+  @ApiProperty({
+    type: [String],
+    example: ['localhost', '127.0.0.1', '::1'],
+    description: 'Hosts an endpoint may name (`LLM_ALLOWED_HOSTS`). A single `*` allows every host.',
+  })
+  allowedHosts!: string[];
+  @ApiProperty({ example: 20000, description: 'Milliseconds one question may take before the scripted bot takes the turn' })
+  timeoutMs!: number;
+  @ApiProperty({ example: 40, description: 'Ticks between two questions to the model' })
+  thinkEveryTicks!: number;
+}
+
 /** What a client needs to know before it joins a match. */
 export class GameSpecDto {
   @ApiProperty({
@@ -71,6 +95,7 @@ export class GameSpecDto {
     description: 'Entity kind codes by name, as `entities[].kind` carries them',
   })
   kinds!: Record<string, number>;
+  @ApiProperty({ type: GameLlmDto }) llm!: GameLlmDto;
   @ApiProperty({ type: SocketDocDto }) socket!: SocketDocDto;
   @ApiProperty({ type: WebSocketDocDto }) webSocket!: WebSocketDocDto;
 }

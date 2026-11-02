@@ -35,6 +35,15 @@ var _camera_selector: OptionButton
 ## keeps the bare plane. The setting lives in `user://luxcores.cfg`, beside the key assignments.
 var _terrain_toggle: CheckButton
 var _auto_terrain := false
+## The start-menu switch for the language model bot, its two fields and the line under them. The switch is
+## off by default: a match then plays the scripted bot. The setting lives in `user://luxcores.cfg`.
+var _llm_toggle: CheckButton
+var _llm_endpoint_input: LineEdit
+var _llm_model_input: LineEdit
+var _llm_note: Label
+var _llm_on := false
+var _llm_endpoint := "http://localhost:11434"
+var _llm_model := "qwen2.5:3b"
 var _cap_input: LineEdit
 var _mode_selector: OptionButton
 var _status_label: Label
@@ -144,6 +153,7 @@ var _tick_hz := 20
 func _ready() -> void:
 	_load_key_bindings()
 	_load_auto_terrain()
+	_load_llm_settings()
 	_backend = BackendClientScript.new()
 	add_child(_backend)
 	_backend.snapshot_received.connect(_on_snapshot)
@@ -192,6 +202,61 @@ func _save_auto_terrain() -> void:
 	var save_error := config.save("user://luxcores.cfg")
 	if save_error != OK:
 		_set_status("Could not save the terrain setting: %s." % error_string(save_error))
+
+## The language model switch as this device last left it. A device that never turned it on plays the
+## scripted bot, as every client does by default.
+func _load_llm_settings() -> void:
+	var config := ConfigFile.new()
+	if config.load("user://luxcores.cfg") != OK:
+		return
+	_llm_on = bool(config.get_value("llm", "enabled", false))
+	_llm_endpoint = String(config.get_value("llm", "endpoint", _llm_endpoint))
+	_llm_model = String(config.get_value("llm", "model", _llm_model))
+
+func _save_llm_settings() -> void:
+	var config := ConfigFile.new()
+	var error := config.load("user://luxcores.cfg")
+	if error != OK and error != ERR_FILE_NOT_FOUND:
+		_set_status("Could not load local settings: %s." % error_string(error))
+		return
+	config.set_value("llm", "enabled", _llm_on)
+	config.set_value("llm", "endpoint", _llm_endpoint)
+	config.set_value("llm", "model", _llm_model)
+	var save_error := config.save("user://luxcores.cfg")
+	if save_error != OK:
+		_set_status("Could not save the language model setting: %s." % error_string(save_error))
+
+## The switch and the two fields of the language model bot. The fields appear once the switch is on, and
+## the note states what the bot will do. The web client shows the same decision (GameLogic.llm_bot_state).
+func _on_llm_toggled(enabled: bool) -> void:
+	_llm_on = enabled
+	_remember_llm()
+	_refresh_llm()
+
+func _on_llm_text_changed(_text: String) -> void:
+	_remember_llm()
+	_refresh_llm()
+
+func _remember_llm() -> void:
+	_llm_endpoint = _llm_endpoint_input.text.strip_edges()
+	_llm_model = _llm_model_input.text.strip_edges()
+	_save_llm_settings()
+
+func _llm_state() -> Dictionary:
+	return GameLogic.llm_bot_state({
+		# The spec says whether the server runs a model, and the menu stands before any connection,
+		# so the switch is offered and the server states the reason when it refuses.
+		"available": true,
+		"on": _llm_on,
+		"endpoint": _llm_endpoint_input.text,
+		"model": _llm_model_input.text,
+	})
+
+func _refresh_llm() -> void:
+	var state := _llm_state()
+	_llm_endpoint_input.visible = bool(state.on)
+	_llm_model_input.visible = bool(state.on)
+	_llm_note.text = String(state.problem) if String(state.problem) != "" else String(state.note)
 
 func _build_interface() -> void:
 	_set_dark_theme()
@@ -314,6 +379,38 @@ func _build_interface() -> void:
 	_cap_input.custom_minimum_size = Vector2(220, 52)
 	limit_options.add_child(_cap_input)
 	_home.add_child(limit_options)
+	var llm_options := HBoxContainer.new()
+	_llm_toggle = CheckButton.new()
+	_llm_toggle.name = "LlmBotToggle"
+	_llm_toggle.text = "Let a language model drive the bot"
+	_llm_toggle.tooltip_text = "On asks an Ollama model what the bot should do, in a match against a bot or between two bots. Off plays the scripted bot, which is the default."
+	_llm_toggle.button_pressed = _llm_on
+	_llm_toggle.custom_minimum_size = Vector2(300, 52)
+	_llm_toggle.toggled.connect(_on_llm_toggled)
+	llm_options.add_child(_llm_toggle)
+	_llm_endpoint_input = LineEdit.new()
+	_llm_endpoint_input.name = "LlmEndpointInput"
+	_llm_endpoint_input.placeholder_text = "http://localhost:11434"
+	_llm_endpoint_input.tooltip_text = "The Ollama server the backend asks. The backend calls only the hosts its LLM_ALLOWED_HOSTS names."
+	_llm_endpoint_input.text = _llm_endpoint
+	_llm_endpoint_input.custom_minimum_size = Vector2(240, 52)
+	_llm_endpoint_input.text_changed.connect(_on_llm_text_changed)
+	llm_options.add_child(_llm_endpoint_input)
+	_llm_model_input = LineEdit.new()
+	_llm_model_input.name = "LlmModelInput"
+	_llm_model_input.placeholder_text = "qwen2.5:3b"
+	_llm_model_input.tooltip_text = "The model as Ollama names it."
+	_llm_model_input.text = _llm_model
+	_llm_model_input.custom_minimum_size = Vector2(180, 52)
+	_llm_model_input.text_changed.connect(_on_llm_text_changed)
+	llm_options.add_child(_llm_model_input)
+	_home.add_child(llm_options)
+	_llm_note = Label.new()
+	_llm_note.name = "LlmNote"
+	_llm_note.add_theme_font_size_override("font_size", 14)
+	_llm_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_home.add_child(_llm_note)
+	_refresh_llm()
 	var connect_button := _make_button("CONNECT / CREATE MATCH", Color("#315f95"))
 	connect_button.pressed.connect(_connect_match)
 	_home.add_child(connect_button)
@@ -802,6 +899,11 @@ func _connect_match() -> void:
 	if capped and cap_ticks < 0 and _match_input.text.strip_edges() == "":
 		_set_status("The tick limit is a whole number from 1 to %d." % GameLogic.MAX_TICK_CAP)
 		return
+	var llm := _llm_state()
+	var wants_bot := _mode_selector.selected == 0 or _mode_selector.selected == 1
+	if bool(llm.on) and String(llm.problem) != "" and wants_bot and _match_input.text.strip_edges() == "":
+		_set_status(String(llm.problem))
+		return
 	_set_status("Signing in and opening the match...")
 	var result: Dictionary = await _backend.connect_match({
 		"server": _server_input.text,
@@ -813,6 +915,7 @@ func _connect_match() -> void:
 		"entropy": _entropy_input.text,
 		"creep_cap": _creep_cap_input.text,
 		"max_ticks": cap_ticks if capped else 0,
+		"llm": {"endpoint": String(llm.endpoint), "model": String(llm.model)} if bool(llm.on) and String(llm.problem) == "" and wants_bot else {},
 	})
 	if not result.ok:
 		_set_status(str(result.get("message", "Could not connect to the match.")))
@@ -841,6 +944,10 @@ func _connect_match() -> void:
 		int(_current_match.get("creepCapPerPlayer", _data.balance.creep.capPerPlayer)),
 		GameLogic.tick_cap_text(int(_current_match.get("maxTicks", _backend.get_spec().get("matchMaxTicks", 0)))),
 	]
+	# A bot a language model drives says so in the lobby, as the web client's lobby card does.
+	var llm_record: Dictionary = _current_match.get("llm", {}) if _current_match.get("llm") != null else {}
+	if not llm_record.is_empty():
+		rules_text += " The bot asks %s at %s." % [String(llm_record.get("model", "")), String(llm_record.get("endpoint", ""))]
 	if _is_host:
 		_set_status("Lobby connected. %s Start the match when ready." % rules_text)
 	else:

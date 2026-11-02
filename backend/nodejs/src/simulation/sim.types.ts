@@ -185,6 +185,12 @@ export interface SimRecorder {
 /** A bot driven by the server: it reads the state and returns the commands it wants this tick. */
 export interface SimBot {
   readonly playerId: number;
+  /**
+   * False for a bot whose commands cannot be worked out again from the seed, which a
+   * language model bot never can. A rebuild then replays its logged commands instead of
+   * asking it to think, and the match's replay is flagged `reproducible: false`.
+   */
+  readonly deterministic?: boolean;
   think(state: SimState): SimCommandEnvelope[];
   /** The bot's own memory as plain data, for a checkpoint. */
   save(): unknown;
@@ -200,6 +206,36 @@ export interface BotApi {
     seed: number;
   }): {
     think(view: unknown): SimCommandEnvelope[];
+    saveState(): unknown;
+    loadState(saved: unknown): void;
+  };
+}
+
+/** The language model bot driver of the repo (`src/llm/index.js`). */
+export interface LlmApi {
+  createLlmBot(opts: {
+    playerId: number;
+    team: number;
+    config: unknown;
+    seed: number;
+    endpoint: string;
+    model: string;
+    thinkEveryTicks: number;
+    timeoutMs: number;
+    maxTokens: number;
+    temperature: number;
+    onEvent?: (event: {
+      type: 'ask' | 'plan' | 'failure';
+      tick: number;
+      text?: string;
+      error?: string;
+      note?: string;
+      ms?: number;
+      commands?: number;
+    }) => void;
+  }): {
+    think(view: unknown): SimCommandEnvelope[];
+    stats(): Record<string, unknown>;
     saveState(): unknown;
     loadState(saved: unknown): void;
   };

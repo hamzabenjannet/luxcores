@@ -13,6 +13,7 @@ import { Public } from '../common/decorators/public.decorator.js';
 import { ErrorResponseDto } from '../common/dto/error-response.dto.js';
 import { MAX_SEED, ParseSeedPipe } from '../common/pipes/parse-seed.pipe.js';
 import { SimService } from '../simulation/sim.service.js';
+import { LlmService } from '../llm/llm.service.js';
 import { MatchRunnerService } from './match-runner.service.js';
 import {
   GameSpecDto,
@@ -113,6 +114,7 @@ export class GameController {
   constructor(
     private readonly sim: SimService,
     private readonly runner: MatchRunnerService,
+    private readonly llm: LlmService,
     private readonly config: ConfigService<AppConfig, true>,
   ) {}
 
@@ -134,6 +136,7 @@ export class GameController {
       snapshotEveryTicks: game.snapshotEveryTicks,
       matchMaxTicks: this.runner.matchMaxTicks,
       kinds: this.sim.kinds,
+      llm: this.llm.advertised,
       socket: SOCKET_DOC,
       webSocket: WEBSOCKET_DOC,
     };

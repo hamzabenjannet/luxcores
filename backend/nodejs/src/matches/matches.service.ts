@@ -8,6 +8,7 @@ import {
 import { randomInt, randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { COLLECTIONS, DataStore } from '../database/data-store.js';
+import { LlmService } from '../llm/llm.service.js';
 import { MAX_SEED } from '../common/pipes/parse-seed.pipe.js';
 import type { AuthenticatedPlayer } from '../common/types.js';
 import type { CreateMatchDto } from './dto/create-match.dto.js';
@@ -28,7 +29,10 @@ export class MatchesService {
   /** Emits `changed` with the new `MatchDto` after every write, for the socket gateway. */
   readonly changes = new EventEmitter();
 
-  constructor(private readonly store: DataStore) {}
+  constructor(
+    private readonly store: DataStore,
+    private readonly llm: LlmService,
+  ) {}
 
   async create(
     host: AuthenticatedPlayer,
@@ -36,6 +40,8 @@ export class MatchesService {
   ): Promise<MatchDto> {
     if (dto.vsBot && dto.botVsBot)
       throw new BadRequestException('vsBot and botVsBot cannot both be set');
+    // Refuses an endpoint this server may not call, so the host reads the reason instead of watching a silent bot.
+    const llm = this.llm.record(this.llm.settingsFor(dto.llm, dto));
     const match: MatchDto = {
       id: randomUUID(),
       name: dto.name,
@@ -47,6 +53,7 @@ export class MatchesService {
       ...(dto.maxTicks === undefined ? {} : { maxTicks: dto.maxTicks }),
       vsBot: dto.vsBot,
       botVsBot: dto.botVsBot,
+      ...(llm === undefined ? {} : { llm }),
       hostId: host.id,
       // In a bot match the host only watches, so the lobby holds no human.
       players: dto.botVsBot

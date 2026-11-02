@@ -397,7 +397,26 @@ func _run() -> void:
 	await _until(func(): return _main._home.visible)
 	_check("Back to Menu returns to the start screen and hides the end screen", _main._home.visible and not _main._game.visible and not _main._summary_box.visible, true)
 
-	# Part 2: two bots play, and this client only watches.
+	# Part 2: the language model switch. A lobby opened with it on carries the model that the bot of
+	# team 1 will ask (docs/LLM_BOT.md), and the lobby line names it. The lobby is left again at once,
+	# because a model plays its own way and the bot checks below expect the scripted rotation.
+	_main._mode_selector.select(1)
+	_main._match_input.text = ""
+	_main._llm_toggle.button_pressed = true
+	_main._on_llm_toggled(true)
+	_main._llm_endpoint_input.text = "http://localhost:11434"
+	_main._llm_model_input.text = "qwen2.5:3b"
+	_check("the switch states what the bot will do", String(_main._llm_note.text), "qwen2.5:3b at http://localhost:11434 drives the bot.")
+	await _main._connect_match()
+	var llm_record: Dictionary = _main._current_match.get("llm", {}) if _main._current_match.get("llm") != null else {}
+	_check("the model reaches the match record", String(llm_record.get("model", "")), "qwen2.5:3b")
+	_check("the lobby names the model", _main._status_label.text.contains("The bot asks qwen2.5:3b"), true)
+	await _main._leave_match()
+	_main._llm_toggle.button_pressed = false
+	_main._on_llm_toggled(false)
+	_check("the switch off leaves the scripted bot", String(_main._llm_note.text), "The bot plays the scripted rotation.")
+
+	# Part 3: two bots play the scripted rotation, and this client only watches.
 	_main._mode_selector.select(1)
 	_main._match_input.text = ""
 	await _main._connect_match()
@@ -410,7 +429,7 @@ func _run() -> void:
 	var match_id: String = _main._backend.get_match_id()
 	await _main._leave_match()
 
-	# Part 3: a second client joins the bot match by id and watches it.
+	# Part 4: a second client joins the bot match by id and watches it.
 	_main._match_input.text = match_id
 	await _main._connect_match()
 	_check("joining a bot match by id spectates", _main._role == "spectator", true)

@@ -16,6 +16,9 @@
  *   maxTicks     with match=new: tick limit of the match, 0 for unlimited (the server's own limit applies without it)
  *   entropy      with match=new: entropy rate in percent of the maximum HP per second (0 to 100, one decimal, such as 0.5)
  *   creepCap     with match=new: creeps alive per player (1 to 1000); a high cap costs frame rate
+ *   llm=1        with vsBot or botVsBot: a language model drives the bot (the scripted bot plays without it)
+ *   llmEndpoint  the Ollama server the backend asks, http://localhost:11434 by default
+ *   llmModel     the model as Ollama names it, qwen2.5:3b by default
  *   autostart=1  start the match as soon as the lobby exists
  *   recover      a recovery code that moves a profile to this device
  *   showcode=1   print a new recovery code in the debug text
@@ -35,7 +38,7 @@ import { joinServerMatch } from './net/server-session.js';
 import { createControls } from './ui/controls.js';
 import { showLobby } from './ui/lobby.js';
 import { showMenu } from './ui/menu.js';
-import { creepCapFromText, entropyFromText, isDay, tickCapFromText } from './entity-text.js';
+import { creepCapFromText, entropyFromText, isDay, llmBotState, tickCapFromText } from './entity-text.js';
 import { matchSummary } from './ui/summary.js';
 import { lockPortrait } from './orientation.js';
 import { createPerfMeter } from './perf.js';
@@ -72,6 +75,35 @@ const data = {
   items: /** @type {any} */ (raw).items,
 };
 
+/**
+ * What this server offers besides the rules: whether it runs a bot a language model drives, and
+ * the endpoint and model the menu prefills. A server that answers nothing keeps the menu plain.
+ * @type {{ available: boolean, defaultEndpoint: string, defaultModel: string, allowedHosts?: string[] } | undefined}
+ */
+let llmSpec;
+try {
+  llmSpec = (await (await fetch(`${server}/api/game/spec`)).json()).llm;
+} catch {
+  llmSpec = undefined; // an older server has no language model block
+}
+
+/**
+ * The language model the address asks for, or undefined. `llm=1` turns the driver on and the two
+ * other parameters say where; a value the server would refuse is left out, so the match plays the
+ * scripted bot instead of failing to open.
+ * @returns {{ endpoint: string, model: string } | undefined}
+ */
+function llmFromQuery() {
+  if (query.get('llm') !== '1' || !(query.get('vsBot') === '1' || query.get('botVsBot') === '1')) return undefined;
+  const state = llmBotState({
+    available: llmSpec?.available !== false,
+    on: true,
+    endpoint: query.get('llmEndpoint') ?? llmSpec?.defaultEndpoint ?? 'http://localhost:11434',
+    model: query.get('llmModel') ?? llmSpec?.defaultModel ?? 'qwen2.5:3b',
+  });
+  return state.on && state.problem === '' ? { endpoint: state.endpoint, model: state.model } : undefined;
+}
+
 /** The menu is skipped when the address says what to do. */
 const direct = ['match', 'vsBot', 'botVsBot', 'autostart'].some((k) => query.has(k));
 /** @type {import('./net/server-session.js').ServerSession | undefined} */
@@ -89,8 +121,9 @@ while (!session) {
         maxTicks: query.has('maxTicks') && (query.get('maxTicks') === '0' || tickCapFromText(query.get('maxTicks') ?? '') >= 0) ? Number(query.get('maxTicks')) : undefined,
         entropy: query.has('entropy') && entropyFromText(query.get('entropy') ?? '') >= 0 ? entropyFromText(query.get('entropy') ?? '') : undefined,
         creepCap: query.has('creepCap') && creepCapFromText(query.get('creepCap') ?? '') >= 0 ? creepCapFromText(query.get('creepCap') ?? '') : undefined,
+        llm: llmFromQuery(),
       }
-    : await showMenu($('menu'), { server, error: problem, entropyDefault: data.balance.economy.entropyPermillePerSecond, capDefault: data.balance.match.stalemateTicks, creepCapDefault: data.balance.creep.capPerPlayer, lastMatch: recallMatch(server) });
+    : await showMenu($('menu'), { server, error: problem, entropyDefault: data.balance.economy.entropyPermillePerSecond, capDefault: data.balance.match.stalemateTicks, creepCapDefault: data.balance.creep.capPerPlayer, lastMatch: recallMatch(server), ...(llmSpec ? { llm: llmSpec } : {}) });
   $('hud-debug').textContent = `Connecting to ${server} ...`;
   try {
     session = await joinServerMatch({
@@ -103,6 +136,7 @@ while (!session) {
       entropyPermillePerSecond: choice.entropy,
       creepCapPerPlayer: choice.creepCap,
       maxTicks: choice.maxTicks,
+      llm: choice.llm,
       specVersion: SPEC_VERSION,
       recoveryCode: query.get('recover') ?? undefined,
     });
